@@ -336,24 +336,6 @@ module Reimbursements
       budget
     end
 
-    # The budget line for one (area, nominal code), created only if the lookup re-taken here,
-    # inside the transaction behind the area's row lock, still finds none. BudgetFinder's own
-    # lookup is a read a double-submitted form passes twice, giving two lines for one
-    # (area, code) and a second agreed figure. +name+ is the code's label, which the match also
-    # reads to recognise a hand-named line.
-    def find_or_create_budget_for_area!(area_id:, nominal_code:, name:, cost_centre: nil,
-                                        financial_year: nil)
-      budget = Budget.transaction do
-        area = Area.lock.find(area_id)
-        BudgetFinder.match(area.budgets.to_a, area: area, nominal_code: nominal_code, label: name) ||
-          create_budget!(name: name, nominal_code: nominal_code, area: area,
-                         cost_centre: cost_centre, financial_year: financial_year)
-      end
-      bust_budgets!
-      bust_areas!
-      budget
-    end
-
     # Only called for a budget with no cost centre (BudgetImport#adoptions), so it never moves a
     # line out of the pot that owns it.
     def adopt_budget!(record_id, cost_centre)

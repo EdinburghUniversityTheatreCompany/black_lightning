@@ -100,9 +100,9 @@ re-taking the find under a lock. A line made this way is flagged on the Review q
 with the finance permission has seen it; the claim is never held up. The picker keeps
 `active_budgets`' active-year rule.
 
-The back end exists and nothing calls it: `Reimbursements::BudgetFinder`,
-`DatabaseStore#find_or_create_budget_for_area!`, and `budget_finder_test.rb` /
-`budget_finder_lock_test.rb`. **Question for Mick:** build the picker, or delete the unused code?
+A back end for it (`Reimbursements::BudgetFinder`, `DatabaseStore#find_or_create_budget_for_area!`
+and a threaded test of the row lock) was built, never called, and deleted on 2026-10-09. Restore it
+from git history if the picker is built.
 
 An area is also the natural place for a future `belongs_to :event`, tying a show's money to its
 `Event`. Not built; don't design anything that rules it out.
