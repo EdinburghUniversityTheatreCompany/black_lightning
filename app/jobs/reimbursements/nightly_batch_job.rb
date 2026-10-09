@@ -173,8 +173,9 @@ module Reimbursements
       return true if stale.empty?
 
       rows = stale.map do |expense|
-        { auto_number: expense.auto_number, payee_name: expense.person&.name.to_s,
-          amount: format("%.2f", expense.amount || 0), age_days: pending_age_days(expense, today) }
+        { auto_number: expense.auto_number, record_id: expense.record_id,
+          payee_name: expense.person&.name.to_s, amount: format("%.2f", expense.amount || 0),
+          age_days: pending_age_days(expense, today) }
       end
       Rails.logger.info("Nightly: #{rows.size} stale pending for #{cost_centre.key}")
       return true if dry_run

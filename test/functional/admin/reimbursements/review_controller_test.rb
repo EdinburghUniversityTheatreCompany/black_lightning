@@ -1240,6 +1240,7 @@ module Admin
         assert_equal [ "pat@example.com" ], mail[:to]
         assert_match(/not approved/, mail[:subject])
         assert_match "Hi Pat,", mail[:html], "Pat Producer is greeted by first name only"
+        assert_includes mail[:html], "https://www.example.com/admin/reimbursements/expenses/#{expense.record_id}"
         assert_match "Missing receipt", mail[:html]
       end
 

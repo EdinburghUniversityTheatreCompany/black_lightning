@@ -14,7 +14,7 @@
   </p>
 <% end %>
 
-<p><strong>Batch summary:</strong></p>
+<p><strong><%= link_to "Batch summary", @batch_id ? admin_reimbursements_batch_url(@batch_id) : admin_reimbursements_batches_url %>:</strong></p>
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
   <thead style="background-color: #f0f0f0;">
     <tr>

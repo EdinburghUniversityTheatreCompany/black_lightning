@@ -9,6 +9,7 @@
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif;">
   <thead style="background-color: #f0f0f0;">
     <tr>
+      <th scope="col">#</th>
       <th scope="col">Amount</th>
       <th scope="col">Budget</th>
       <th scope="col">Description</th>
@@ -17,6 +18,7 @@
   <tbody>
     <% @line_items.each do |item| %>
       <tr>
+        <td><%= link_to "##{item[:auto_number]}", admin_reimbursements_expense_url(item[:record_id]) %></td>
         <td><%= reimbursements_money(item[:amount]) %></td>
         <td><%= item[:budget_name] %></td>
         <td><%= item[:description] %></td>
@@ -25,15 +27,16 @@
   </tbody>
   <tfoot>
     <tr style="font-weight: bold; background-color: #f0f0f0;">
+      <td>Total</td>
       <td><%= reimbursements_money(@total) %></td>
-      <td colspan="2">Total</td>
+      <td colspan="2"></td>
     </tr>
   </tfoot>
 </table>
 
 <p>
   EUSA typically processes BACS payments within a few business days. If you don't
-  receive payment within two weeks, let me know.
+  receive payment within two weeks, contact us at <%= mail_to @cost_centre.contact_email %>.
 </p>
 
 <p>

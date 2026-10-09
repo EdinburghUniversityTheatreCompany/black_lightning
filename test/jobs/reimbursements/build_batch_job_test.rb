@@ -58,6 +58,7 @@ module Reimbursements
       ready = alerts(:batch_ready).sole.last
       assert_equal OPERATOR, ready[:recipients]
       assert_equal "https://outlook.example/draft-1", ready[:draft_link]
+      assert_equal "recBat1", ready[:batch_id]
       # The alert is sent from the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
     end

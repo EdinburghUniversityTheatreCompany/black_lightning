@@ -211,6 +211,9 @@ module Reimbursements
                    graph.send_mails.map { |mail| mail[:to] }.flatten.sort
       assert @expense_a.reload.producer_notified
       assert @expense_b.reload.producer_notified
+      alice_mail = graph.send_mails.find { |mail| mail[:to] == [ "alice@example.com" ] }
+      assert_includes alice_mail[:html],
+                      %(href="https://www.example.com/admin/reimbursements/expenses/#{@expense_a.record_id}">#11</a>)
       assert_equal 2, result.receipts_uploaded, "one receipt per expense; the xlsx isn't counted here"
     end
 

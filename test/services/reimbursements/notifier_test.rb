@@ -19,7 +19,7 @@ module Reimbursements
     test "rejection sends from the mailbox with the payee, subject and rendered body" do
       notifier, graph = build
 
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7,
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
                          amount: 12.5, budget_name: "Props", description: "Fake blood",
                          reason: "Receipt is missing the VAT breakdown.")
 
@@ -35,8 +35,10 @@ module Reimbursements
 
     test "producer_notification lists the payee's expenses and totals" do
       notifier, graph = build
-      line_items = [ { amount: "12.50", budget_name: "Props", description: "Fake blood" },
-                     { amount: "8.00", budget_name: "Props", description: "Brushes" } ]
+      line_items = [ { auto_number: 7, record_id: 42, amount: "12.50", budget_name: "Props",
+                       description: "Fake blood" },
+                     { auto_number: 8, record_id: 43, amount: "8.00", budget_name: "Props",
+                       description: "Brushes" } ]
 
       notifier.producer_notification(to: "alice@example.com", greeting_name: "Alice",
                                      line_items: line_items, bacs_date: Date.new(2026, 5, 13), total: "20.50")
@@ -54,7 +56,8 @@ module Reimbursements
       recipients = [ "ops@bedlamfringe.co.uk" ]
 
       notifier.pending_reminder(recipients: recipients, run_date: "9 July 2026", threshold_days: 3,
-                                rows: [ { auto_number: 7, payee_name: "Pat", amount: "12.50", age_days: 5 } ])
+                                rows: [ { auto_number: 7, record_id: 42, payee_name: "Pat", amount: "12.50",
+                                          age_days: 5 } ])
       notifier.approved_ready(recipients: recipients, total: "40.00", run_date: "9 July 2026",
                               next_run_day: "Tuesday 14 July",
                               expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
@@ -133,7 +136,7 @@ module Reimbursements
     test "the rendered email is a complete HTML document, not a bare fragment" do
       notifier, graph = build
 
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7,
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
                          amount: 12.5, budget_name: "Props", description: "Fake blood",
                          reason: "Missing VAT breakdown.")
 
@@ -153,10 +156,10 @@ module Reimbursements
       centre = cost_centre(name: "Termtime Payments")
       notifier, graph = build(centre: centre)
       recipients = [ "ops@example.com" ]
-      row = { auto_number: 7, payee_name: "Pat", amount: "12.50", age_days: 5,
+      row = { auto_number: 7, record_id: 42, payee_name: "Pat", amount: "12.50", age_days: 5,
               budget_name: "Props", description: "Paint", flags: [] }
 
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, amount: 12.5,
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42, amount: 12.5,
                          budget_name: "Props", description: "Paint", reason: "No receipt.")
       notifier.producer_notification(to: "pat@example.com", greeting_name: "Pat", total: "12.50",
                                      line_items: [ row ], bacs_date: Date.new(2026, 5, 13))
@@ -180,6 +183,61 @@ module Reimbursements
       assert(operator_subjects.all? { |subject| subject.start_with?("[Termtime Payments]") },
              "operator subjects must share one cost-centre-derived prefix: #{operator_subjects.inspect}")
       assert_includes graph.send_mails.last[:html], "Termtime Payments BACS (automated)"
+    end
+
+    PORTAL = "https://www.example.com/admin/reimbursements".freeze
+
+    test "rejection links to the claim, a new claim and the cost centre's contact address" do
+      notifier, graph = build
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
+                         amount: 12.5, budget_name: "Props", description: "Paint", reason: "No receipt.")
+
+      html = graph.send_mails.sole[:html]
+      assert_includes html, %(href="#{PORTAL}/expenses/42")
+      assert_includes html, %(href="#{PORTAL}/expenses/new")
+      assert_includes html, %(href="mailto:#{MAILBOX}")
+      assert_not_includes html, "feel free"
+    end
+
+    test "producer notification numbers and links each claim and names the contact address" do
+      notifier, graph = build
+      notifier.producer_notification(to: "pat@example.com", greeting_name: "Pat", total: "12.50",
+                                     bacs_date: Date.new(2026, 5, 13),
+                                     line_items: [ { auto_number: 7, record_id: 42, amount: "12.50",
+                                                     budget_name: "Props", description: "Paint" } ])
+
+      html = graph.send_mails.sole[:html]
+      assert_includes html, %(href="#{PORTAL}/expenses/42">#7</a>)
+      assert_includes html, %(contact us at <a href="mailto:#{MAILBOX}")
+      assert_not_includes html, "let me know"
+    end
+
+    test "operator emails link to the portal pages they talk about" do
+      notifier, graph = build
+      recipients = [ "ops@bedlamfringe.co.uk" ]
+      row = { auto_number: 7, record_id: 42, payee_name: "Pat", amount: "12.50", age_days: 5,
+              budget_name: "Props", description: "Paint", flags: [] }
+
+      notifier.pending_reminder(recipients: recipients, rows: [ row ], run_date: "9 July 2026",
+                                threshold_days: 3)
+      notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "12.50",
+                              run_date: "9 July 2026")
+      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50", batch_id: 9,
+                           draft_link: nil, run_date: "9 July 2026")
+      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50",
+                           draft_link: nil, run_date: "9 July 2026")
+      notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
+
+      pending, approved, ready, ready_without_id, failure = graph.send_mails.map { |mail| mail[:html] }
+      assert_includes pending, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=to_approve")
+      assert_includes pending, %(href="#{PORTAL}/expense_edits/42/edit">#7</a>)
+      assert_includes approved, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=approved")
+      assert_includes approved, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+      assert_includes ready, %(href="#{PORTAL}/batches/9")
+      assert_includes ready_without_id, %(href="#{PORTAL}/batches")
+      assert_includes failure, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+      assert_includes failure, "forward this email to IT"
+      assert_not_includes failure, "server logs"
     end
 
     test "a Graph send failure propagates so callers can rescue it" do

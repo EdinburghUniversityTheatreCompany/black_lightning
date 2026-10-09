@@ -1,6 +1,7 @@
 <p>Hi <%= @greeting_name %>,</p>
 
-<p>Unfortunately, your expense submission (#<%= @auto_number %>) has been reviewed and
+<p>Unfortunately, your expense submission
+(<%= link_to "##{@auto_number}", admin_reimbursements_expense_url(@record_id) %>) has been reviewed and
 <strong>rejected</strong> for the following reason:</p>
 
 <blockquote style="border-left: 4px solid #cc0000; margin: 1em 0; padding: 0.5em 1em; color: #333;">
@@ -27,10 +28,10 @@
 </table>
 
 <p>If you believe this decision is incorrect, or you have addressed the reason above, reply to
-this email and we can put the claim back in the queue. You can also file a new one, attaching the
-corrected receipt.</p>
+this email and we can put the claim back in the queue. You can also
+<%= link_to "file a new one", new_admin_reimbursements_expense_url %>, attaching the corrected receipt.</p>
 
-<p>If you have any questions, feel free to get in touch.</p>
+<p>If you have any questions, contact us at <%= mail_to @cost_centre.contact_email %>.</p>
 
 <p>Best,<br>
 <%= @cost_centre.finance_sender_name %></p>

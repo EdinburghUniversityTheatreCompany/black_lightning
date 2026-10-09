@@ -373,7 +373,8 @@ module Reimbursements
     # false when it failed (collected into result.errors, never raised).
     def deliver_producer_email(result, email, items, bacs_date)
       line_items = items.map do |expense|
-        { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
+        { auto_number: expense.auto_number, record_id: expense.record_id,
+          amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
           description: expense.description.to_s }
       end
       @notifier.producer_notification(

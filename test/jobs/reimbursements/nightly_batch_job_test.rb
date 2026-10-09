@@ -114,6 +114,14 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
+    test "the pending reminder carries each claim's id for its edit link" do
+      expense = pending_expense(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal expense.record_id, mailer_calls(:pending_reminder).sole.last[:rows].sole[:record_id]
+    end
+
     test "fresh pending submissions do not trigger a reminder" do
       pending_expense(days_ago: 1)
 

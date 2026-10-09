@@ -33,13 +33,13 @@ module Reimbursements
     # operator-alert row hashes below are a different thing: still full names.
 
     # Producer: their expense was rejected on Review reject.
-    def rejection(to:, greeting_name:, auto_number:, amount:, budget_name:, description:, reason:)
+    def rejection(to:, greeting_name:, auto_number:, record_id:, amount:, budget_name:, description:, reason:)
       send_email(
         to: to,
         subject: "Your #{@cost_centre.name} expense ##{auto_number} was not approved",
         template: "reimbursements/emails/rejection",
-        assigns: { greeting_name: greeting_name, auto_number: auto_number, amount: amount,
-                   budget_name: budget_name, description: description, reason: reason }
+        assigns: { greeting_name: greeting_name, auto_number: auto_number, record_id: record_id,
+                   amount: amount, budget_name: budget_name, description: description, reason: reason }
       )
     end
 
@@ -115,7 +115,7 @@ module Reimbursements
     # notification, batch flags) — the draft itself is still valid and ready to
     # send, but the template must not claim those steps all succeeded when
     # +errors+ is non-empty.
-    def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:, errors: [])
+    def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:, errors: [], batch_id: nil)
       count = expenses.size
       send_email(
         to: recipients,
@@ -123,7 +123,7 @@ module Reimbursements
                  "#{'expense'.pluralize(count)} (#{run_date})",
         template: "reimbursements/emails/batch_ready",
         assigns: { expenses: expenses, total: total, draft_link: draft_link, run_date: run_date,
-                   errors: errors }
+                   errors: errors, batch_id: batch_id }
       )
     end
 
@@ -143,13 +143,21 @@ module Reimbursements
     # details come from the sending cost centre without each caller having to
     # remember to pass a name through.
     def send_email(to:, subject:, template:, assigns:)
-      html = ApplicationController.render(
+      html = renderer.render(
         template: template, layout: "reimbursements_mailer",
         assigns: assigns.merge(subject: subject, cost_centre: @cost_centre).stringify_keys
       )
       result = @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html)
       log_send(to: to, subject: subject, template: template)
       result
+    end
+
+    # Outside a request the default renderer answers *_url with
+    # http://example.org, so it takes the mailer's host and protocol instead.
+    def renderer
+      url = Rails.application.config.action_mailer.default_url_options || {}
+      ApplicationController.renderer.new(http_host: [ url[:host], url[:port] ].compact.join(":"),
+                                         https: url[:protocol].to_s.start_with?("https"))
     end
 
     # Record what went to whom, AFTER the send and never before it.
