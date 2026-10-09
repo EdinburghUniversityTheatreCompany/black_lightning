@@ -6,46 +6,6 @@ namespace :active_storage do
     ActiveStorage::Blob.unattached.where("active_storage_blobs.created_at <= ?", 2.days.ago).find_each(&:purge_later)
   end
 
-  desc "Find corrupted image blobs (migration errors, invalid files)"
-  task validate_blobs: :environment do
-    image_content_types = %w[image/png image/jpeg image/gif image/webp]
-
-    puts "Checking image blobs..."
-
-    # Suspiciously small "images" are likely JSON/text error bodies
-    tiny_blobs = ActiveStorage::Blob
-      .where(content_type: image_content_types)
-      .where("byte_size < 500")
-      .pluck(:id, :byte_size, :filename)
-
-    puts "\n=== Suspiciously small blobs (<500 bytes) ==="
-    tiny_blobs.each do |id, size, filename|
-      puts "  ID: #{id}, Size: #{size} bytes, Filename: #{filename}"
-    end
-    puts "Total: #{tiny_blobs.count}"
-
-    corrupted = []
-    ActiveStorage::Blob.where(content_type: image_content_types).find_each do |blob|
-      print "."
-      blob.open do |file|
-        Vips::Image.new_from_file(file.path)
-      end
-    rescue Vips::Error => e
-      corrupted << { id: blob.id, byte_size: blob.byte_size, filename: blob.filename.to_s, error: e.message }
-      print "X"
-    rescue => e
-      corrupted << { id: blob.id, byte_size: blob.byte_size, filename: blob.filename.to_s, error: "#{e.class}: #{e.message}" }
-      print "!"
-    end
-
-    puts "\n\n=== Blobs that fail vips processing ==="
-    corrupted.each do |blob|
-      puts "  ID: #{blob[:id]}, Size: #{blob[:byte_size]} bytes, Filename: #{blob[:filename]}"
-      puts "    Error: #{blob[:error]}"
-    end
-    puts "Total: #{corrupted.count}"
-  end
-
   desc "Restore corrupted blobs from original Paperclip folder"
   task :restore_from_paperclip, [ :paperclip_path ] => :environment do |t, args|
     paperclip_root = args[:paperclip_path]
