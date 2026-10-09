@@ -525,6 +525,37 @@ module Admin
       assert_redirected_to admin_reimbursements_actuals_path(period: "04", include_offsets: "1")
     end
 
+    test "unoffset keeps the selected cost centre" do
+      accrual, = create_offsetting_pair
+      termtime = create_second_reimbursements_cost_centre
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id, cost_centre: termtime.key }
+
+      assert_redirected_to admin_reimbursements_actuals_path(cost_centre: termtime.key)
+    end
+
+    test "a refused conversion returns to the selected cost centre" do
+      accrual, = create_offsetting_pair
+      termtime = create_second_reimbursements_cost_centre
+      sign_in @user
+
+      get :new_expense, params: { id: accrual.record_id, cost_centre: termtime.key }
+
+      assert_redirected_to admin_reimbursements_actuals_path(cost_centre: termtime.key)
+    end
+
+    test "the row actions and the convert page carry the selected cost centre" do
+      termtime = create_second_reimbursements_cost_centre
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id, cost_centre: termtime.key }
+
+      assert_select "form[action=?]",
+                    create_expense_admin_reimbursements_actual_path(@unlinked.record_id, cost_centre: termtime.key)
+      assert_select "a[href=?]", admin_reimbursements_actuals_path(cost_centre: termtime.key), minimum: 1
+    end
+
     test "unoffset refuses a row that is not marked offsetting" do
       sign_in @user
 

@@ -93,6 +93,12 @@ module Admin
         assert_equal "termtime", enqueued_jobs.last["arguments"].first["cost_centre_key"]
       end
 
+      test "the build returns to History for the same centre" do
+        post :create, params: { cost_centre: "termtime", bacs_date: Date.current.iso8601 }
+
+        assert_redirected_to admin_reimbursements_batches_path(cost_centre: "termtime")
+      end
+
       # The controller's preview is only a preview: BuildBatchJob re-selects the
       # Approved set at run time (that re-selection is what makes a serialised
       # double-click a clean no-op), so the narrowing has to be there too.

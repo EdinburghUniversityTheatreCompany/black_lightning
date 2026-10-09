@@ -84,7 +84,7 @@ module Admin
           operator_emails: Array(current_user.try(:email)).compact_blank,
           attempt_id: attempt.id
         )
-        redirect_to admin_reimbursements_batches_path,
+        redirect_to history_path,
                     notice: "Batch is building for #{@cost_centre.name}. Its EUSA draft link will appear " \
                             "here and be emailed to you when ready. Don't rebuild it in the meantime."
       end
@@ -106,7 +106,7 @@ module Admin
         store.delete_batch!(batch.record_id)
 
         reverted = "Reverted #{linked.size} #{'expense'.pluralize(linked.size)} to Approved and removed the batch."
-        redirect_to admin_reimbursements_batches_path, **draft_cleanup_flash(batch, reverted, mailbox)
+        redirect_to history_path, **draft_cleanup_flash(batch, reverted, mailbox)
       end
 
       # Ask Graph whether this batch's EUSA draft is still sitting unsent, and
@@ -148,7 +148,11 @@ module Admin
       # Detail is one batch's page, and a probe must not move the operator off
       # the page they are reading.
       def redirect_to_history(**flash_args)
-        redirect_back fallback_location: admin_reimbursements_batches_path, **flash_args
+        redirect_back fallback_location: history_path, **flash_args
+      end
+
+      def history_path
+        admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key)
       end
 
       def assign_new_form
@@ -223,7 +227,7 @@ module Admin
       end
 
       def blocked_by_unconfirmed_draft
-        redirect_to admin_reimbursements_batches_path,
+        redirect_to history_path,
                     alert: "Can't reopen: the EUSA draft for this batch could not be confirmed as " \
                            "still unsent in Outlook (it may already have been sent, or Graph couldn't " \
                            "be reached). If it was genuinely sent, do not reopen; repair reconciliation " \
@@ -242,7 +246,7 @@ module Admin
 
         return render_cost_centre_chooser if selectable_cost_centres.any?
 
-        redirect_to admin_reimbursements_batches_path,
+        redirect_to history_path,
                     alert: "No cost centre configured. Seed one before building a batch."
       end
 
@@ -322,7 +326,7 @@ module Admin
 
       def blocked_by_paid(paid)
         numbers = paid.map { |expense| "##{expense.auto_number}" }.join(", ")
-        redirect_to admin_reimbursements_batches_path,
+        redirect_to history_path,
                     alert: "Can't reopen: #{paid.size} #{'expense'.pluralize(paid.size)} already Paid " \
                            "(#{numbers}). Reconciled payments must not be reverted."
       end

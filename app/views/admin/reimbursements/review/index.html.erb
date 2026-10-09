@@ -27,11 +27,11 @@
   <%# Awaiting owner sits first because it is the earlier step in the claim's
       life, not because it is the finance team's queue — "To approve" is, and it
       is the tab every link into this page lands on. %>
-  <%= link_to "Awaiting owner (#{@awaiting_owner.size})", admin_reimbursements_review_path(tab: "awaiting_owner"),
+  <%= link_to "Awaiting owner (#{@awaiting_owner.size})", admin_reimbursements_review_path(tab: "awaiting_owner", cost_centre: selected_cost_centre&.key),
               "aria-current": (@tab == "awaiting_owner" ? "page" : nil), class: tab_class.call(@tab == "awaiting_owner") %>
-  <%= link_to "To approve (#{@to_approve.size})", admin_reimbursements_review_path(tab: "to_approve"),
+  <%= link_to "To approve (#{@to_approve.size})", admin_reimbursements_review_path(tab: "to_approve", cost_centre: selected_cost_centre&.key),
               "aria-current": (@tab == "to_approve" ? "page" : nil), class: tab_class.call(@tab == "to_approve") %>
-  <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
+  <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved", cost_centre: selected_cost_centre&.key),
               "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
   <span class="ml-auto self-center pb-1">
     <%# ?tab= already rides along in the query parameters, so the download
@@ -100,7 +100,7 @@
           Select all
         </label>
         <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
-        <%= form_with url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab),
+        <%= form_with url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab, cost_centre: selected_cost_centre&.key),
                       method: :patch, id: "bulk-review-form",
                       class: "flex flex-wrap items-center gap-2" do %>
           <%= text_field_tag :override_note, nil,
@@ -127,7 +127,7 @@
       Nothing to approve.
       <% if @awaiting_owner.any? %>
         <%= link_to pluralize(@awaiting_owner.size, "claim"),
-                    admin_reimbursements_review_path(tab: "awaiting_owner"),
+                    admin_reimbursements_review_path(tab: "awaiting_owner", cost_centre: selected_cost_centre&.key),
                     class: "text-primary underline" %>
         <%= @awaiting_owner.one? ? "is" : "are" %> still with a budget owner.
       <% end %>
@@ -148,7 +148,7 @@
           Select all
         </label>
         <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
-        <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab), method: :patch,
+        <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab, cost_centre: selected_cost_centre&.key), method: :patch,
                       id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
           <%# Deliberately NOT required, unlike the per-card reject box: this one
               box is shared with "Approve selected", which needs no reason, and a
@@ -159,11 +159,11 @@
                              data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
                              class: input_classes(width: nil) %>
           <%= submit_tag "Approve selected",
-                         formaction: admin_reimbursements_bulk_approve_review_path(tab: @tab),
+                         formaction: admin_reimbursements_bulk_approve_review_path(tab: @tab, cost_centre: selected_cost_centre&.key),
                          data: { bulk_review_target: "approveButton" }, disabled: true,
                          class: btn_classes(:success, :sm) %>
           <%= submit_tag "Reject selected",
-                         formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab),
+                         formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab, cost_centre: selected_cost_centre&.key),
                          data: { bulk_review_target: "rejectButton", disable_with: false,
                                  turbo_confirm: "Reject the selected expenses and email each producer?" },
                          disabled: true, class: btn_classes(:danger, :sm) %>

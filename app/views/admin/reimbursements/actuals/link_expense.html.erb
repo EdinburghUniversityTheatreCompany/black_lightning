@@ -1,4 +1,4 @@
-<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+<%= render "shared/back_link", text: "All actuals", path: actuals_path_with_filters %>
 
 <p class="mb-3 text-gray-600">
   Attach this EUSA row to a claim the automatic matcher missed. The matcher only links a row it is
@@ -23,7 +23,7 @@
       No claim here can be settled by this row. Paid claims are settled already, and drafts and
       rejected claims are never offered. So this row is income, someone else's, or a cost nobody
       claimed - in which case
-      <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id) %>
+      <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id, actual_filters) %>
       instead.
     </p>
   <% end %>
@@ -31,7 +31,7 @@
   <%# form_with wraps the card, never the other way round: the footer is a
       component SLOT, so a form opened inside the card renders its submit button
       outside the <form> and the button silently does nothing. %>
-  <%= form_with url: confirm_link_admin_reimbursements_actual_path(@actual.record_id),
+  <%= form_with url: confirm_link_admin_reimbursements_actual_path(@actual.record_id, actual_filters),
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which claim did this pay?") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
@@ -76,7 +76,7 @@
       <% card.with_footer do %>
         <div class="form-actions flex flex-wrap items-center gap-2">
           <%= f.submit "Link and mark Paid", class: btn_classes(:primary) %>
-          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+          <%= link_to "Cancel", actuals_path_with_filters, class: btn_classes(:secondary) %>
         </div>
       <% end %>
     <% end %>

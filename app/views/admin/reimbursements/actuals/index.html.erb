@@ -12,13 +12,15 @@
   # button comes back to the list the operator was reading rather than to an
   # unfiltered first page. Built once here, since four controls need it.
   filters = { period: @period.presence, search: @search.presence, state: @state,
-              include_offsets: (@include_offsets ? "1" : nil) }.compact
+              include_offsets: (@include_offsets ? "1" : nil),
+              cost_centre: selected_cost_centre&.key }.compact
   needs_attention = @state == ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
   all_state = ::Admin::Reimbursements::ActualsController::STATE_ALL
 %>
 
 <%= render CardComponent.new(title: "Filter") do %>
   <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
+    <%= hidden_field_tag :cost_centre, selected_cost_centre.key if selected_cost_centre %>
     <%# The state rides in the URL like every other filter, so a "what is left
         to do" view is a link somebody can bookmark or send. %>
     <div>
@@ -51,7 +53,7 @@
     <% end %>
     <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
     <% if @period.present? || @search.present? || @include_offsets || !needs_attention %>
-      <%= link_to "Clear", admin_reimbursements_actuals_path, class: "text-sm text-gray-600 underline" %>
+      <%= link_to "Clear", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key), class: "text-sm text-gray-600 underline" %>
     <% end %>
   <% end %>
 <% end %>
@@ -163,17 +165,17 @@
               # and nobody claimed (convert it).
               safe_join([
                 link_to("Link to claim",
-                        link_expense_admin_reimbursements_actual_path(actual.record_id),
+                        link_expense_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
                         class: btn_classes(:secondary, :sm)),
                 link_to("Create expense",
-                        new_expense_admin_reimbursements_actual_path(actual.record_id),
+                        new_expense_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
                         class: btn_classes(:secondary, :sm))
               ], " ")
             elsif actual.apportionable?
               # A credit covering several shows: split it rather than letting
               # the whole payout land on one income line.
               link_to("Split across budgets",
-                      apportion_admin_reimbursements_actual_path(actual.record_id),
+                      apportion_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
                       class: btn_classes(:secondary, :sm))
             elsif actual.apportioned?
               # The way back out, finance-gated as "Not offsetting" is. The row
@@ -215,7 +217,7 @@
            # at all.
            (if actual.pairable?
               link_to("Mark as offsetting",
-                      offset_pair_admin_reimbursements_actual_path(actual.record_id),
+                      offset_pair_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
                       class: btn_classes(:secondary, :sm))
             end),
            (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?

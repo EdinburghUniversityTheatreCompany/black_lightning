@@ -125,19 +125,19 @@ module Admin
                                         payment_confirmed_date: @actual.date,
                                         submitted_at: @actual.date&.beginning_of_day)
         )
-        redirect_to admin_reimbursements_actuals_path,
+        redirect_to actuals_path_with_filters,
                     notice: "Expense ##{expense.auto_number} created from this EUSA row and " \
                             "recorded as already paid."
       rescue ::Reimbursements::DatabaseStore::NotConvertibleError
         # The row was converted between this request's check and its write (a
         # double-submitted form, or another operator).
-        redirect_to admin_reimbursements_actuals_path,
+        redirect_to actuals_path_with_filters,
                     alert: "That row had already been converted to an expense, so nothing was " \
                            "created a second time."
       rescue ::Reimbursements::DatabaseStore::BudgetGoneError
         # And the same race on the budget link: the whole transaction rolled
         # back, so the row is still convertible against another budget.
-        redirect_to admin_reimbursements_actuals_path,
+        redirect_to actuals_path_with_filters,
                     alert: "That budget was deleted while this page was open, so nothing was " \
                            "created. Pick another budget and try again."
       end
@@ -351,13 +351,18 @@ module Admin
         @include_offsets ? actuals : actuals.reject(&:offset?)
       end
 
-      # The index's own filters, so undoing an offset doesn't throw the operator
-      # back to an unfiltered first page.
-      def actuals_path_with_filters
-        admin_reimbursements_actuals_path(
-          params.permit(:period, :include_offsets, :state, :search).to_h.compact_blank
-        )
+      # The index's own filters and cost centre, so an action taken from a
+      # filtered list (or a page reached from one) comes back to that list.
+      def actual_filters
+        params.permit(:period, :include_offsets, :state, :search).to_h
+              .merge(cost_centre: selected_cost_centre&.key).compact_blank
       end
+      helper_method :actual_filters
+
+      def actuals_path_with_filters
+        admin_reimbursements_actuals_path(actual_filters)
+      end
+      helper_method :actuals_path_with_filters
 
       # A row that can be half of a hand-made offsetting pair. Anything else is
       # bounced with the reason, the shape #set_convertible_actual uses.
@@ -383,14 +388,14 @@ module Admin
         @actual = find_or_404(:find_actual)
         return if @actual.convertible_to_expense?
 
-        redirect_to admin_reimbursements_actuals_path, alert: not_convertible_reason(@actual)
+        redirect_to actuals_path_with_filters, alert: not_convertible_reason(@actual)
       end
 
       def set_apportionable_actual
         @actual = find_or_404(:find_actual)
         return if @actual.apportionable?
 
-        redirect_to admin_reimbursements_actuals_path, alert: not_apportionable_reason(@actual)
+        redirect_to actuals_path_with_filters, alert: not_apportionable_reason(@actual)
       end
 
       def not_apportionable_reason(actual)

@@ -1,4 +1,4 @@
-<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+<%= render "shared/back_link", text: "All actuals", path: actuals_path_with_filters %>
 
 <p class="mb-3 text-gray-600">
   One credit can only sit on one budget, so a payout covering several shows (a Stripe
@@ -31,7 +31,7 @@
       component SLOT, so a form opened inside the card renders its submit
       outside the <form> and the button silently does nothing. A request test
       cannot see that; actuals_apportion_js_test clicks the real button. %>
-  <%= form_with url: create_apportionment_admin_reimbursements_actual_path(@actual.record_id),
+  <%= form_with url: create_apportionment_admin_reimbursements_actual_path(@actual.record_id, actual_filters),
                 method: :post,
                 data: { controller: "apportion-total",
                         apportion_total_target_value: @actual.apportionable_total.to_s,
@@ -85,7 +85,7 @@
                        "disabled:cursor-not-allowed disabled:hover:bg-white " \
                        "disabled:hover:text-primary",
                 data: { apportion_total_target: "submit" } %>
-          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+          <%= link_to "Cancel", actuals_path_with_filters, class: btn_classes(:secondary) %>
         </div>
         <p class="mt-2 mb-0 text-sm text-gray-500">
           Nobody is emailed. The row stays on the ledger and the split can be removed again from

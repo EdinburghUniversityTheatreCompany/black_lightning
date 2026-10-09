@@ -1,4 +1,4 @@
-<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+<%= render "shared/back_link", text: "All actuals", path: actuals_path_with_filters %>
 
 <p class="mb-3 text-gray-600">
   Record a pair the reconcile wizard did not propose, or re-pair two rows after
@@ -37,7 +37,7 @@
   <%# form_with wraps the card, never the other way round: the footer is a
       component SLOT, so a form opened inside the card renders its submit
       outside the <form> and the button silently does nothing. %>
-  <%= form_with url: confirm_offset_admin_reimbursements_actual_path(@actual.record_id),
+  <%= form_with url: confirm_offset_admin_reimbursements_actual_path(@actual.record_id, actual_filters),
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
@@ -76,7 +76,7 @@
       <% card.with_footer do %>
         <div class="form-actions flex flex-wrap items-center gap-2">
           <%= f.submit "Mark these two as offsetting", class: btn_classes(:primary) %>
-          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+          <%= link_to "Cancel", actuals_path_with_filters, class: btn_classes(:secondary) %>
         </div>
         <p class="mt-2 mb-0 text-sm text-gray-500">
           Both rows stay on the ledger and stop counting as spend or income. "Not offsetting" on

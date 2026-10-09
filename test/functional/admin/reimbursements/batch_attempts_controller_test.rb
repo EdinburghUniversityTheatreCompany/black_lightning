@@ -30,6 +30,15 @@ module Admin
         assert_not_includes ::Reimbursements::BatchAttempt.needing_attention, attempt
       end
 
+      test "dismissing comes back to the centre History was showing" do
+        termtime = create_second_reimbursements_cost_centre
+        attempt = build_attempt(status: "failed", error_messages: "boom")
+
+        post :dismiss, params: { id: attempt.id, cost_centre: termtime.key }
+
+        assert_redirected_to admin_reimbursements_batches_path(cost_centre: termtime.key)
+      end
+
       test "records who dismissed it" do
         attempt = build_attempt(status: "failed", error_messages: "boom")
 

@@ -1504,6 +1504,44 @@ module Admin
         assert_equal "Original", expense.description, "no save happened without save_changes"
       end
 
+      # --- The chosen cost centre survives every click --------------------
+
+      test "the tab links keep the selected cost centre" do
+        termtime = create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        %w[awaiting_owner to_approve approved].each do |tab|
+          assert_select "a[href=?]", admin_reimbursements_review_path(tab: tab, cost_centre: termtime.key)
+        end
+        assert_select "form[action=?]", admin_reimbursements_approve_review_path(
+          expense.record_id, tab: "to_approve", cost_centre: termtime.key
+        )
+      end
+
+      test "an approval comes back to the same cost centre" do
+        termtime = create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id, tab: "to_approve", cost_centre: termtime.key }
+
+        query = Rack::Utils.parse_nested_query(URI.parse(@response.redirect_url).query)
+        assert_equal termtime.key, query["cost_centre"]
+        assert_equal "to_approve", query["tab"]
+      end
+
+      test "an approval with no centre selected still comes back to every centre" do
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_redirected_to_review
+      end
+
       # --- Unsaved-edits dialog wiring (rendered markup) -------------------
 
       test "the review card wires the unsaved-edits guard on its decision controls" do

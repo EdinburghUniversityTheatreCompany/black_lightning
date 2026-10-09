@@ -8,12 +8,13 @@ module Admin
         attempt = ::Reimbursements::BatchAttempt.find(params[:id])
 
         unless attempt.dismissible?
-          return redirect_to(admin_reimbursements_batches_path,
+          return redirect_to(admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
                              alert: "That build is still running. Wait for it to finish.")
         end
 
         attempt.dismiss!(email: current_user&.email)
-        redirect_to admin_reimbursements_batches_path, notice: "Alert dismissed."
+        redirect_to admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
+                    notice: "Alert dismissed."
       end
     end
   end

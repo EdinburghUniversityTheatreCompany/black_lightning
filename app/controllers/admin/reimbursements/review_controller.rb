@@ -560,8 +560,8 @@ module Admin
         # visit lands at the top of the page (measured: main.scrollTop 0 after
         # approving the fifth card). The fragment is kept because a no-JS
         # navigation honours it; scroll_to_controller reads `focus`.
-        redirect_to admin_reimbursements_review_path(tab: params[:tab], focus: target,
-                                                     anchor: target),
+        redirect_to admin_reimbursements_review_path(tab: params[:tab], cost_centre: selected_cost_centre&.key,
+                                                     focus: target, anchor: target),
                     **flash
       end
     end
