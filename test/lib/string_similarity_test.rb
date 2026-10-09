@@ -72,9 +72,11 @@ class StringSimilarityTest < ActiveSupport::TestCase
     end
   end
 
-  test "fuzzy_name_match respects custom threshold" do
-    assert_not StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.95)
-    assert StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.5)
+  test "fuzzy_name_match draws the line at NAME_MATCH_THRESHOLD" do
+    assert_in_delta StringSimilarity::NAME_MATCH_THRESHOLD, StringSimilarity.match_confidence("Brown", "Braun")
+    assert StringSimilarity.fuzzy_name_match?("Brown", "Braun")
+    assert_operator StringSimilarity.match_confidence("Charles", "Charity"), :<, StringSimilarity::NAME_MATCH_THRESHOLD
+    assert_not StringSimilarity.fuzzy_name_match?("Charles", "Charity")
   end
 
   test "match_confidence returns 1.0 for exact normalized match" do

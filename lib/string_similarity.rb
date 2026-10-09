@@ -1,5 +1,7 @@
 # Name similarity for fuzzy duplicate matching.
 module StringSimilarity
+  NAME_MATCH_THRESHOLD = 0.6
+
   module_function
 
   # 0.0 (completely different) to 1.0 (identical).
@@ -54,7 +56,5 @@ module StringSimilarity
     levenshtein_similarity(n1, n2)
   end
 
-  def fuzzy_name_match?(name1, name2, threshold: 0.6)
-    match_confidence(name1, name2) >= threshold
-  end
+  def fuzzy_name_match?(name1, name2) = match_confidence(name1, name2) >= NAME_MATCH_THRESHOLD
 end
