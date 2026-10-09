@@ -40,15 +40,8 @@
     <p class="py-4 text-center text-gray-600">No budgets found.</p>
   <% end %>
 <% else %>
-  <% expected_header = content_tag(:span, "Expected outturn",
-       title: "The greater of the current projection and what's already been spent or committed, " \
-              "so the number never drops below reality. Blank on income lines, where the same " \
-              "figure would read as best-case income instead.") %>
-  <% projected_header = content_tag(:span, "Projected",
-       title: "The line's current plan: the latest logged forecast, falling back to the " \
-              "initial budget, which is marked as such.") %>
-  <% headers = [ "Budget", "Type", "Visible", "Initial", projected_header, "Committed",
-                 "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
+  <% headers = [ "Budget", "Type", "Visible", "Initial", "Projected", "Committed",
+                 "Pipeline", "Paid (portal)", "EUSA actual", "Expected outturn",
                  "Remaining", "Variance", "Owners", "" ] %>
   <%
     # Grouped off the scoped budgets, so an area shows only its in-scope lines.

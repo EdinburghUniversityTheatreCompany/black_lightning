@@ -193,6 +193,16 @@ module Admin
         assert_equal %w[Income Hidden], rows.find { |r| r[0] == "Ticket income" }.values_at(2, 3)
       end
 
+      # The glossary block above the table is the one definition; a title= note drifts from it.
+      test "index column headings carry no tooltip of their own" do
+        sign_in @user
+
+        get :index
+
+        assert_select "thead [title]", count: 0
+        assert_select "details dt", text: "Expected outturn"
+      end
+
       test "index offers a Download CSV link" do
         sign_in @user
 
