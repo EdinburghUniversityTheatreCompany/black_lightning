@@ -57,9 +57,9 @@ module Reimbursements
       end
 
       authorisation = workbook[AUTHORISATION_SHEET_NAME]
-      write_template_cell(authorisation, CENTRE_NAME_CELL, centre_name)
-      write_template_cell(authorisation, AUTHORISER_NAME_CELL, authoriser_name)
-      write_template_cell(authorisation, AUTHORISER_DESIGNATION_CELL, authoriser_designation)
+      write(authorisation, *CENTRE_NAME_CELL, CellSanitizer.sanitize(centre_name))
+      write(authorisation, *AUTHORISER_NAME_CELL, CellSanitizer.sanitize(authoriser_name))
+      write(authorisation, *AUTHORISER_DESIGNATION_CELL, CellSanitizer.sanitize(authoriser_designation))
 
       workbook.stream.string
     end
@@ -77,10 +77,6 @@ module Reimbursements
       write(sheet, row_index, COL_COST_CENTRE, row.cost_centre)
       write(sheet, row_index, COL_PAYMENT_REFERENCE, CellSanitizer.sanitize(row.payment_reference))
       write(sheet, row_index, COL_DESCRIPTION, CellSanitizer.sanitize(row.description))
-    end
-
-    def write_template_cell(sheet, (row, column), value)
-      write(sheet, row, column, CellSanitizer.sanitize(value.to_s))
     end
   end
 end
