@@ -51,17 +51,6 @@ module ReimbursementsHelper
     value.strftime("%Y-%m-%d")
   end
 
-  # "Waiting 6 days." for a claim on the owner gate. Empty, not "-" or "Waiting 0 days",
-  # with no timestamp or submitted today: no delay to read, so nothing to print.
-  def reimbursements_waiting_since(submitted_at)
-    return "" if submitted_at.blank?
-
-    days = (Date.current - submitted_at.to_date).to_i
-    return "" unless days.positive?
-
-    "Waiting #{pluralize(days, 'day')}."
-  end
-
   # The one money format: "£12.50", or "-" for nil (never "£0.00"). Accepts a numeric or
   # a numeric string.
   def reimbursements_money(amount)

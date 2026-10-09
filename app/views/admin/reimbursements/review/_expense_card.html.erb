@@ -100,7 +100,7 @@
         <p class="text-warning">
           <span class="font-medium">Awaiting a budget owner's endorsement</span>
           (blocks approval until signed off or overridden).
-          <%= reimbursements_waiting_since(expense.submitted_at) %>
+          <%= reimbursements_waiting_for(expense.submitted_at).upcase_first %>.
           <% if owners %>
             <% owner_links = owners.map do |owner|
                  label = owner.name.presence || owner.email.presence || "an owner"

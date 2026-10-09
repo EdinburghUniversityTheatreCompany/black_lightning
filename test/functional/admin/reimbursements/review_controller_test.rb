@@ -780,6 +780,15 @@ module Admin
         assert_match(/no address is never emailed/, response.body)
       end
 
+      test "the awaiting-owner card says a claim was submitted today" do
+        gated_expense.update!(submitted_at: Time.current)
+        sign_in @user
+
+        get :index, params: { tab: "awaiting_owner" }
+
+        assert_match(/Submitted today\./, response.body)
+      end
+
       def international_expense(**attrs)
         pending_expense(
           payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
