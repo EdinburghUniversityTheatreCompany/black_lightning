@@ -86,11 +86,12 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
     assert_equal [ [ "1", :processed ] ], fake.processed
   end
 
-  test "with more than one sensor the mail stays unread and the ambiguity is reported once a day" do
+  test "with more than one active sensor the mail stays unread and the ambiguity is reported once a day" do
     # Govee's email names no device, so two sensors leave nothing to resolve on.
     Rails.cache.delete(Climate::MailboxPollJob::AMBIGUOUS_ALERT_KEY)
     north = create_climate_sensor(display_name: "Crypt north")
     south = create_climate_sensor(display_name: "Crypt south")
+    create_climate_sensor(display_name: "Crypt north (replaced)", active: false)
     fake = nil
 
     notices = capture_honeybadger_notices do
@@ -101,9 +102,40 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
     end
 
     assert_equal 1, notices.size
+    assert_kind_of Climate::MailboxPollJob::AmbiguousSensorError, notices.first.first
+    assert_match(/\A2 active Govee sensors/, notices.first.first.message)
     assert_empty fake.processed
     assert_equal 0, north.readings.count
     assert_equal 0, south.readings.count
+  end
+
+  test "a deactivated sensor does not make the export ambiguous" do
+    # Deactivating is how a replaced unit is retired: deleting it deletes its readings.
+    replaced = create_climate_sensor(display_name: "Crypt north (replaced)", active: false)
+    live = create_climate_sensor(display_name: "Crypt north")
+    fake = use_mailbox
+
+    notices = capture_honeybadger_notices { Climate::MailboxPollJob.perform_now }
+
+    assert_empty notices
+    assert_equal 2, live.readings.count
+    assert_equal 0, replaced.readings.count
+    assert_equal [ [ "1", :processed ] ], fake.processed
+  end
+
+  test "with only inactive sensors the mail stays unread and the alert says why" do
+    Rails.cache.delete(Climate::MailboxPollJob::NO_ACTIVE_SENSOR_ALERT_KEY)
+    replaced = create_climate_sensor(active: false)
+    fake = use_mailbox
+
+    notices = capture_honeybadger_notices { Climate::MailboxPollJob.perform_now }
+
+    assert_equal 1, notices.size
+    # Its own fault, or a still-open ambiguity fault would swallow the notification.
+    assert_kind_of Climate::MailboxPollJob::NoActiveSensorError, notices.first.first
+    assert_match(/only inactive Govee sensors/i, notices.first.first.message)
+    assert_empty fake.processed
+    assert_equal 0, replaced.readings.count
   end
 
   # What Govee's scheduled export sends, with no attachment, on a day the

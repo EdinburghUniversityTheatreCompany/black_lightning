@@ -3,17 +3,21 @@ module Climate
   # Ingests Govee CSV exports emailed to the shared climate mailbox, through the
   # same CsvImport + ReadingIngest path as the upload screen.
   #
-  # Assumes ONE Govee sensor (of any placement, active or not), because nothing
-  # in Govee's export email identifies the device. See #sensor_for to extend it.
+  # Assumes ONE active Govee sensor (of any placement), because nothing in
+  # Govee's export email identifies the device. See #sensor_for to extend it.
   class MailboxPollJob < ::ApplicationJob
     include ::ErrorReporting
 
     queue_as :default
     limits_concurrency key: "climate_mailbox_poll", duration: 10.minutes
 
-    ConfigurationError = Class.new(StandardError)
+    # One class per state, so Honeybadger files each as its own fault: by default a
+    # notice joining a fault already open (the other state's) notifies nobody.
+    AmbiguousSensorError = Class.new(StandardError)
+    NoActiveSensorError = Class.new(StandardError)
 
     AMBIGUOUS_ALERT_KEY = "climate_mailbox_ambiguous_sensor".freeze
+    NO_ACTIVE_SENSOR_ALERT_KEY = "climate_mailbox_no_active_sensor".freeze
     CSV_EXTENSIONS = %w[.csv .txt].freeze
     CSV_CONTENT_TYPES = %w[text/csv application/csv text/plain].freeze
 
@@ -59,7 +63,7 @@ module Climate
       return skip(message, "no CSV attachment") if attachments.empty?
 
       sensor = sensor_for
-      return skip(message, "could not tell which sensor it is from") if sensor.nil?
+      return skip(message, "it needs exactly one active Govee sensor") if sensor.nil?
 
       # Collected, not summed inline: #import returns nil for a skipped
       # attachment, and summing nil would raise a second, misleading failure.
@@ -104,30 +108,36 @@ module Climate
 
     # Govee's export email identifies no device, so with several sensors there is
     # nothing to resolve on, and one wall's readings filed under another is
-    # silent, plausible nonsense.
+    # silent, plausible nonsense. A deactivated (replaced) unit is no candidate.
     #
     # THE EXTENSION POINT: give each sensor its own mailbox (or plus address) and
     # resolve on the recipient (pass the message in), or match a per-sensor string
     # if Govee ever names the device.
     def sensor_for
-      candidates = Sensor.govee.to_a
+      candidates = Sensor.active.govee.to_a
       return candidates.first if candidates.one?
 
-      warn_ambiguous if candidates.many?
+      if candidates.many?
+        alert_once(AMBIGUOUS_ALERT_KEY, AmbiguousSensorError.new(
+          "#{candidates.size} active Govee sensors exist, and a Govee export names none of them, " \
+          "so emailed readings cannot be attributed. Import them by hand, or see " \
+          "Climate::MailboxPollJob#sensor_for."
+        ))
+      elsif Sensor.govee.exists?
+        alert_once(NO_ACTIVE_SENSOR_ALERT_KEY, NoActiveSensorError.new(
+          "There are only inactive Govee sensors, so emailed readings are left unread. " \
+          "Reactivate one or add a new one, and the next poll imports them."
+        ))
+      end
       nil
     end
 
     # Deduped to once a day: a configuration state, not an incident. Without the
     # alert, unattributable mail piles up unread unnoticed.
-    def warn_ambiguous
-      return unless Rails.cache.write(AMBIGUOUS_ALERT_KEY, true, expires_in: 1.day, unless_exist: true)
+    def alert_once(key, error)
+      return unless Rails.cache.write(key, true, expires_in: 1.day, unless_exist: true)
 
-      error = ConfigurationError.new(
-        "#{Sensor.govee.count} climate sensors exist, and a Govee export names none of them, " \
-        "so emailed readings cannot be attributed. Import them by hand, or see " \
-        "Climate::MailboxPollJob#sensor_for."
-      )
-      log_and_notify("[climate] emailed export cannot be attributed", error,
+      log_and_notify("[climate] emailed export cannot be imported: #{error.message}", error,
                      context: { source: "climate_mailbox_poll" })
     end
   end
