@@ -33,15 +33,20 @@ class OpportunityRole < ApplicationRecord
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true
 
-  # Virtual field so either form can submit, and create, a department by name: resolved to a
-  # Department (built if new, saved by belongs_to autosave) before validation.
-  attr_writer :department_name
-
   before_validation :assign_department_from_name
 
   normalizes :position, with: ->(position) { position&.strip }
 
   default_scope { order(:ordering) }
+
+  # Virtual field so either form can submit, and create, a department by name: resolved to a
+  # Department (built if new, saved by belongs_to autosave) before validation. A row whose only
+  # edit is its department must count as changed, or the opportunity's nested save skips it and
+  # the pick is lost.
+  def department_name=(name)
+    @department_name = name
+    department_id_will_change! unless name.to_s.strip.casecmp?(department&.name.to_s)
+  end
 
   # Falls back to the department so the form pre-fills.
   def department_name

@@ -29,6 +29,16 @@ class OpportunityRoleTest < ActiveSupport::TestCase
     assert_equal "Rigging", role.department.name
   end
 
+  test "a saved role whose only edit is its department, set or cleared, is saved through the opportunity" do
+    role = opportunity_roles(:internal_stage_manager)
+
+    role.opportunity.update!(roles_attributes: { "0" => { id: role.id, position: role.position, department_name: "Sound" } })
+    assert_equal departments(:sound), role.reload.department
+
+    role.opportunity.update!(roles_attributes: { "0" => { id: role.id, position: role.position, department_name: "" } })
+    assert_nil role.reload.department
+  end
+
   test "blank department_name clears the department" do
     role = opportunity_roles(:internal_stage_manager)
     role.department_name = ""
