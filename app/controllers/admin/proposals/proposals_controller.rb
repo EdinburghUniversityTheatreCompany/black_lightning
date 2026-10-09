@@ -122,7 +122,7 @@ class Admin::Proposals::ProposalsController < AdminController
     begin
       @proposal.convert_to_show
 
-      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is queued to be converted. Please remember to check the automatically entered show info, enter the rest of the show info, and to publicise the show.")
+      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been converted. Please remember to check the automatically entered show info, enter the rest of the show info, and to publicise the show.")
     rescue ArgumentError => e
       helpers.append_to_flash(:error, e.message)
     ensure

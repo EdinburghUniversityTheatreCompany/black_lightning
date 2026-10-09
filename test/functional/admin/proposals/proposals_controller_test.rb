@@ -288,7 +288,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     assert Show.where(name: proposal.show_title).any?
     assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_includes flash[:success].first, "is queued to be converted"
+    assert_includes flash[:success].first, "has been converted."
   end
 
   [ [ :awaiting_approval, false ], [ :rejected, false ], [ :successful, true ] ].each do |status, withdrawn|
