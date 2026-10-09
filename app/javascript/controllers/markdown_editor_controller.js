@@ -187,7 +187,7 @@ export default class extends Controller {
       <div class="milkdown-sep"></div>
       <div class="milkdown-toolbar__group">
         <button type="button" class="milkdown-btn" title="Insert link (Ctrl+K)"  data-action="click->markdown-editor#insertLink"><i class="fa-solid fa-link"></i></button>
-        <button type="button" class="milkdown-btn" title="Upload image" data-action="click->markdown-editor#insertImage"><i class="fa-solid fa-image"></i></button>
+        ${this.hasUploadUrlValue ? `<button type="button" class="milkdown-btn" title="Upload image" data-action="click->markdown-editor#insertImage"><i class="fa-solid fa-image"></i></button>` : ""}
         <button type="button" class="milkdown-btn" title="Insert table" data-action="click->markdown-editor#insertTable"><i class="fa-solid fa-table"></i></button>
       </div>
       <div class="milkdown-sep milkdown-sep--strong"></div>
@@ -228,12 +228,14 @@ export default class extends Controller {
     this.#previewEl.style.display = "none"
     this.element.appendChild(this.#previewEl)
 
-    this.#fileInput = document.createElement("input")
-    this.#fileInput.type = "file"
-    this.#fileInput.accept = "image/*"
-    this.#fileInput.style.display = "none"
-    this.#fileInput.addEventListener("change", () => this.#handleFileInputChange())
-    this.element.appendChild(this.#fileInput)
+    if (this.hasUploadUrlValue) {
+      this.#fileInput = document.createElement("input")
+      this.#fileInput.type = "file"
+      this.#fileInput.accept = "image/*"
+      this.#fileInput.style.display = "none"
+      this.#fileInput.addEventListener("change", () => this.#handleFileInputChange())
+      this.element.appendChild(this.#fileInput)
+    }
 
     this.#linkDialog = this.#buildDialog("Insert link", LINK_FIELDS, data => ({
       href: data.get("href"), text: data.get("text")
@@ -298,8 +300,8 @@ export default class extends Controller {
       { clipboard },
       { listener, listenerCtx },
       { upload, uploadConfig },
-      { replaceAll, insert },
-      { TextSelection }
+      { replaceAll, insert, $prose },
+      { TextSelection, Plugin }
     ] = await Promise.all([
       import("@milkdown/core"),
       import("@milkdown/preset-commonmark"),
@@ -326,13 +328,14 @@ export default class extends Controller {
       insertTableCommand, undoCommand, redoCommand
     }
 
-    this.#editor = await Editor.make()
+    const editor = Editor.make()
       .config(ctx => {
         ctx.set(rootCtx, this.#editorEl)
         ctx.set(defaultValueCtx, this.#textarea.value)
         ctx.get(listenerCtx).markdownUpdated((_ctx, md) => {
           this.#textarea.value = md
         })
+        if (!this.hasUploadUrlValue) return
         ctx.update(uploadConfig.key, prev => ({
           ...prev,
           uploader: (files, schema) => this.#uploadFiles(files, schema)
@@ -343,8 +346,12 @@ export default class extends Controller {
       .use(history)
       .use(clipboard)
       .use(listener)
-      .use(upload)
-      .create()
+    // plugin-upload is what uploads a dragged, dropped or pasted image. Without it a file dropped
+    // here must still be swallowed, or the browser opens it in place of the half-filled form.
+    editor.use(this.hasUploadUrlValue ? upload : $prose(() => new Plugin({
+      props: { handleDrop: (_view, event) => event.dataTransfer?.files?.length > 0 }
+    })))
+    this.#editor = await editor.create()
 
     const prose = this.#editorEl.querySelector(".ProseMirror")
     if (prose) prose.classList.add("markdown-body", "prose", "max-w-none", "p-3")
@@ -691,7 +698,7 @@ export default class extends Controller {
     if (this.itemIdValue) formData.append("item_id", this.itemIdValue)
     const response = await fetch(this.uploadUrlValue, {
       method: "POST",
-      headers: { "X-CSRF-Token": getMetaValue("csrf-token") },
+      headers: { "X-CSRF-Token": getMetaValue("csrf-token"), Accept: "application/json" },
       body: formData
     })
     if (!response.ok) return null

@@ -19,7 +19,7 @@
             allow_custom_input: true, include_blank: true,
             hint: "Optional. Pick a venue or type another location." %>
 
-        <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical) %>
+        <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical, uploads: user_signed_in?) %>
         <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
 
         <%= f.input :compensation_type, as: :select,

@@ -32,6 +32,20 @@ class MdEditorComponentTest < ViewComponent::TestCase
     assert_selector "div.md\\:w-9\\/12 [data-controller='markdown-editor']"
   end
 
+  test "offers image upload by default" do
+    render_editor
+
+    assert_selector "[data-controller='markdown-editor'][data-markdown-editor-upload-url-value='/markdown/upload']"
+  end
+
+  test "uploads: false gives the editor no upload URL, so it offers no image upload" do
+    render_editor(uploads: false)
+
+    assert_selector "[data-controller='markdown-editor']"
+    assert_no_selector "[data-markdown-editor-upload-url-value]"
+    assert_no_selector "[data-markdown-editor-item-type-value]"
+  end
+
   test "the vertical layout stacks and styles the label like a sibling field" do
     render_editor(layout: :vertical)
 

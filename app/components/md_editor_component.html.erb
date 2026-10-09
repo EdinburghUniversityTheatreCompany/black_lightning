@@ -9,18 +9,12 @@
   <% end %>
 
   <%= content_tag :div, class: control_wrapper_class do %>
-    <div data-controller="markdown-editor"
-         data-markdown-editor-upload-url-value="<%= upload_url %>"
-         data-markdown-editor-item-type-value="<%= item_type %>"
-         data-markdown-editor-item-id-value="<%= item_id %>"
-         data-markdown-editor-height-value="<%= editor_height %>"
-         data-markdown-editor-primary-button-class-value="<%= ButtonComponent.classes_for(variant: :primary, size: :sm) %>"
-         data-markdown-editor-secondary-button-class-value="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %>">
+    <%= content_tag :div, data: editor_data do %>
       <%= @f.input_field @field, class: "form-control", rows: @rows, **@input_field_args %>
       <div class="invalid-feedback">
         <%= @f.full_error @field %>
       </div>
-    </div>
+    <% end %>
     <%= side_content if side_content? %>
   <% end %>
 <% end %>

@@ -3,10 +3,18 @@ require "test_helper"
 class GetInvolvedOpportunitiesTest < ActionController::TestCase
   tests GetInvolvedController
 
-  test "new succeeds for a signed-in member" do
+  test "new succeeds for a signed-in member, with image upload in the description editor" do
     sign_in users(:member)
     get :new
     assert_response :success
+    assert_select "[data-markdown-editor-upload-url-value]"
+  end
+
+  test "new offers a logged-out visitor no image upload, which needs sign-in" do
+    get :new
+    assert_response :success
+    assert_select "[data-controller='markdown-editor']"
+    assert_select "[data-markdown-editor-upload-url-value]", false
   end
 
   test "a member's submission is attributed to them and unapproved, ignoring approved and submitter params" do

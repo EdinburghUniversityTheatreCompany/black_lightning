@@ -14,6 +14,8 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal @incomplete_user, assigns(:user)
     assert_equal "Complete Your Profile", assigns(:title)
+    # Image upload needs sign-in, which the link alone is not.
+    assert_select "[data-markdown-editor-upload-url-value]", false
   end
 
   test "show with valid token when already signed in as same user" do
@@ -51,6 +53,7 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_equal @incomplete_user, assigns(:user)
+    assert_select "[data-markdown-editor-upload-url-value]"
   end
 
   test "show for logged in user with complete profile" do
