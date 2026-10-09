@@ -1040,6 +1040,10 @@ survive as historical import provenance and are never written. Spec + plan in
   heredoc replies escape it (`ERB::Util`) — they have no escaping of their own and
   `first_name` is self-service editable. `unknown_sender_html`/`rate_limited_html` keep a
   bare "Hi," on purpose: no matched person to name.
+- **Notifier templates may call `*_url` helpers only because `Notifier#renderer` passes in the
+  mailer's host and protocol** (`action_mailer.default_url_options`). A bare
+  `ApplicationController.render` outside a request answers `http://example.org`, so a new render
+  path that skips it ships dead links that no test with a relative-path assertion would catch.
 - **Tests**: seed real rows with the `create_reimbursements_*` helpers
   (`test/support/reimbursements_test_helpers.rb`). Pure-logic unit tests that need a
   value object without a DB round-trip build an unpersisted AR model and pin the
