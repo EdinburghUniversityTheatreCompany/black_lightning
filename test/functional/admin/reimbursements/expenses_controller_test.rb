@@ -72,8 +72,7 @@ module Admin
     # active_budgets is not cost-centre scoped, so the picker must say whose
     # line each is.
     test "the budget picker groups lines under their area" do
-      centre = create_reimbursements_cost_centre(key: "group-centre", name: "Bedlam Fringe",
-                                                 eusa_code: "F42", short_code: "BF")
+      centre = create_second_reimbursements_cost_centre(short_code: "BF")
       area = create_reimbursements_area(name: "Cogito", cost_centre: centre)
       create_reimbursements_budget(name: "Marketing", cost_centre: centre, area: area)
       sign_in @user

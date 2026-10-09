@@ -71,9 +71,8 @@ module Admin
       end
 
       def centred_budget
-        centre = create_reimbursements_cost_centre(key: "edit-centre", name: "Bedlam Fringe",
-                                                   eusa_code: "F43", short_code: "BF")
-        create_reimbursements_budget(name: "Lights", nominal_code: "4200", cost_centre: centre)
+        create_reimbursements_budget(name: "Lights", nominal_code: "4200",
+                                     cost_centre: create_second_reimbursements_cost_centre(short_code: "BF"))
       end
 
       test "the edit page's budget select is a Tom Select labelled with each line's centre" do
