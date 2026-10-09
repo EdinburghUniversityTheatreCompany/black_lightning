@@ -998,6 +998,44 @@ module Reimbursements
       assert_equal Status::PAID, settled.status
     end
 
+    # Both callers filter first; this is the refusal for the next one that forgets.
+    test "settling refuses a claim nobody agreed to pay or one already settled, and writes nothing" do
+      other_row = EusaActual.create!(nominal_code: "432540", narrative: "Earlier run",
+                                     debit: BigDecimal("230.00"))
+      {
+        "a draft" => { status: Status::DRAFT },
+        "a rejected claim" => { status: Status::REJECTED },
+        "a Paid claim with a payment date" => { status: Status::PAID,
+                                                payment_confirmed_date: Date.new(2026, 5, 1) },
+        "a Paid claim another row settled" => { status: Status::PAID, other_row: true }
+      }.each do |label, attrs|
+        expense, actual = settle_setup(international: false)
+        other_row.update!(expense_id: expense.id) if attrs.delete(:other_row)
+        expense.update!(attrs)
+        before = expense.reload.attributes.slice("status", "payment_confirmed_date")
+
+        error = assert_raises(DatabaseStore::NotSettleableError, label) do
+          store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                            payment_date: Date.new(2026, 5, 20))
+        end
+        assert_equal expense.status, error.status, label
+        assert_nil actual.reload[:expense_id], label
+        assert_equal before, expense.reload.attributes.slice("status", "payment_confirmed_date"), label
+      end
+    end
+
+    # An imported Paid claim with no payment date is still waiting for its EUSA row.
+    test "settling still takes a Paid claim no row or payment date has settled yet" do
+      expense, actual = settle_setup(international: false)
+      expense.update!(status: Status::PAID)
+
+      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                        payment_date: Date.new(2026, 5, 20))
+
+      assert_equal Date.new(2026, 5, 20), expense.reload.payment_confirmed_date
+      assert_equal expense.id, actual.reload[:expense_id]
+    end
+
     # --- Areas -----------------------------------------------------------
 
     test "areas is unscoped; areas_for_year narrows by year and centre and keeps unplaced areas" do

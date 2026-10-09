@@ -13,6 +13,13 @@ module Admin
       end
     end
 
+    # Hands the controller a stale claim: it still reads Submitted while the stored one has moved on.
+    class StaleExpenseStore < ::Reimbursements::DatabaseStore
+      def find_expense(record_id)
+        super&.tap { |expense| expense.status = ::Reimbursements::Status::SUBMITTED }
+      end
+    end
+
     setup do
       grant_finance_permission(users(:member))
       @user = users(:member)
@@ -590,6 +597,22 @@ module Admin
         assert_nil @unlinked.reload[:expense_id], status
         assert_equal status, claim.reload.status
       end
+    end
+
+    # The store's locked re-read refuses it; the operator gets the same message as the pre-check.
+    test "confirm_link refuses a claim rejected after the controller read it" do
+      claim = create_reimbursements_expense(auto_number: 85, budget: @budget,
+                                            status: ::Reimbursements::Status::REJECTED,
+                                            amount: BigDecimal("42.00"), amount_excl_vat: BigDecimal("42.00"))
+      BaseController.store_builder = ->(**) { StaleExpenseStore.new }
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_equal "That claim is Rejected now, so this row can't settle it.", flash[:alert]
+      assert_nil @unlinked.reload[:expense_id]
+      assert_equal ::Reimbursements::Status::REJECTED, claim.reload.status
     end
 
     test "confirm_link refuses a row that is already linked" do

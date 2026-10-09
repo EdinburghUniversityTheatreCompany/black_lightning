@@ -119,11 +119,7 @@ module Admin
           return
         end
         # Re-checked on the write: #link_candidates was a stale read.
-        if EXCLUDED_LINK_STATUSES.include?(expense.status)
-          redirect_to actuals_path_with_filters,
-                      alert: "That claim is #{expense.status} now, so this row can't settle it."
-          return
-        end
+        return refuse_settle(expense.status) if EXCLUDED_LINK_STATUSES.include?(expense.status)
 
         store.settle_expense_from_actual!(@actual.record_id, expense.record_id,
                                           payment_date: @actual.date,
@@ -131,6 +127,9 @@ module Admin
         redirect_to actuals_path_with_filters,
                     notice: "Linked to ##{expense.auto_number}, which is now Paid" \
                             "#{' with the amount corrected to what EUSA charged' if expense.international?}."
+      rescue ::Reimbursements::DatabaseStore::NotSettleableError => e
+        # The claim changed between the check above and the store's locked re-read.
+        refuse_settle(e.status)
       end
 
       # Split one credit across several income budgets: a ledger row carries one budget_id, so a
@@ -400,6 +399,11 @@ module Admin
              .reject { |expense| EXCLUDED_LINK_STATUSES.include?(expense.status) }
              .sort_by { |expense| link_candidate_rank(expense, actual) }
              .first(LINK_CANDIDATE_LIMIT)
+      end
+
+      def refuse_settle(status)
+        redirect_to actuals_path_with_filters,
+                    alert: "That claim is #{status} now, so this row can't settle it."
       end
 
       # A claim whose payee is named in the narrative ("BACS PAYMENT A SMITH") comes first, whatever

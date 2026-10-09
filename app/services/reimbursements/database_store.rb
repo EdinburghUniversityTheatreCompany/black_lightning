@@ -28,6 +28,17 @@ module Reimbursements
     # earlier state to unlink it to. Delete the claim instead.
     class ClaimFromRowError < StandardError; end
 
+    # A ledger row may not settle this claim: nobody agreed to pay a draft or a rejected claim,
+    # and a Paid claim already settled would count the charge twice.
+    class NotSettleableError < StandardError
+      attr_reader :status
+
+      def initialize(status)
+        @status = status
+        super("the claim is #{status}, so this row can't settle it")
+      end
+    end
+
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
@@ -682,11 +693,17 @@ module Reimbursements
     # (amount_excl_vat follows, as Expense mirrors it on that rail). One method because reconcile
     # apply and the Actuals manual link both do exactly this, and a half-applied settle leaves an
     # actual pointing at a claim still reading Submitted.
+    #
+    # Raises NotSettleableError for a claim no ledger row may settle (#settleable?), re-read under
+    # a row lock: both callers filter first, but their reads go stale and the next caller may not.
     def settle_expense_from_actual!(actual_id, expense_id, payment_date:, gbp_charged: nil)
       settled = EusaActual.transaction do
+        expense = Expense.lock.find(expense_id)
+        raise NotSettleableError, expense.status unless settleable?(expense, actual_id)
+
         link_actual_to_expense!(actual_id, expense_id)
         attrs = { status: Status::PAID, payment_confirmed_date: payment_date }
-        attrs[:amount] = gbp_charged if gbp_charged && Expense.find(expense_id).international?
+        attrs[:amount] = gbp_charged if gbp_charged && expense.international?
         update_expense!(expense_id, attrs)
       end
       bust_eusa_actuals!
@@ -914,6 +931,16 @@ module Reimbursements
       return records if centre.nil?
 
       records.select { |record| record.cost_centre_id.nil? || record.cost_centre_id == centre.id }
+    end
+
+    # Draft and Rejected never. Paid only while no payment date or other ledger row settles it: an
+    # imported Paid claim with neither is still waiting for its EUSA row, and Reconcile matches it.
+    def settleable?(expense, actual_id)
+      return false if [ Status::DRAFT, Status::REJECTED ].include?(expense.status)
+      return true unless expense.status == Status::PAID
+
+      expense.payment_confirmed_date.blank? &&
+        !EusaActual.where(expense_id: expense.id).where.not(id: actual_id).exists?
     end
 
     # Whether a foreign-key violation on an expense write was the budget link. MySQL names the
