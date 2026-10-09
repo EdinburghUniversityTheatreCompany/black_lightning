@@ -3,13 +3,6 @@ daily_maintenance:
   queue: default
   schedule: at 2:03am every day
 
-refresh_cloudflare_ips:
-  class: RefreshCloudflareIpsJob
-  queue: default
-  # 01:13 / 13:13, not every 12 hours: that lands on minute 0 and races the 5-minute mailbox
-  # poll and the hourly climate poll (recurring_schedule_test).
-  schedule: 13 1,13 * * *
-
 refresh_fuzzy_duplicates:
   class: RefreshFuzzyBothDuplicatesJob
   queue: default

@@ -15,8 +15,7 @@ require "action_cable/engine"
 require "rails/test_unit/railtie"
 
 require "image_processing/vips"
-require_relative "../lib/cloudflare_ips"
-require_relative "../app/middleware/cloudflare_ip_sanitizer"
+require_relative "../app/middleware/client_ip_stripper"
 require_relative "../app/middleware/malformed_request_handler"
 
 # Require the gems listed in Gemfile, including any gems
@@ -42,8 +41,7 @@ module ChaosRails
     config.eager_load_paths << "#{config.root}/lib"
     Rails.autoloaders.main.ignore(config.root.join("lib/generators"))
 
-    # Strip spoofed HTTP_CLIENT_IP headers from Cloudflare requests
-    config.middleware.insert_before ActionDispatch::RemoteIp, CloudflareIpSanitizer
+    config.middleware.insert_before ActionDispatch::RemoteIp, ClientIpStripper
 
     # Rack::MethodOverride raises on unparseable requests (bots POSTing gzip-encoded multipart
     # bodies with no boundary) outside ShowExceptions, so catch them here: 400, not 500.
