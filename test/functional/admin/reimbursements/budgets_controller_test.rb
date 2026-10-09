@@ -1063,7 +1063,7 @@ module Admin
 
       test "create lands on the centre the form chose, not the page's" do
         termtime = create_second_reimbursements_cost_centre
-        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        fringe = ::Reimbursements::CostCentre.default
         sign_in @user
 
         post :create, params: { cost_centre: termtime.key, cost_centre_id: fringe.id, name: "Late addition",
@@ -1401,7 +1401,7 @@ module Admin
 
       test "the cost-centre selector names the default on every page, offering a switch elsewhere" do
         termtime = create_second_reimbursements_cost_centre
-        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        fringe = ::Reimbursements::CostCentre.default
         @user.update!(reimbursements_cost_centre: termtime)
         sign_in @user
 

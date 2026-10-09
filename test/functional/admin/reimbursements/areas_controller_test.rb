@@ -77,9 +77,9 @@ module Admin
 
       test "create lands on the centre the form chose, not the page's" do
         termtime = create_second_reimbursements_cost_centre
-        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        fringe = ::Reimbursements::CostCentre.default
 
-        post :create, params: { cost_centre: termtime.key, name: "Cogito",
+        post :create, params: { cost_centre: termtime.key,
                                 reimbursements_area: { name: "Cogito", cost_centre_id: fringe.id } }
 
         area = ::Reimbursements::Area.order(:id).last
