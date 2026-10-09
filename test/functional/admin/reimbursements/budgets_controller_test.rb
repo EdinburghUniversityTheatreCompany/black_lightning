@@ -1036,8 +1036,6 @@ module Admin
         assert_match(/isn't part of this budget/i, flash[:alert])
       end
 
-      private
-
       # --- Creating one budget by hand ---------------------------------------
 
       test "create makes a budget in the selected year" do
@@ -1419,6 +1417,8 @@ module Admin
         assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: fringe.key),
                       text: "Make this my default"
       end
+
+      private
 
       # The live year (holding the budgets seeded in setup) plus a draft year
       # with one budget of its own.
