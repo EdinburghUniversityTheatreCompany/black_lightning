@@ -120,10 +120,11 @@ module Admin
 
       # The year and centre the operator ASKED for, to carry through links and
       # redirects. Only what was in the URL: filling in the active year or a
-      # centre here would turn "every centre" into one on the next page.
+      # centre here would turn "every centre" into one on the next page. An
+      # explicit All (an empty or unknown cost_centre=) is kept as empty.
       def scope_params
         { year: (selected_financial_year&.key if params[:year].present?),
-          cost_centre: selected_cost_centre&.key }.compact
+          cost_centre: selected_cost_centre&.key || (params[:cost_centre] && "") }.compact
       end
 
       # Every configured cost centre, for the selector. Read straight off the

@@ -185,7 +185,7 @@ module NavigationHelper
   # reads the centre. Only while the page names no centre: a centre already chosen is
   # carried by the sidebar itself and must win over the default.
   def home_cost_centre_scope
-    return {} if params[:cost_centre].present? || params[:cost_centre_id].present?
+    return {} if params.key?(:cost_centre) || params[:cost_centre_id].present?
 
     key = current_user&.reimbursements_cost_centre&.key
     key ? { cost_centre: key } : {}

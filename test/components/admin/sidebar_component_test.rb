@@ -137,6 +137,14 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
     assert_selector "a[href='/admin/reimbursements/budgets']", text: /Budgets/
   end
 
+  # An explicit "All" (cost_centre=) is a choice too: carried, so the home
+  # centre does not come back on the next screen. A blank year means nothing.
+  test "an explicit All cost centre is carried, a blank year is not" do
+    render_scoped({ "year" => "", "cost_centre" => "" })
+
+    assert_selector "a[href='/admin/reimbursements/budgets?cost_centre=']", text: /Budgets/
+  end
+
   # Only the two selectors, never the page's other filter state: a ?search= or
   # a ?page= carried onto another screen would filter it by something the
   # operator never typed there.

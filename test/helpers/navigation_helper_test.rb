@@ -60,6 +60,14 @@ class NavigationHelperTest < ActionView::TestCase
     assert_empty paths.values.grep(/cost_centre/), "the sidebar carries the page's own choice instead"
   end
 
+  test "an explicit All on the page beats the home centre" do
+    termtime = create_second_reimbursements_cost_centre
+    params[:cost_centre] = ""
+    paths = finance_paths_with_home(termtime)
+
+    assert_empty paths.values.grep(/cost_centre/)
+  end
+
   def finance_category
     admin_navbar_items.find { |category| category[:title] == "Finance" }
   end

@@ -135,6 +135,28 @@ module Admin
                       overview_admin_reimbursements_budgets_path(cost_centre: termtime.key)
       end
 
+      test "All is an explicit empty cost_centre= that the page's own links keep" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_nil assigns(:selected_cost_centre)
+        assert_select "[aria-label='Cost centre'] a[aria-current]", text: "All"
+        assert_select "[aria-label='Cost centre'] a[href=?]", admin_reimbursements_budgets_path(cost_centre: "")
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      overview_admin_reimbursements_budgets_path(cost_centre: "")
+      end
+
+      test "with no cost_centre at all, page links stay bare" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index
+
+        assert_select "nav[aria-label='Budget views'] a[href=?]", overview_admin_reimbursements_budgets_path
+      end
+
       test "the row a save came back for is highlighted" do
         sign_in @user
 
