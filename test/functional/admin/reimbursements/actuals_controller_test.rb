@@ -596,13 +596,14 @@ module Admin
     # and offers no budget. Only `as: :grouped_select` really groups.
     test "new_expense renders real optgroups, each holding its budgets" do
       create_reimbursements_budget(name: "Sundries", nominal_code: "500000")
+      create_reimbursements_budget(name: "Marketing", area: create_reimbursements_area(name: "Cogito"))
       sign_in @user
 
       get :new_expense, params: { id: @unlinked.record_id }
 
       assert_response :success
       groups = css_select("select#reimbursements_expense_form_budget_record_id optgroup")
-      assert_equal 2, groups.size
+      assert_equal 3, groups.size
       assert_includes groups.first["label"], "500000"
       assert(groups.all? { |group| group.css("option").any? },
              "an optgroup with no options offers nothing")
@@ -612,16 +613,6 @@ module Admin
                       "an order, not a filter: every other line is still offerable"
       assert_includes css_select("select#reimbursements_expense_form_budget_record_id option")
                       .map { |option| option.text.strip }.join(" "), "Sundries"
-    end
-
-    test "new_expense groups the other budgets by area" do
-      area = create_reimbursements_area(name: "Cogito")
-      create_reimbursements_budget(name: "Marketing", area: area)
-      sign_in @user
-
-      get :new_expense, params: { id: @unlinked.record_id }
-
-      assert_response :success
       assert_select "select.simple-select2 optgroup[label='Cogito'] option", text: /Cogito: Marketing/
       assert_select "select[data-placeholder='Pick a budget']"
     end
