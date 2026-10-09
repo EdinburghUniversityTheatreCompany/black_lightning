@@ -643,7 +643,8 @@ survive as historical import provenance and are never written. Spec + plan in
     been sent" — untrue and inescapable.
   - **`hidden_from_submitters` filters `submittable_budgets`, the PRODUCER picker only.** Never
     apply it to `active_budgets`: Review, finance expense-edit and the actuals convert read that,
-    and a hidden centre's existing claims must stay editable there. A line with no centre stays offered.
+    and a hidden centre's existing claims must stay editable there. A line with no centre stays offered,
+    and a producer's own claim already on a hidden line keeps it (hidden = no NEW claims).
   - **A budget import ADOPTS the unplaced line it matched** (`BudgetImport#adoptions`), or the same
     leniency has two committees revising one shared row forever and neither getting its own.
   - **Which reads are scoped is the design.** `budgets_for_year` / `budgets_with_actuals` /

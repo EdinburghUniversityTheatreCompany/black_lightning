@@ -106,7 +106,16 @@ module Admin
       # against a list it doesn't display can only produce an error the producer
       # cannot act on.
       def offerable_budgets
-        @budgets ||= store.submittable_budgets
+        @budgets ||= store.submittable_budgets + kept_hidden_budget
+      end
+
+      # Hiding a centre stops NEW claims against it; a claim already on one of
+      # its active lines keeps that line, or every save would demand a re-charge.
+      def kept_hidden_budget
+        current = @expense&.budget_record_id
+        return [] if current.blank? || store.submittable_budgets.any? { |b| b.record_id == current }
+
+        store.active_budgets.select { |b| b.record_id == current }
       end
 
       def offerable_budget_ids
