@@ -71,8 +71,8 @@ module Admin
         assert_equal [ "Budget", "Initial", "Projected", "Committed", "EUSA actual", "Expected outturn",
                        "Remaining", "Variance", "Owners", "" ], headers
         # @props: forecast 800, committed 300, remaining 500, and EUSA actual 161 from the seed above.
-        %w[800 300 500 161].each { |figure| assert_includes response.body, "£#{figure}.00" }
-        assert_select "td.text-right", text: /161/
+        %w[800 300 500].each { |figure| assert_includes response.body, "£#{figure}.00" }
+        assert_select "td.text-right", text: "£161.00"
       end
 
       test "a hidden line is tagged after its name rather than in a column" do
