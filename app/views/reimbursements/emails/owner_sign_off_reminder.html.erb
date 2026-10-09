@@ -1,5 +1,5 @@
 <p>Hi <%= @greeting_name %>,</p>
-<% budget_count = @rows.map { |row| row[:budget_name] }.uniq.size %>
+<% budget_count = @rows.map { |row| row[:budget_id] }.uniq.size %>
 
 <p>
   <%= @rows.size %> <%= "claim".pluralize(@rows.size) %>

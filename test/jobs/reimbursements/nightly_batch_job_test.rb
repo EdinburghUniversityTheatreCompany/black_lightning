@@ -229,6 +229,20 @@ module Reimbursements
       assert_equal "Olive Owner", rows["ann@example.com"][:also_owned_by]
     end
 
+    test "owner rows carry the budget id and skip a co-owner with no name" do
+      blank = create_reimbursements_person(name: "Temp", email: "blank@example.com")
+      blank.update_columns(name: "")
+      owned_budget.own_owners << blank
+      owned_budget.own_owners << create_reimbursements_person(name: "Bo Other", email: "bo@example.com")
+      gated_pending
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      row = mailer_calls(:owner_sign_off_reminder).find { |_, call| call[:to] == [ owner_person.email ] }.last[:rows].sole
+      assert_equal owned_budget.record_id, row[:budget_id]
+      assert_equal "Bo Other", row[:also_owned_by]
+    end
+
     test "an owner with no email address is skipped rather than raising" do
       owner_person.update!(email: nil)
       gated_pending(days_ago: 5)

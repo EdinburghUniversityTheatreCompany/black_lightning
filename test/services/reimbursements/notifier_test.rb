@@ -189,7 +189,7 @@ module Reimbursements
     PORTAL = "https://www.example.com/admin/reimbursements".freeze
 
     def owner_row(**attrs)
-      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Set",
+      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
         description: "Timber", age_days: 5 }.merge(attrs)
     end
 
@@ -205,11 +205,12 @@ module Reimbursements
 
       assert_includes html, "charged to a budget you own"
       assert_includes html, %(href="#{PORTAL}/my_budgets")
-      assert_includes remind_owner(owner_row, owner_row(budget_name: "Props")), "charged to budgets you own"
+      assert_includes remind_owner(owner_row, owner_row(budget_id: 2)), "charged to budgets you own",
+                      "two lines can share a display name"
     end
 
     test "owner reminder names a budget's other owners on that budget only" do
-      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_name: "Props"))
+      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_id: 2, budget_name: "Props"))
 
       assert_includes html, "Set (also owned by Ann Other)"
       assert_equal 1, html.scan("also owned by").size
