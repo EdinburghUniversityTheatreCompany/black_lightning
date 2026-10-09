@@ -33,14 +33,16 @@ module Reimbursements
     # Every writable column. The store's person-update path routes exactly these
     # keys here, so a field missing from the list is silently dropped; the FIELDS
     # test in payment_details_test.rb holds them in step.
-    FIELDS = %i[sort_code account_number iban bic verified notes].freeze
+    FIELDS = %i[sort_code account_number verified notes].freeze
+
+    # Nothing ever wrote them: an international claim carries its own IBAN and BIC. The next
+    # deploy drops both columns.
+    self.ignored_columns += %w[iban bic]
 
     # Encrypted at rest, non-deterministic: nothing queries these by value.
     # `notes` is encrypted too because its audit trail can reference bank details.
     encrypts :sort_code
     encrypts :account_number
-    encrypts :iban
-    encrypts :bic
     encrypts :notes
 
     validates :person_id, uniqueness: true
@@ -50,8 +52,6 @@ module Reimbursements
     # with ample headroom, so it is left uncapped.
     validates :sort_code, :account_number,
               length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
-    validates :iban, length: { maximum: BankDetails::IBAN_MAX_LENGTH }
-    validates :bic, length: { maximum: BankDetails::BIC_MAX_LENGTH }
 
     # Appends one timestamped line to a notes trail. One formatter for both
     # callers (the People page and BankDetailsRetention) keeps the trail uniform.

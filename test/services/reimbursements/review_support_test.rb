@@ -42,7 +42,6 @@ module Reimbursements
 
     def international_payee
       person = Person.new(name: "Ausland GmbH", email: "konto@example.de")
-      person.build_payment_details(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
       person.define_singleton_method(:record_id) { "recPerson3" }
       person
     end
@@ -52,6 +51,7 @@ module Reimbursements
       expense(payee: payee || international_payee, budget: budget, receipts: [ receipt ],
         payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
         foreign_amount: BigDecimal("266.69"), foreign_currency: Expense::CURRENCY_EUR,
+        iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500",
         **extra)
     end
 
@@ -290,11 +290,11 @@ module Reimbursements
 
     test "an international claim is blocked without an IBAN or a foreign amount" do
       blank_iban = Person.new(name: "Ausland GmbH", email: "konto@example.de")
-      blank_iban.build_payment_details(iban: "", bic: "")
       blank_iban.define_singleton_method(:record_id) { "recPerson3" }
       [
-        [ { payee: blank_iban }, "no bank details" ],
-        [ { payee: valid_payee }, "no bank details" ], # a UK sort code does not satisfy it
+        [ { payee: blank_iban, iban_override: "", bic_override: "" }, "no bank details" ],
+        # A UK sort code does not satisfy it.
+        [ { payee: valid_payee, iban_override: "", bic_override: "" }, "no bank details" ],
         [ { foreign_amount: nil }, "no EUR amount" ],
         [ { foreign_amount: BigDecimal("0") }, "no EUR amount" ],
         [ { foreign_amount: nil, foreign_currency: "USD" }, "no USD amount" ]

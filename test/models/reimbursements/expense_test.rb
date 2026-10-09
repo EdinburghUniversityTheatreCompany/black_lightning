@@ -132,18 +132,16 @@ module Reimbursements
 
     # --- The international rail ---------------------------------------------
 
-    test "effective IBAN and BIC fall back through PaymentDetails, and an override wins" do
+    test "effective IBAN and BIC are the claim's own" do
       person = Person.create!(name: "Pat", email: "intl-payee@example.com")
-      person.create_payment_details!(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
       expense = create_expense(person: person, payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL)
 
-      assert_equal "DE89370400440532013000", expense.effective_iban
-      assert_equal "DEUTDEFF500", expense.effective_bic
-      assert expense.effective_has_bank_details?
+      assert_not expense.effective_has_bank_details?
 
-      expense.update!(iban_override: "NL91ABNA0417164300", bic_override: "ABNANL2A")
+      expense.update!(iban_override: " NL91ABNA0417164300 ", bic_override: "ABNANL2A")
       assert_equal "NL91ABNA0417164300", expense.effective_iban
       assert_equal "ABNANL2A", expense.effective_bic
+      assert expense.effective_has_bank_details?
     end
 
     # Reading the wrong rail blocked every international claim at approval.

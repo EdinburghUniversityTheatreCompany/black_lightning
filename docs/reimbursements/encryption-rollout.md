@@ -7,12 +7,12 @@ a database dump, backup or replica does not expose them.
 
 | Model | Columns |
 |---|---|
-| `Reimbursements::PaymentDetails` | `sort_code`, `account_number`, `iban`, `bic`, `notes` |
+| `Reimbursements::PaymentDetails` | `sort_code`, `account_number`, `notes` |
 | `Reimbursements::Expense` | `sort_code_override`, `account_number_override`, `payee_name_override`, `iban_override`, `bic_override` |
 
 The rollout is finished. Production was backfilled on 2026-07-26 (10 `PaymentDetails` and 38
-`Expense` records, 0 failures). The four IBAN/BIC columns came later and were new, so they never
-held plaintext.
+`Expense` records, 0 failures). The two IBAN/BIC override columns on Expense came later and were
+new, so they never held plaintext.
 
 **The check run that day proved nothing.** It tested `ciphertext_for`, which encrypts a plaintext
 value on the way out, so every value looked like ciphertext. Run the sweep below once in
@@ -73,7 +73,7 @@ for as long as any row was written with it.
 ## Encrypting a new column
 
 **A brand-new column with no plaintext rows:** add `encrypts` and deploy. Nothing needs
-backfilling. This is how the IBAN/BIC columns went in.
+backfilling. This is how the IBAN/BIC overrides went in.
 
 **A column that already holds plaintext** needs the full sequence, because
 `reimbursements:encrypt_backfill` **cannot run while `support_unencrypted_data` is false**: it has

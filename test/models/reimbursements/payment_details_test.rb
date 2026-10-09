@@ -11,6 +11,13 @@ module Reimbursements
       assert_equal writable.sort, PaymentDetails::FIELDS.map(&:to_s).sort
     end
 
+    # BankDetailsRetention clears only the UK pair, so a payee-level IBAN would outlive it.
+    test "a payee holds no IBAN or BIC: an international claim carries its own" do
+      assert_not_includes PaymentDetails.column_names, "iban"
+      assert_not_includes PaymentDetails.column_names, "bic"
+      assert_raises(ActiveModel::UnknownAttributeError) { PaymentDetails.new(iban: "DE89370400440532013000") }
+    end
+
     test "the store writes every field in the vocabulary through to the record" do
       person = Person.create!(name: "Pat", email: "pat-fields@example.com")
 

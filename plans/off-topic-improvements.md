@@ -41,6 +41,19 @@ production database, and it costs nothing at about 300 rows a financial year.
 **Fix:** drop the index, or keep it and move the offset filters into SQL scopes
 (`EusaActual.offset` / `.not_offset`).
 
+### Drop the columns the models ignore (once the release ignoring them is live)
+
+`Reimbursements::PaymentDetails` ignores `iban` and `bic` (`ignored_columns`): nothing ever wrote
+them, and an international claim carries its own. The drop needs a release of its own: Rails names
+every column on INSERT, so dropping in the release that adds the ignore breaks the outgoing
+container's writes while the new one boots.
+
+**Fix:** one migration (`bin/rails g migration`) that removes them inside `safety_assured`, each
+guarded by `column_exists?`, with a `down` that re-adds empty `string, default: "", null: false`
+columns (no data comes back). Delete the `ignored_columns` line in the same commit. Once it has
+run, never `kamal rollback` past the ignoring release: older code reads `person.iban` on every
+international claim page.
+
 ## Reimbursements: areas and budgets
 
 ### Drop the two area rollback columns

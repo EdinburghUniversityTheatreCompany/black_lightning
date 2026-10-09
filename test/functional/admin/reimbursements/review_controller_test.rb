@@ -802,6 +802,19 @@ module Admin
         assert_includes response.body, "DEUTDEFF500"
       end
 
+      # A People record has no IBAN field, so pointing there is a dead end.
+      test "an international claim with no IBAN or BIC sends finance to the claim's override" do
+        expense = international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person)
+        sign_in @user
+
+        get :index
+
+        assert_match(/No IBAN and BIC on this claim/, response.body)
+        assert_select "a[href=?]", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                      text: "payee override"
+        assert_select "a", text: /People record/, count: 0
+      end
+
       test "approve accepts an international claim with an IBAN and both amounts" do
         expense = international_expense
         sign_in @user

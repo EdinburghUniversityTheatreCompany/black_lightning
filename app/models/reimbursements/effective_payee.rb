@@ -23,13 +23,10 @@ module Reimbursements
       account_number_override.to_s.strip.presence || person&.account_number.to_s
     end
 
-    def effective_iban
-      iban_override.to_s.strip.presence || person&.iban.to_s
-    end
+    # The claim's own: a payee's record holds no IBAN or BIC to fall back to.
+    def effective_iban = iban_override.to_s.strip
 
-    def effective_bic
-      bic_override.to_s.strip.presence || person&.bic.to_s
-    end
+    def effective_bic = bic_override.to_s.strip
 
     # Whether we know where to send the money, asked of the claim's own rail.
     # Reading the UK pair for an international claim made every one permanently
