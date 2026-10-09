@@ -27,7 +27,6 @@
       value_method: :record_id,
       label_method: ->(person) { person.name.presence || person.email },
       selected: owner_ids, include_blank: false,
-      hint: "Everyone who owns this area.",
       input_html: { multiple: true, data: { placeholder: "Search people…" } } %>
 <% if form.object.persisted? && owner_ids.empty? %>
   <%# OwnerReview.gate_applies? is false with no owners, so every claim under
