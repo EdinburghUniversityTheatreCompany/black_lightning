@@ -88,6 +88,23 @@ module Reimbursements
       assert_match "SharePoint down", failure[:html]
     end
 
+    # The interactive build runs no readiness checks, so the email must not claim any.
+    test "batch_ready states the batch it built, with a count that reads right for one or several" do
+      notifier, graph = build
+      row = { auto_number: 3, payee_name: "Sam", amount: "40.00", budget_name: "Props",
+              description: "Paint" }
+
+      [ [ row ], [ row, row, row ] ].each do |expenses|
+        notifier.batch_ready(recipients: [ "ops@example.com" ], expenses: expenses, total: "40.00",
+                             draft_link: nil, run_date: "9 July 2026")
+      end
+
+      one, three = graph.send_mails.map { |mail| Nokogiri::HTML(mail[:html]).text.squish }
+      assert_includes one, "You built a BACS batch of 1 approved expense on 9 July 2026."
+      assert_includes three, "You built a BACS batch of 3 approved expenses on 9 July 2026."
+      [ one, three ].each { |text| assert_no_match(/readiness|checks/, text) }
+    end
+
     test "owner_sign_off_reminder greets the owner and lists their claims" do
       notifier, graph = build
 

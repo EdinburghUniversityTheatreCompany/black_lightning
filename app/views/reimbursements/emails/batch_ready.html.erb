@@ -1,9 +1,8 @@
 <p>Hi,</p>
 
 <p>
-  You built a BACS batch on <strong><%= @run_date %></strong>, and
-  <strong>all <%= @expenses.size %> approved <%= "expense".pluralize(@expenses.size) %></strong>
-  in it passed the automated readiness checks.
+  You built a BACS batch of <strong><%= pluralize(@expenses.size, "approved expense") %></strong>
+  on <strong><%= @run_date %></strong>.
 </p>
 
 <p>The EUSA draft email has been created in the send mailbox. Please review and send it:</p>
