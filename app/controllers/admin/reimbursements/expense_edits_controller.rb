@@ -29,19 +29,6 @@ module Admin
         end
       end
 
-      def find
-        @title = "Find an Expense"
-        query = params[:q].to_s.strip
-        return if query.blank?
-
-        expense = lookup_expense(query)
-        if expense
-          redirect_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-        else
-          flash.now[:alert] = "No expense matches \"#{query}\". Try its number (e.g. 42) or record id."
-        end
-      end
-
       def edit
         load_edit(find_expense!)
       end
@@ -161,12 +148,6 @@ module Admin
         Float(query.delete("£, ")) == amount.to_f
       rescue ArgumentError
         false
-      end
-
-      # Record id first, then the visible auto-number.
-      def lookup_expense(query)
-        store.find_expense(query) ||
-          store.expenses.find { |e| e.auto_number.to_s == query.delete_prefix("#") }
       end
 
       # The rail is fixed once Submitted or Paid: the paperwork has gone out.

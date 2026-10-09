@@ -195,10 +195,8 @@ ChaosRails::Application.routes.draw do
       delete "review/:id/receipts/:attachment_id", to: "review#remove_receipt", as: :review_receipt
 
       # Finance edit-any-status: an index of ALL expenses (filter + search) and edit at ANY status
-      # (incl. Submitted/Paid), reached from the Review cards or by auto-number/record id.
-      resources :expense_edits, only: %i[index edit update] do
-        get :find, on: :collection
-      end
+      # (incl. Submitted/Paid), reached from the Review cards or the index.
+      resources :expense_edits, only: %i[index edit update]
       # Put a rejected claim back in the queue.
       post   "expense_edits/:id/reopen", to: "expense_edits#reopen", as: :reopen_expense_edit
       post   "expense_edits/:id/receipts",                to: "expense_edits#add_receipts",   as: :expense_edit_receipts

@@ -125,6 +125,7 @@ module Admin
           { q: "velvet" } => [ @exp2 ],
           { q: "stagehand" } => [ @exp2 ],
           { q: "3" } => [ @exp3 ],
+          { q: "#3" } => [ @exp3 ],
           { q: "£99.00" } => [ @exp2 ],
           { q: "not a number and no substring match" } => [],
           { q: "Pat Producer" } => [ @exp1, @exp3, claim ],
@@ -845,40 +846,6 @@ module Admin
         get :edit, params: { id: expense.record_id }
 
         assert_match(/already sent to EUSA/i, response.body)
-      end
-
-      # --- Lookup ----------------------------------------------------------
-
-      test "find without a query shows the lookup form" do
-        sign_in @user
-
-        get :find
-
-        assert_response :success
-      end
-
-      test "find resolves an auto-number or a record id to the edit page" do
-        paid = expense_at("Paid", auto_number: 42)
-        submitted = expense_at("Submitted", auto_number: 7)
-        sign_in @user
-
-        get :find, params: { q: "42" }
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(paid.record_id)
-
-        get :find, params: { q: submitted.record_id }
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(submitted.record_id)
-      end
-
-      # A non-numeric query must come back as no match, not a 500.
-      %w[999 not-an-id].each do |query|
-        test "find with no match for #{query} flashes and re-renders the lookup" do
-          sign_in @user
-
-          get :find, params: { q: query }
-
-          assert_response :success
-          assert_match(/no expense/i, response.body)
-        end
       end
 
       test "editing an unknown expense 404s" do
