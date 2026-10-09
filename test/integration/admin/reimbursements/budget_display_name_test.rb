@@ -68,15 +68,18 @@ module Admin
                         "Contingency"
       end
 
-      test "the picker is ordered by the label it prints" do
+      test "the picker is ordered by the label it prints within each area group" do
         sign_in @producer
 
         get new_admin_reimbursements_expense_path
 
-        offered = option_texts("select#reimbursements_expense_form_budget_record_id") -
-                  [ "Choose a budget…" ]
-        assert_equal offered.sort, offered,
-                     "the options read out of order, which is what sorting by the bare name does"
+        groups = css_select("select#reimbursements_expense_form_budget_record_id optgroup")
+        assert_equal ::Reimbursements::Budget::NO_AREA_GROUP, groups.last["label"]
+        groups.each do |group|
+          offered = group.css("option").map { |option| option.text.strip }
+          assert_equal offered.sort, offered,
+                       "#{group['label']} reads out of order, which is what sorting by the bare name does"
+        end
       end
 
       test "the batch budget-update form names the show in each row and each field's label" do
