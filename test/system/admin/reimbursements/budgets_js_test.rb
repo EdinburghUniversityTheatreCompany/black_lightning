@@ -2,8 +2,8 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # The budget form's area picker and owners list, clicked for real: a
-    # request test cannot see what the browser fails to send.
+    # The budget form and index, clicked for real: a request test cannot see
+    # what the browser fails to send or where it scrolls.
     class BudgetsJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
