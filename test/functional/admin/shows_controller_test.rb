@@ -243,8 +243,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
   test "a failed update keeps a custom author selected in the re-rendered form" do
     show = FactoryBot.create(:show, author: "Original Author")
-    # Only an update clears the cached list; an empty one from an earlier test skips the custom-value branch.
-    Rails.cache.delete(Event::AUTHOR_NAME_LIST_CACHE_KEY)
 
     put :update, params: { id: show, show: FactoryBot.attributes_for(:show, author: "  Brand New Custom Author  ", venue_id: nil) }
 

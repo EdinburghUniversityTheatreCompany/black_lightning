@@ -167,6 +167,17 @@ class EventTest < ActionView::TestCase
     assert_equal([ "Author 1", "Author 3" ], Event.author_name_list)
   end
 
+  test "a created or deleted event's author reaches the cached author list at once" do
+    FactoryBot.create(:show, author: "Author 1")
+    assert_includes Event.author_name_list, "Author 1"
+
+    show = FactoryBot.create(:show, author: "Brand New Author")
+    assert_includes Event.author_name_list, "Brand New Author"
+
+    show.destroy!
+    assert_not_includes Event.author_name_list, "Brand New Author"
+  end
+
   test "automatically generates slug from name if blank" do
     event = FactoryBot.build(:event, name: "Test Event Name", slug: "")
     assert event.valid?

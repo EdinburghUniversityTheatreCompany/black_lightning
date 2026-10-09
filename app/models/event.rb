@@ -202,7 +202,7 @@ class Event < ApplicationRecord
   before_validation :assign_company_from_name
   after_initialize :set_default_members_only_text
   before_validation :derive_price_from_ticket_prices, if: :will_save_change_to_ticket_prices?
-  after_update :recache_author_list_if_changed
+  after_commit :clear_author_name_list
   after_destroy :cleanup_orphaned_company
 
   # Formats the shows so they can be used in a selection field
@@ -439,11 +439,10 @@ class Event < ApplicationRecord
 
   private
 
-  def recache_author_list_if_changed
-    if saved_change_to_author?
-      # Clear the cache for the author_name_list so it regenerates.
-      Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
-    end
+  # On every commit, not only an author change: after_commit sees only the last
+  # save's changes, so a transaction saving twice would hide the author edit.
+  def clear_author_name_list
+    Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
   end
 
   def end_date_after_start_date
