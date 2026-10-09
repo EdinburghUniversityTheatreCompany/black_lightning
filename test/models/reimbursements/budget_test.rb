@@ -312,7 +312,7 @@ module Reimbursements
 
     # Area names are unique only per (year, centre), so the heading names both.
     test "picker_group heads an area-bound line with its centre and area" do
-      centre = picker_cost_centre(key: "fringe-group", eusa_code: "F40g")
+      centre = create_second_reimbursements_cost_centre(short_code: "BF")
       area = Area.create!(name: "Cogito", cost_centre: centre)
 
       assert_equal "BF - Cogito", build_budget(cost_centre: centre, area: area).picker_group
@@ -324,7 +324,7 @@ module Reimbursements
     end
 
     test "picker_group takes the area's centre when the line has none" do
-      centre = picker_cost_centre(key: "fringe-inherit", eusa_code: "F40i")
+      centre = create_second_reimbursements_cost_centre(short_code: "BF")
       budget = build_budget(area: Area.create!(name: "Cogito", cost_centre: centre))
       budget.update_column(:cost_centre_id, nil)
 
