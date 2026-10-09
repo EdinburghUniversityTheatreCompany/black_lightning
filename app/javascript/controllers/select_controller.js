@@ -1,27 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Remote search results, shared by every select for 60 seconds.
-const ajaxCache = {
-  data: {},
-  timestamps: {},
-  maxAge: 60000,
-
-  get(key) {
-    const timestamp = this.timestamps[key]
-    if (timestamp && (Date.now() - timestamp) < this.maxAge) {
-      return this.data[key]
-    }
-    delete this.data[key]
-    delete this.timestamps[key]
-    return null
-  },
-
-  set(key, value) {
-    this.data[key] = value
-    this.timestamps[key] = Date.now()
-  }
-}
-
 // Builds a Tom Select for every select.simple-select2 in this element, including
 // ones inserted later. Attributes on the <select>:
 //   data-remote-source          search URL (JSON: { results: [{id, text}] })
@@ -173,25 +151,12 @@ export default class extends Controller {
     url.searchParams.set(el.dataset.queryField || "q", query)
     if (el.dataset.showNonMembers) url.searchParams.set("show_non_members", el.dataset.showNonMembers)
 
-    const cacheKey = url.toString()
-    const cached = ajaxCache.get(cacheKey)
-
-    if (cached) {
-      // Async, as a fetch would be
-      setTimeout(() => callback(cached), 0)
-      return
-    }
-
-    fetch(cacheKey, {
+    fetch(url, {
       headers: { Accept: "application/json" },
       credentials: "same-origin"
     })
       .then((r) => r.json())
-      .then((data) => {
-        const results = data.results || []
-        ajaxCache.set(cacheKey, results)
-        callback(results)
-      })
+      .then((data) => callback(data.results || []))
       .catch(() => callback([]))
   }
 }

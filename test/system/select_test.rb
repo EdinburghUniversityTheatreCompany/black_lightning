@@ -16,10 +16,30 @@ class SelectTest < ApplicationSystemTestCase
     assert_selector ".ts-dropdown-content .option", wait: 5
   end
 
+  test "a remote select searches afresh after a Turbo visit" do
+    visit new_admin_debt_checker_path
+    search_remote_select("Pet")
+    assert_selector ".ts-dropdown-content .option", text: "Peter Peanut", wait: 5
+
+    FactoryBot.create(:member, first_name: "Petunia", last_name: "Latecomer")
+    execute_script("document.body.dataset.before = 'yes'; Turbo.visit(arguments[0])", new_admin_debt_checker_path)
+    assert_no_selector "body[data-before]", wait: 5
+
+    search_remote_select("Pet")
+    assert_selector ".ts-dropdown-content .option", text: "Petunia Latecomer", wait: 5
+  end
+
   test "merge page initialises tom-select for source user field" do
     @user = users(:admin)
     visit merge_admin_user_path(@user)
 
     assert_selector ".ts-wrapper", wait: 3
+  end
+
+  private
+
+  def search_remote_select(query)
+    find(".ts-control", wait: 3).click
+    find(".ts-dropdown .dropdown-input", wait: 3).set(query)
   end
 end
