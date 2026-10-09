@@ -84,18 +84,6 @@ module Admin
         assert_select "tr#budget_#{@props.record_id} td:first-child span", text: "(hidden)"
       end
 
-      test "the index and the overview are tabs that keep the filters" do
-        termtime = create_second_reimbursements_cost_centre
-        sign_in @user
-
-        get :index, params: { cost_centre: termtime.key }
-
-        assert_select "nav[aria-label='Budget views'] a[aria-current=page][href=?]",
-                      admin_reimbursements_budgets_path(cost_centre: termtime.key)
-        assert_select "nav[aria-label='Budget views'] a[href=?]",
-                      overview_admin_reimbursements_budgets_path(cost_centre: termtime.key)
-      end
-
       test "All is an explicit empty cost_centre= that the page's own links keep" do
         create_second_reimbursements_cost_centre
         sign_in @user
@@ -1330,7 +1318,7 @@ module Admin
         assert_equal [ "Next year props" ], names
       end
 
-      test "the tabs between the index and the overview keep the selected year and centre" do
+      test "the budget tabs and the index's row links keep the selected year and centre" do
         this_year, = seed_two_years
         other = create_second_reimbursements_cost_centre
         sign_in @user
@@ -1338,8 +1326,11 @@ module Admin
 
         get :index, params: scope
 
+        assert_select "nav[aria-label='Budget views'] a[aria-current=page][href=?]",
+                      admin_reimbursements_budgets_path(scope), text: "Budgets"
         assert_select "nav[aria-label='Budget views'] a[href=?]",
                       overview_admin_reimbursements_budgets_path(scope), text: "Overview"
+        assert_select "a[href=?]", edit_admin_reimbursements_budget_path(@props.record_id, **scope)
 
         get :overview, params: scope
 
@@ -1404,18 +1395,6 @@ module Admin
                                   cost_centre: termtime.key }
 
         assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key)
-      end
-
-      test "the index row links to the edit page with the filters and anchors the row" do
-        termtime = create_second_reimbursements_cost_centre
-        sign_in @user
-
-        get :index, params: { cost_centre: termtime.key }
-
-        assert_select "tr#budget_#{@props.record_id}"
-        assert_select "a[href=?]",
-                      edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key),
-                      minimum: 1
       end
 
       test "the edit page links to the previous and next budget in the index's order" do
