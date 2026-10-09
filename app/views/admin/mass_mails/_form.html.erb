@@ -4,13 +4,8 @@
   <% content_for :extra_form_actions do %>
     <% if @mass_mail.persisted? %>
       <%= submit_tag :Send, name: 'send', class: btn_classes(:primary),
-                    data: { title: "Send Mass Mail",
-                            confirm: """
-                                    Are you sure you wish to continue? The mass mail will be send at the time specified.<br><br>
-                                    Even if you have delayed sending this message, you will not be able to edit it (or remove it) once you confirm.
-                                    """ 
-                            } 
-      %>
+                    data: { turbo_confirm: "Send this mass mail to every member on its send date? " \
+                                           "Once you confirm, it can no longer be edited or deleted." } %>
     <% end %>
   <% end %>
 
