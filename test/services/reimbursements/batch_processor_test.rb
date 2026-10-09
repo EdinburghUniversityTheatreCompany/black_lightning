@@ -1,4 +1,5 @@
 require "test_helper"
+require "rubyXL" # BacsXlsx requires it lazily; this test parses the uploaded spreadsheet itself
 
 module Reimbursements
   class BatchProcessorTest < ActiveSupport::TestCase
@@ -83,28 +84,18 @@ module Reimbursements
       graph.drafts.first[:attachments]
     end
 
-    class RecordingBacsXlsx < BacsXlsx
-      attr_reader :authorisation
-
-      def generate(rows, **authorisation)
-        @authorisation = authorisation
-        super
-      end
-    end
-
     test "prints the cost centre's budget holder on the BACS authorisation form" do
       cost_centre = configured_cost_centre
       cost_centre.authoriser_name = "Jo Producer"
       cost_centre.authoriser_designation = "Fringe Treasurer"
-      _processor, store, graph = build_scenario(cost_centre: cost_centre)
-      xlsx = RecordingBacsXlsx.new
-      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, xlsx: xlsx,
-                                     sleeper: ->(_seconds) { })
+      processor, store, graph = build_scenario(cost_centre: cost_centre)
 
       run_batch(processor, store)
 
-      assert_equal({ centre_name: "Bedlam Fringe", authoriser_name: "Jo Producer",
-                     authoriser_designation: "Fringe Treasurer" }, xlsx.authorisation)
+      bacs = graph.uploaded.find { |upload| upload[:filename].include?("BACS-request") }
+      form = RubyXL::Parser.parse_buffer(bacs[:content])["AUTHORISATION FORM"]
+      assert_equal [ "Bedlam Fringe", "Jo Producer", "Fringe Treasurer" ],
+                   [ form[3][3].value, form[15][2].value, form[16][2].value ]
     end
 
     test "a mixed batch attaches and backs up the BACS sheet plus one form per international claim" do

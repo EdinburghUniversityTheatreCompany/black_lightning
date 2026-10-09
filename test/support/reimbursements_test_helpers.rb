@@ -300,7 +300,7 @@ module ReimbursementsTestHelpers
       raise ::GraphAuth::Error, "SharePoint down" if fail_uploads
       raise ::GraphAuth::Error, "SharePoint down for #{filename}" if Array(fail_upload_for).include?(filename)
 
-      @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
+      @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, content: content }
       "https://sp.example/#{folder_id}/#{filename}"
     end
 
