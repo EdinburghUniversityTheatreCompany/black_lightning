@@ -15,13 +15,13 @@ module Climate
     # last_error, which the dashboard's staleness badge reads.
     REPORT_FAILURE_AFTER = 1.day
 
-    # Test seam. The sensor's source picks the client (Climate::OUTDOOR_SOURCES).
-    class_attribute :client_builder, default: ->(sensor) { Climate.outdoor_client_for(sensor.source) }
+    # Test seam.
+    class_attribute :client_builder, default: -> { OpenMeteoClient.new }
 
     def perform
       Sensor.outdoor_source!
 
-      Sensor.active.outdoor.find_each { |sensor| poll_safely(sensor) }
+      Sensor.active.open_meteo.find_each { |sensor| poll_safely(sensor) }
     end
 
     private
@@ -50,8 +50,8 @@ module Climate
     end
 
     def poll(sensor)
-      rows = client_builder.call(sensor).hourly_series(latitude: sensor.latitude.to_f,
-                                                       longitude: sensor.longitude.to_f)
+      rows = client_builder.call.hourly_series(latitude: sensor.latitude.to_f,
+                                               longitude: sensor.longitude.to_f)
       ReadingIngest.upsert_series!(sensor: sensor, rows: rows)
       sensor.update_columns(last_polled_at: Time.current, last_error: nil)
     end

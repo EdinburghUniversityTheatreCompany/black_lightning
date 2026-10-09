@@ -25,7 +25,7 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
 
   def use_source(result = rows)
     fake = FakeOutdoorSource.new(rows: result)
-    Climate::OutdoorPollJob.client_builder = ->(_sensor) { fake }
+    Climate::OutdoorPollJob.client_builder = -> { fake }
     fake
   end
 
@@ -119,8 +119,9 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
     assert_empty fake.calls
   end
 
-  test "does not touch the govee sensors" do
+  test "does not touch a Govee sensor, even one placed outdoors" do
     govee = create_climate_sensor
+    govee.update!(placement: Climate::Sensor::PLACEMENT_OUTDOOR)
     use_source
 
     Climate::OutdoorPollJob.perform_now

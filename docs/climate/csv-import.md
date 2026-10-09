@@ -110,8 +110,8 @@ Bedlam's own coordinates, fetched hourly. Two things follow from that.
 
 - **Attribution is a licence condition** (CC BY 4.0), rendered in the "How this works" panel.
   Don't remove it.
-- **The free tier is non-commercial only.** Fine for a student theatre. `Climate::OUTDOOR_SOURCES`
-  is the swap point if that ever changes.
+- **The free tier is non-commercial only.** Fine for a student theatre. If that ever changes, a
+  replacement is a client class answering `#hourly_series`, built by `OutdoorPollJob`.
 
 Each poll re-fetches a rolling multi-day window and upserts it, so an outage backfills itself.
 That self-healing is why Open-Meteo won over sources with a better uptime guarantee but no history.

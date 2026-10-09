@@ -53,7 +53,7 @@ module Climate
 
     scope :active, -> { where(active: true) }
     scope :govee, -> { where(source: SOURCE_GOVEE) }
-    scope :outdoor, -> { where(placement: PLACEMENT_OUTDOOR) }
+    scope :open_meteo, -> { where(source: SOURCE_OPEN_METEO) }
     scope :in_display_order, -> { order(Arel.sql("placement = 'outdoor'"), :position, :id) }
 
     # Ensured in code, not seeded by a data migration: test and CI databases are
