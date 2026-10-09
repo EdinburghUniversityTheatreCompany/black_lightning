@@ -94,6 +94,9 @@ module Reimbursements
       area ? "#{area.name}: #{name}" : name.to_s
     end
 
+    # The admin breadcrumb names a record by to_label before name.
+    def to_label = display_name
+
     # The budgets index's row order (area lines grouped by area, then the loose ones), shared with
     # the edit page's previous/next links so stepping through them walks the table as it reads.
     def self.index_order(budgets)
