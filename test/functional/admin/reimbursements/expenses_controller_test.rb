@@ -101,22 +101,15 @@ module Admin
     end
 
     # Hiding a centre stops NEW claims; a claim already on its line keeps it.
-    test "editing a claim on a hidden centre's budget keeps that budget offered" do
+    test "a claim on a hidden centre's budget keeps it offered on edit, saves unchanged and survives a failed save" do
       hidden = hidden_centre_budget
       @expense.update!(budget: hidden)
       sign_in @user
 
       get :edit, params: { id: @expense.record_id }
-
       assert_select "option[selected][value='#{hidden.record_id}']", text: /Termtime props/
-    end
 
-    test "a claim on a hidden centre's budget saves unchanged, and survives a failed save" do
-      hidden = hidden_centre_budget
-      @expense.update!(budget: hidden)
-      sign_in @user
       params = valid_form_params.except(:receipts).merge(budget_record_id: hidden.record_id)
-
       patch :update, params: { id: @expense.record_id,
                                reimbursements_expense_form: params.merge(description: "") }
       assert_response :unprocessable_entity
