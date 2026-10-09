@@ -7,6 +7,15 @@ module Reimbursements
       assert_equal "F40", CostCentre.default.eusa_code
     end
 
+    test "caps the BACS budget holder fields at their column length" do
+      fringe = CostCentre.default
+      fringe.assign_attributes(authoriser_name: "a" * 256, authoriser_designation: "b" * 256)
+
+      assert_not fringe.valid?
+      assert fringe.errors[:authoriser_name].present?
+      assert fringe.errors[:authoriser_designation].present?
+    end
+
     test "carries distinct receive and send mailboxes" do
       fringe = CostCentre.default
       assert_equal "reimbursements@bedlamfringe.co.uk", fringe.receive_mailbox

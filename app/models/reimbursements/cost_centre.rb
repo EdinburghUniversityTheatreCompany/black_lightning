@@ -87,6 +87,7 @@ module Reimbursements
     # Short enough to prefix a dropdown option without pushing the budget's own
     # name out of view.
     validates :short_code, length: { maximum: SHORT_CODE_MAX }, allow_blank: true
+    validates :authoriser_name, :authoriser_designation, length: { maximum: 255 }
     validates :receive_mailbox, uniqueness: { case_sensitive: false }
     validates :send_mailbox, uniqueness: { case_sensitive: false }
     # No format check existed anywhere on this write path — a mistyped
