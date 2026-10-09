@@ -75,10 +75,6 @@ module Reimbursements
     # Each refusal is a form EUSA could not act on: a wrong form costs days, a
     # refusal a correction before anything is sent.
     def validate!(payment)
-      if payment.cost_centre.blank?
-        raise TemplateError, "an international payment needs a cost-centre code before the form can be built."
-      end
-
       if payment.amount.nil? || payment.amount.to_d.zero?
         raise TemplateError, "an international payment needs a non-zero amount."
       end

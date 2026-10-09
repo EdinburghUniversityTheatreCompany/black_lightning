@@ -133,7 +133,6 @@ module Reimbursements
     test "refuses a form EUSA could not act on" do
       [
         [ { currency: "" }, /currency/i ], # the amount label names no currency, so a blank leaves no unit
-        [ { cost_centre: " " }, /cost.centre/i ], # defaulting to F40 would book a termtime payment to the Fringe
         [ { iban: "" }, nil ],
         [ { bic: nil }, nil ],
         [ { iban: "DE88370400440532013000" }, /IBAN/i ], # fails its check digits

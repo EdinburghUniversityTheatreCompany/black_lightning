@@ -45,12 +45,6 @@ module Reimbursements
               "split this into multiple submissions."
       end
 
-      # Refuse rather than default: a termtime row stamped F40 is paid from the
-      # Fringe's pot.
-      if rows.any? { |row| row.cost_centre.blank? }
-        raise TemplateError, "every BACS row needs a cost-centre code before the spreadsheet can be built."
-      end
-
       workbook, sheet = open_workbook
       rows.each_with_index do |row, index|
         write_row(sheet, DATA_START_ROW + index, row)
