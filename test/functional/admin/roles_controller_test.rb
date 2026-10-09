@@ -329,7 +329,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
       delete :destroy, params: { id: regular_role }
     end
 
-    assert_includes flash[:success], "The role 'Test Role' was successfully deleted."
+    assert_includes flash[:success], "The Role \"Test Role\" has been successfully destroyed."
     assert_redirected_to admin_roles_path
     assert_not Role.exists?(regular_role.id), "Regular role should be removed"
   end
