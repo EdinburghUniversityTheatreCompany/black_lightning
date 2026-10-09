@@ -83,7 +83,7 @@ module LinkHelper
       end
     end
 
-    confirm_data = get_confirm_data(object, action, confirm, detail)
+    confirm_data = get_confirm_data(object, action, confirm, detail) || {}
 
     namespace = get_namespace_for_link(object, admin)
 
@@ -97,17 +97,11 @@ module LinkHelper
     title ||= strip_tags(link_text).strip
 
     if http_method.nil? || http_method == :get
-      link = link_to(link_text, link_target, class: button_class, data: (confirm_data || {}), title: title, target: target)
+      link = link_to(link_text, link_target, class: button_class, data: confirm_data, title: title, target: target)
     else
-      confirm_message = confirm_data&.dig(:turbo_confirm)
-      form_data = confirm_message.present? ? {
-        controller: "confirm",
-        action: "submit->confirm#confirm",
-        confirm_message_value: confirm_message
-      } : {}
       link = button_to(link_text.html_safe, link_target, method: http_method,
                        class: button_class, title: title,
-                       form: { style: "display:contents", data: form_data })
+                       form: { style: "display:contents", data: form_confirm_data(confirm_data) })
     end
 
     link = wrap_in_tags(link, wrap_tag) if wrap_tag
@@ -214,5 +208,13 @@ module LinkHelper
     message ||= "Are you sure you want to delete #{get_object_name(object, include_class_name: true, include_the: true)}?" if action == :destroy
 
     { turbo_confirm: message } if message
+  end
+
+  # On the public site the button posts to an admin page, which has another layout, and a Turbo
+  # submit would lose the flash there. So confirm_controller asks, then submits natively.
+  def form_confirm_data(confirm_data)
+    return confirm_data if @admin_site || confirm_data.empty?
+
+    { controller: "confirm", action: "submit->confirm#confirm", confirm_message_value: confirm_data[:turbo_confirm] }
   end
 end

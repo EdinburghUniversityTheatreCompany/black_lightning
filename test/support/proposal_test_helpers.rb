@@ -9,7 +9,7 @@ module ProposalTestHelpers
   end
 
   def assert_debtor_approval_question(proposal)
-    assert_select "form[action=?][data-confirm-message-value=?]", approve_admin_proposals_proposal_path(proposal),
+    assert_select "form[action=?][data-turbo-confirm=?]", approve_admin_proposals_proposal_path(proposal),
                   "#{proposal.show_title} has debtors on its team. Approve it anyway?"
   end
 end

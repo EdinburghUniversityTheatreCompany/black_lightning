@@ -9,6 +9,7 @@ class LinkHelperTest < ActionView::TestCase
 
   setup do
     @current_user = users(:admin)
+    @admin_site = true
   end
 
   test "user_link for nil" do
@@ -95,7 +96,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test "get_link with destroy" do
     news = FactoryBot.create(:news, id: 1, title: "Vikings have taken over the Bedlam")
-    expected_link = "<form style=\"display:contents\" data-controller=\"confirm\" data-action=\"submit-&gt;confirm#confirm\" data-confirm-message-value=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
+    expected_link = "<form style=\"display:contents\" data-turbo-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
 
     assert_equal expected_link, get_link(news, :destroy)
 
@@ -131,7 +132,19 @@ class LinkHelperTest < ActionView::TestCase
 
     link = get_link(opportunity, :approve, confirm: "Approve this?")
 
-    assert_includes link, 'data-confirm-message-value="Approve this?"'
+    assert_includes link, 'data-turbo-confirm="Approve this?"'
+  end
+
+  test "get_link on the public site asks through confirm_controller, which submits natively" do
+    @admin_site = false
+    opportunity = FactoryBot.create(:opportunity, id: 1)
+
+    link = get_link(opportunity, :approve, confirm: "Approve this?")
+
+    assert_includes link, 'data-controller="confirm" data-action="submit-&gt;confirm#confirm" ' \
+                          'data-confirm-message-value="Approve this?"'
+    assert_not_includes link, "data-turbo-confirm"
+    assert_not_includes get_link(opportunity, :reject), "data-controller"
   end
 
   test "get_link with custom action" do
@@ -188,7 +201,7 @@ class LinkHelperTest < ActionView::TestCase
 
     assert_not @current_user.can?(:destroy, news)
 
-    expected_link = "<form style=\"display:contents\" data-controller=\"confirm\" data-action=\"submit-&gt;confirm#confirm\" data-confirm-message-value=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
+    expected_link = "<form style=\"display:contents\" data-turbo-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
 
     assert_equal expected_link, get_link(news, :destroy, condition: true)
   end

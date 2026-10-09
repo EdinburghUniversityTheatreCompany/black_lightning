@@ -38,9 +38,7 @@ class UsersTableComponent < ViewComponent::Base
     helpers.button_to(
       "Remove", @remove_url.call(user.id), method: :delete,
       class: ButtonComponent.classes_for(variant: :danger, size: :sm),
-      form: { style: "display:contents",
-              data: { controller: "confirm", action: "submit->confirm#confirm",
-                      confirm_message_value: "Remove #{user.name} from this role?" } }
+      form: { style: "display:contents", data: { turbo_confirm: "Remove #{user.name} from this role?" } }
     )
   end
 end

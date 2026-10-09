@@ -40,7 +40,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
   test "the delete button asks a plain question naming the user" do
     get :show, params: { id: @user }
 
-    assert_select "form[data-confirm-message-value=?]",
+    assert_select "form[data-turbo-confirm=?]",
                   "Delete #{@user.name(users(:admin))}? Content that belongs to them may break."
   end
 
