@@ -1,4 +1,5 @@
-class ButtonComponent < ViewComponent::Base
+# Button styles for btn_classes, get_link and the components. It renders nothing itself.
+module ButtonComponent
   BASE_CLASSES = "btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium cursor-pointer no-underline transition-colors".freeze
 
   VARIANT_CLASSES = {
@@ -23,18 +24,5 @@ class ButtonComponent < ViewComponent::Base
       VARIANT_CLASSES.fetch(variant, VARIANT_CLASSES[:secondary]),
       SIZE_CLASSES.fetch(size, "")
     ].join(" ").strip
-  end
-
-  def initialize(href: nil, variant: :secondary, size: :md, disabled: false, type: "button", **html_options)
-    @href = href
-    @variant = variant.to_sym
-    @size = size.to_sym
-    @disabled = disabled
-    @type = type
-    @html_options = html_options
-  end
-
-  def button_classes
-    self.class.classes_for(variant: @variant, size: @size)
   end
 end
