@@ -84,8 +84,10 @@ module Admin
         assert_select "tr#budget_#{@props.record_id} td:first-child span", text: "(hidden)"
       end
 
-      test "All is an explicit empty cost_centre= that the page's own links keep" do
+      # Two years, so a link that adds the selected year when the URL names none fails here.
+      test "All is an explicit empty cost_centre= the page's links keep; with none at all they stay bare" do
         create_second_reimbursements_cost_centre
+        seed_two_years
         sign_in @user
 
         get :index, params: { cost_centre: "" }
@@ -95,25 +97,12 @@ module Admin
         assert_select "[aria-label='Cost centre'] a[href=?]", admin_reimbursements_budgets_path(cost_centre: "")
         assert_select "nav[aria-label='Budget views'] a[href=?]",
                       overview_admin_reimbursements_budgets_path(cost_centre: "")
-      end
-
-      test "New budget carries the page's scope, an explicit All included" do
-        create_second_reimbursements_cost_centre
-        seed_two_years
-        sign_in @user
-
-        get :index, params: { cost_centre: "" }
-
         assert_select "a[href=?]", new_admin_reimbursements_budget_path(cost_centre: ""), text: "New budget"
-      end
-
-      test "with no cost_centre at all, page links stay bare" do
-        create_second_reimbursements_cost_centre
-        sign_in @user
 
         get :index
 
         assert_select "nav[aria-label='Budget views'] a[href=?]", overview_admin_reimbursements_budgets_path
+        assert_select "a[href=?]", new_admin_reimbursements_budget_path, text: "New budget"
       end
 
       test "the row a save came back for is highlighted" do
