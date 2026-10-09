@@ -63,6 +63,13 @@
                   "Leave blank to sign off as \"#{@cost_centre.name} Finance\"." %>
     </div>
 
+    <div class="grid gap-x-4 sm:grid-cols-2">
+      <%= f.input :authoriser_name, label: "Budget holder name",
+            hint: "Printed on the BACS authorisation form as the budget holder. Left blank, the form is filled in by hand." %>
+      <%= f.input :authoriser_designation, label: "Budget holder designation",
+            hint: "Their role, printed under the name on the BACS authorisation form." %>
+    </div>
+
     <%= f.input :nightly_run_days, as: :check_boxes, label: "Nightly reminders run on",
           collection: Date::DAYNAMES.each_with_index.map { |day_name, wday| [ day_name, wday ] },
           wrapper: :vertical_collection_inline, wrapper_html: { class: "mb-0" },

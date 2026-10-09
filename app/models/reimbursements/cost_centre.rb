@@ -4,6 +4,8 @@
 # Database name: primary
 #
 #  id                            :bigint           not null, primary key
+#  authoriser_designation        :string(255)
+#  authoriser_name               :string(255)
 #  eusa_code                     :string(255)      not null
 #  eusa_contact_name             :string(255)
 #  eusa_recipient                :string(255)
