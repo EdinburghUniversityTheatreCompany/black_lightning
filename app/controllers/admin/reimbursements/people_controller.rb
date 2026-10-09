@@ -13,7 +13,7 @@ module Admin
           # The on-screen filter carries through; bank details are masked (Exports::People).
           format.csv do
             send_export ::Reimbursements::Exports::People,
-                        filtered_people(store.people_in_name_order)
+                        filtered_people(store.people)
           end
         end
       end
@@ -60,7 +60,7 @@ module Admin
 
       def load_registry
         @title = "Reimbursements People"
-        people = store.people_in_name_order
+        people = store.people
         # Over the WHOLE registry, not the filtered page: a filter hiding one
         # half of a pair would hide the warning too.
         @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(people)

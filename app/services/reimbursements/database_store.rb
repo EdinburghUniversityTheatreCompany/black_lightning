@@ -128,15 +128,11 @@ module Reimbursements
       Batch.find_by(id: record_id)
     end
 
-    def people
-      @people ||= Person.includes(:payment_details).to_a
-    end
-
     # By name, blanks last, id as tiebreak. Ordered in SQL because the column collates
     # utf8mb4_unicode_ci, which folds accents while Ruby's sort is byte-wise ("Ábel" would land
     # after "Zoe", unlike every other ordered list in the portal).
-    def people_in_name_order
-      @people_in_name_order ||=
+    def people
+      @people ||=
         Person.includes(:payment_details)
               .order(Arel.sql("CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END"), :name, :id)
               .to_a

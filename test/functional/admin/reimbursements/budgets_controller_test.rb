@@ -712,6 +712,16 @@ module Admin
         assert_select "select#owner_ids option[value=#{@bob.record_id}][selected]", false
       end
 
+      test "the owner picker lists people by name, not by when they were added" do
+        create_reimbursements_person(name: "Aaron Early", email: "aaron@example.com")
+        sign_in @user
+
+        get :new
+
+        assert_equal [ "Aaron Early", "Alice Owner", "Bob Owner" ],
+                     css_select("select#owner_ids option").map(&:text)
+      end
+
       # The Glossary is the one definition; the figures' old hover notes had drifted from it.
       test "edit's read-only figures carry no tooltip of their own" do
         sign_in @user

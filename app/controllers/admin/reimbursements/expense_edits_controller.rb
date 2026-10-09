@@ -99,7 +99,7 @@ module Admin
         @title = "Edit ##{expense.auto_number}"
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
-        @people = store.people_in_name_order
+        @people = store.people
         @attention =
           ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
         load_history(expense)
@@ -170,7 +170,7 @@ module Admin
       # the wrong payee are what this exists to correct.
       def person_record_id_error(record_id)
         return nil if record_id.blank?
-        return nil if store.people_in_name_order.any? { |person| person.record_id == record_id.to_s }
+        return nil if store.people.any? { |person| person.record_id == record_id.to_s }
 
         "That person is no longer in the registry. Reload the page and pick again."
       end
