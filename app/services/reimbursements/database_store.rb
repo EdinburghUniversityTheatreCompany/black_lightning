@@ -668,9 +668,9 @@ module Reimbursements
     end
 
     # Actuals already imported for an EUSA period (P1..P12), to dedup a pasted export. Both sides
-    # go through Reconciliation.normalise_period: a row that slipped in unpadded (a console fix,
-    # a database the backfill has not reached) must still be recognised, or a re-paste
-    # double-counts it in the ledger and every rollup.
+    # go through Reconciliation.normalise_period: a row that slipped in unpadded (written with
+    # update_column or from the console) must still be recognised, or a re-paste double-counts it
+    # in the ledger and every rollup.
     def actuals_for_period(period)
       key = Reconciliation.normalise_period(period)
       eusa_actuals.select { |a| Reconciliation.normalise_period(a.period) == key }

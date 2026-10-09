@@ -3,8 +3,8 @@ require "test_helper"
 module Reimbursements
   ##
   # The EUSA period has ONE canonical spelling, zero-padded to two digits. Covers the pure rule, the
-  # model write path, the backfill, and the one that costs money if it breaks: dedup still recognising
-  # a re-pasted row across the two spellings.
+  # model write path, and the one that costs money if it breaks: dedup still recognising a re-pasted
+  # row across the two spellings.
   class PeriodNormalisationTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
@@ -28,31 +28,6 @@ module Reimbursements
     test "a nil period stays nil rather than becoming a blank string" do
       actual = create_reimbursements_eusa_actual(period: nil, debit: BigDecimal("10"))
       assert_nil actual.reload.period
-    end
-
-    # --- The backfill ------------------------------------------------------
-
-    test "the backfill rewrites stored rows and reports how many" do
-      unpadded = create_reimbursements_eusa_actual(period: "6", debit: BigDecimal("10"))
-      # update_column, not the model: the before_validation is what this backfill exists to have been missing.
-      unpadded.update_column(:period, "6")
-      already = create_reimbursements_eusa_actual(period: "07", debit: BigDecimal("11"))
-
-      rewritten = PeriodNormalisation.run!
-
-      assert_equal 1, rewritten
-      assert_equal "06", unpadded.reload.period
-      assert_equal "07", already.reload.period
-      assert_equal 0, PeriodNormalisation.run!, "a second run finds nothing to do"
-    end
-
-    test "the backfill leaves a period it cannot read alone" do
-      row = create_reimbursements_eusa_actual(period: "06", debit: BigDecimal("10"))
-      row.update_column(:period, "P6")
-
-      PeriodNormalisation.run!
-
-      assert_equal "P6", row.reload.period
     end
 
     # --- Dedup across the two spellings ------------------------------------

@@ -100,7 +100,7 @@ module Reimbursements
     # month and "10" no longer sorts between "1" and "2". Only a purely numeric value of up to two digits
     # is touched (Sage's period 13 included); anything else ("P6", a date, blank) stays as the sheet
     # spelled it, since padding what we cannot read would be guessing. Idempotent, which is what lets it
-    # sit on a before_validation, in the parser and in the backfill.
+    # sit on a before_validation and in the parser.
     def normalise_period(value)
       stripped = value.to_s.strip
       return stripped unless /\A\d+\z/.match?(stripped)
