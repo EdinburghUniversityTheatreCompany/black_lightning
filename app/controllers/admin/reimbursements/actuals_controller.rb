@@ -455,16 +455,11 @@ module Admin
         matching, others = offerable_budgets.partition do |budget|
           actual.nominal_code.present? && budget.nominal_code == actual.nominal_code
         end
-        groups = []
-        if matching.any?
-          groups << [ "Matches this row's nominal code (#{actual.nominal_code})",
-                      budget_options(matching) ]
-        end
-        groups + ::Reimbursements::Budget.picker_groups(others) { |budget| budget_option_label(budget) }
-      end
+        groups = ::Reimbursements::Budget.picker_groups(others) { |budget| budget_option_label(budget) }
+        return groups if matching.empty?
 
-      def budget_options(budgets)
-        budgets.map { |budget| [ budget_option_label(budget), budget.record_id ] }
+        groups.unshift([ "Matches this row's nominal code (#{actual.nominal_code})",
+                         matching.map { |budget| [ budget_option_label(budget), budget.record_id ] } ])
       end
 
       def budget_option_label(budget) = "#{budget.picker_label} · #{budget.nominal_code}"
