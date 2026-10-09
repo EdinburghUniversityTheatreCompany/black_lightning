@@ -68,12 +68,19 @@ module Reimbursements
     end
 
     # perform, not perform_now: ApplicationJob's retry_on would take the error and re-enqueue.
-    test "an unreadable BACS date raises rather than paying on today's date" do
+    # The attempt is failed first, or History shows it building until it goes stale.
+    test "an unreadable BACS date fails its attempt, then raises rather than paying on today's date" do
       approved_expense
+      attempt = click_time_attempt
 
-      assert_raises(Date::Error) { BuildBatchJob.new.perform(**enqueue_args(bacs_date: "not-a-date")) }
+      assert_raises(Date::Error) do
+        BuildBatchJob.new.perform(**enqueue_args(bacs_date: "not-a-date", attempt_id: attempt.id))
+      end
 
       assert_empty @processor.calls
+      assert attempt.reload.failed?
+      assert_equal 'The BACS date "not-a-date" could not be read, so nothing was built. Build the batch again.',
+                   attempt.error_messages
     end
 
     test "a run whose click-time attempt is missing raises rather than inventing one" do

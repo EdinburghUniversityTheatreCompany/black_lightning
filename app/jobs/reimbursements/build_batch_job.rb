@@ -27,8 +27,7 @@ module Reimbursements
       # The row the controller created at the click, by id: "the oldest
       # building row" mislabels History when builds race or a prior job died.
       attempt = BatchAttempt.find(attempt_id)
-      # Raises rather than guess: today's date by accident is a wrong payment date.
-      bacs_date = Date.iso8601(bacs_date)
+      bacs_date = read_bacs_date(bacs_date, attempt)
 
       cost_centre = CostCentre.find_by(key: cost_centre_key)
       if cost_centre.nil?
@@ -66,6 +65,17 @@ module Reimbursements
     end
 
     private
+
+    # Raises rather than guess: today's date by accident is a wrong payment date. The attempt
+    # is failed first, or History shows it building until it goes stale.
+    def read_bacs_date(value, attempt)
+      Date.iso8601(value.to_s)
+    rescue Date::Error
+      attempt.resolve!(status: "failed",
+                       error_messages: "The BACS date #{value.inspect} could not be read, so nothing was " \
+                                       "built. Build the batch again.")
+      raise
+    end
 
     # The processor and the notifier share one GraphClient (one OAuth token).
     def graph
