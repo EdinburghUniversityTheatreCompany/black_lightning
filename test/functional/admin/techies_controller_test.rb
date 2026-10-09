@@ -44,8 +44,8 @@ class Admin::TechiesControllerTest < ActionController::TestCase
       post :create, params: { techie: attributes }
     end
 
-    assert child.parents.first, assigns(:techie)
-    assert parent.children.first, assigns(:techie)
+    assert_equal assigns(:techie), child.parents.first
+    assert_equal assigns(:techie), parent.children.first
 
     assert_redirected_to admin_techie_path(assigns(:techie))
   end
@@ -106,7 +106,7 @@ class Admin::TechiesControllerTest < ActionController::TestCase
 
     patch :update, params: { id: @techie.id, techie: attributes }
 
-    assert attributes[:name], assigns(:techie).name
+    assert_equal attributes[:name], @techie.reload.name
     assert_redirected_to admin_techie_path(assigns(:techie))
   end
 

@@ -41,11 +41,11 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     staffing_debt = FactoryBot.create(:staffing_debt, state: :normal)
     staffing_job = FactoryBot.create(:staffing_job, staffing_debt: staffing_debt, user: staffing_debt.user)
 
-    assert staffing_job.id, staffing_debt.reload.admin_staffing_job&.id
+    assert_equal staffing_job.id, staffing_debt.reload.admin_staffing_job&.id
 
     staffing_debt.forgive
 
-    assert :forgiven, staffing_debt.status
+    assert_equal :forgiven, staffing_debt.status
 
     assert_nil staffing_debt.reload.admin_staffing_job
   end
