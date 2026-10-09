@@ -17,7 +17,7 @@ module Reimbursements
 
     test "index_order breaks a name tie by id, so the edit page's neighbours are stable" do
       first = create_reimbursements_budget(name: "Props")
-      second = create_reimbursements_budget(name: "props", nominal_code: "4001")
+      second = create_reimbursements_budget(name: "props")
 
       assert_equal [ first, second ], Reimbursements::Budget.index_order([ second, first ])
     end

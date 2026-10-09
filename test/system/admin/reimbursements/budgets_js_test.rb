@@ -18,7 +18,7 @@ module Admin
       test "saving a budget far down a long index lands with its row in view" do
         area = create_reimbursements_area(name: "Medea")
         lines = (1..30).map do |n|
-          create_reimbursements_budget(name: format("Line %02d", n), nominal_code: "4#{n.to_s.rjust(3, '0')}", area: area)
+          create_reimbursements_budget(name: format("Line %02d", n), area: area)
         end
         target = lines[27]
 
