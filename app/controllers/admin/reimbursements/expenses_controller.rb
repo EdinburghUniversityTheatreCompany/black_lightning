@@ -106,7 +106,7 @@ module Admin
       # against a list it doesn't display can only produce an error the producer
       # cannot act on.
       def offerable_budgets
-        @budgets ||= store.active_budgets
+        @budgets ||= store.submittable_budgets
       end
 
       def offerable_budget_ids

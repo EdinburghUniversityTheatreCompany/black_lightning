@@ -133,6 +133,32 @@ module Admin
       end
     end
 
+    def hidden_centre_budget
+      centre = create_second_reimbursements_cost_centre(hidden_from_submitters: true)
+      create_reimbursements_budget(name: "Termtime props", cost_centre: centre)
+    end
+
+    test "the budget picker leaves out a centre hidden from submitters" do
+      hidden_centre_budget
+      sign_in @user
+
+      get :new
+
+      assert_select "option", text: /Termtime props/, count: 0
+    end
+
+    test "create refuses a budget from a centre hidden from submitters" do
+      sign_in @user
+      params = valid_form_params.merge(budget_record_id: hidden_centre_budget.record_id)
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: params }
+      end
+
+      assert_response :unprocessable_entity
+      assert_predicate assigns(:form).errors[:budget_record_id], :present?
+    end
+
     test "new renders the receipt-first form" do
       sign_in @user
 

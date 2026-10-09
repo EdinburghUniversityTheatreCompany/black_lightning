@@ -259,6 +259,12 @@ module Reimbursements
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:display_name)
     end
 
+    # The producer's picker only. Finance's pickers read #active_budgets so a
+    # hidden centre's claims stay editable; a line with no centre stays offered.
+    def submittable_budgets
+      active_budgets.reject { |b| b.cost_centre&.hidden_from_submitters? }
+    end
+
     # Every area, every year — an id->record lookup, for exactly the reason
     # #budgets is unscoped: narrowing it blanks the area name on another
     # year's or another centre's claim.

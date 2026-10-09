@@ -257,6 +257,19 @@ module Admin
         assert_equal [ 1, 3, 5 ], @cost_centre.nightly_run_days
       end
 
+      test "update hides a cost centre's budgets from submitters" do
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, cost_centre: {
+          hidden_from_submitters: "1", nightly_run_days: @cost_centre.nightly_run_days
+        } }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_predicate @cost_centre.reload, :hidden_from_submitters?
+        get :index
+        assert_includes response.body, "hidden from submitters"
+      end
+
       test "update saves the SharePoint site URL" do
         sign_in @user
 

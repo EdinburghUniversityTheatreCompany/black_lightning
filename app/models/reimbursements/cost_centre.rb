@@ -8,6 +8,7 @@
 #  eusa_contact_name             :string(255)
 #  eusa_recipient                :string(255)
 #  eusa_signature_name           :string(255)
+#  hidden_from_submitters        :boolean          default(FALSE), not null
 #  key                           :string(255)      not null
 #  last_nightly_run_on           :date
 #  name                          :string(255)      not null

@@ -641,6 +641,9 @@ survive as historical import provenance and are never written. Spec + plan in
     (derived centre, then default). Older batches all drafted into the default centre's mailbox,
     and `GraphClient#draft_message?` fails closed, so one wrong guess read as "may already have
     been sent" — untrue and inescapable.
+  - **`hidden_from_submitters` filters `submittable_budgets`, the PRODUCER picker only.** Never
+    apply it to `active_budgets`: Review, finance expense-edit and the actuals convert read that,
+    and a hidden centre's existing claims must stay editable there. A line with no centre stays offered.
   - **A budget import ADOPTS the unplaced line it matched** (`BudgetImport#adoptions`), or the same
     leniency has two committees revising one shared row forever and neither getting its own.
   - **Which reads are scoped is the design.** `budgets_for_year` / `budgets_with_actuals` /
