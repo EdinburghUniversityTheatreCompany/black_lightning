@@ -4,9 +4,10 @@ Member ticket prices in the pretix shop are gated behind a pretix **membership**
 specifies how that membership is driven from the website's `member` role instead of from a
 product the member has to remember to buy.
 
-Status: built and tested, not yet merged or deployed. `Pretix::Settings`, `Pretix::Client`,
-`Pretix::MembershipSync`, `Pretix::ReconcileMembershipsJob` and `Pretix::SyncMembershipJob`, with
-the three triggers wired. The one-off data fix in [Rollout](#rollout) step 0 is done in production.
+Status: live in production. `Pretix::Settings`, `Pretix::Client`, `Pretix::MembershipSync`,
+`Pretix::ReconcileMembershipsJob` and `Pretix::SyncMembershipJob`, with the three triggers wired
+(`Pretix::LoginSync` for logins). The one-off data fix in [Rollout](#rollout) step 0 is done in
+production.
 
 **Verified against the live API**, not only against fakes: both filter names on the memberships
 endpoint, `PATCH date_end` (the 198-record backfill), and `POST` creation — the last by creating a
@@ -230,13 +231,14 @@ the reconcile rather than hooked, but two things constrain what is sent:
 ## Reconcile algorithm
 
 ```
-customers  = GET /organizers/eutc/customers/        (paginated, ~875)
-memberships = GET /organizers/eutc/memberships/     (paginated, type 225)
+customers = GET /organizers/eutc/customers/         (paginated, ~875)
 
-for each customer with an external_identifier:
-    user     = User.find_by(email: customer.external_identifier)
-    entitled = user&.has_role?(:member) || user&.has_role?("life member")
-    mine     = memberships for this customer, type 225
+for each customer:
+    user     = User by stored pretix_customer_identifier, else by email
+               (external_identifier, or a native account's own email)
+    next unless user                                # nothing written
+    entitled = user.has_role?(:member) || user.has_role?("life member")
+    mine     = GET /organizers/eutc/memberships/?customer=<identifier>, type 225
 
     canonical = mine.min_by(&:date_start)       # widest window
     others    = mine - [canonical]
@@ -292,21 +294,23 @@ grant themselves a membership.
    `2027-09-21T23:59:59+01:00`. They were expiring on 31 August, which had already blocked member
    pricing for the whole autumn programme. This grants nobody anything new; over-inclusion is
    corrected by the first reconcile.
-1. Ship the sync and let the nightly reconcile run clean for a few days.
+1. **Done:** the sync is live in production, with the nightly reconcile scheduled.
 2. **Delete the membership activation product**, so nothing in the shop grants a membership.
 3. Re-enable native email+password login (Organizer → Settings → General → Customer accounts).
-   189 native accounts already exist and none collide with an SSO account today, so nobody is
-   locked out. Forward risk: a member who later creates a native account on their Bedlam email
-   locks themselves out of SSO.
+   The shop's 189 identity-less customers are anonymised (no email), so none collides with an SSO
+   account and nobody is locked out. Forward risk: a member who later creates a native account on
+   their Bedlam email locks themselves out of SSO.
 4. September rollover, unchanged for whoever runs it — archive `member`, import the new list. The
    reconcile expires everyone on archive and restores them as the import lands.
 
 ## Things the build settled that the spec had not
 
-- **`sync_user` checks `external_identifier` too, not just the email match.** pretix's only customer
-  filter is email, and 189 native accounts exist carrying no `external_identifier`. Matching on the
-  customer's own `email` field would grant a membership to an account the reconcile — which keys on
-  `external_identifier` — could never find again, so the two paths would disagree by construction.
+- **Both paths resolve a customer's email through one function** (`external_email`): the SSO
+  `external_identifier`, else a native (password) account's own email. So someone who signs up in
+  the shop with a password is recognised, and the reconcile can still find any account `sync_user`
+  wrote to. When it found the customer by email, `sync_user` also requires that email to equal the
+  user's before writing. The 189 identity-less customers once taken for native accounts are
+  anonymised (no email) and are left alone.
 - `users.email` is uniquely indexed, so an email resolves to exactly one `User` — no ambiguity
   branch is needed there. `date_start` ties are broken by membership id, for determinism.
 
@@ -318,5 +322,6 @@ grant themselves a membership.
   automatic and takes about a minute. Worth saying out loud in whatever announcement ships with
   this. Measured 2026-08-26: of 642 resolvable customers, 71 would be created, 117 extended, 5
   deduplicated.
-- The email-change orphaning above has no mitigation. Warning on email change, or reconciling
+- An email change before a person's first match (no stored link yet) still orphans their customer:
+  the stored link only covers people matched once already. Warning on email change, or reconciling
   orphaned customers by matching a former email, would both work; neither is specified here.
