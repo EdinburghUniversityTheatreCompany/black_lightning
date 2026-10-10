@@ -208,6 +208,20 @@ module Reimbursements
       assert_includes table_cells(graph.drafts.sole[:html]), "Cogito: Props"
     end
 
+    # SharePoint replaces a file uploaded under a name already in the folder, while
+    # receipts_offloaded tells each producer their copy is backed up.
+    test "every receipt in a batch uploads under its own name" do
+      processor, store, graph = build_scenario
+      attach_test_receipt(@expense_a, filename: "second.pdf")
+
+      run_batch(processor, store)
+
+      names = graph.uploaded.map { |upload| upload[:filename] }.reject { |name| name.end_with?(".xlsx") }
+      assert_equal 3, names.size
+      assert_equal names.uniq, names, "two claims on one line with one description, and one claim's two receipts"
+      assert(names.all? { |name| name.include?("#11") || name.include?("#12") }, names.inspect)
+    end
+
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do
       processor, store, graph = build_scenario
       graph.fail_draft = true
@@ -353,11 +367,11 @@ module Reimbursements
 
       failing_filename = FilenameSanitizer.build_receipt_filename(
         bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
-        original_filename: "receipt2.pdf", index: 2
+        auto_number: 11, original_filename: "receipt2.pdf", index: 2
       )
       succeeding_filename = FilenameSanitizer.build_receipt_filename(
         bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
-        original_filename: "receipt1.pdf", index: 1
+        auto_number: 11, original_filename: "receipt1.pdf", index: 1
       )
       graph.fail_upload_for = [ failing_filename ]
 

@@ -29,27 +29,28 @@ module Reimbursements
     end
 
     {
-      [ "New XLR cables", "IMG_1234.jpg", 1 ] => "2026-05-03 Tech - New XLR cables.jpg",
-      [ "Cables", "receipt.PDF", 1 ] => "2026-05-03 Tech - Cables.pdf",
-      [ "Cables", "img.jpg", 2 ] => "2026-05-03 Tech - Cables (2).jpg",
-      [ "Mic + DI: stage left/right", "r.jpg", 1 ] => "2026-05-03 Tech - Mic + DI stage left right.jpg",
-      [ "Mystery file", "receipt_no_ext", 1 ] => "2026-05-03 Tech - Mystery file.bin"
+      [ "New XLR cables", "IMG_1234.jpg", 1 ] => "2026-05-03 Tech - New XLR cables #417.jpg",
+      [ "Cables", "receipt.PDF", 1 ] => "2026-05-03 Tech - Cables #417.pdf",
+      [ "Cables", "img.jpg", 2 ] => "2026-05-03 Tech - Cables #417 (2).jpg",
+      [ "Mic + DI: stage left/right", "r.jpg", 1 ] => "2026-05-03 Tech - Mic + DI stage left right #417.jpg",
+      [ "Mystery file", "receipt_no_ext", 1 ] => "2026-05-03 Tech - Mystery file #417.bin"
     }.each do |(description, original, index), expected|
       test "build_receipt_filename gives #{expected}" do
         assert_equal expected, FilenameSanitizer.build_receipt_filename(
           bacs_date: Date.new(2026, 5, 3), budget_name: "Tech", description: description,
-          original_filename: original, index: index
+          auto_number: 417, original_filename: original, index: index
         )
       end
     end
 
-    test "long description keeps the filename bounded" do
+    test "long description keeps the filename bounded and the claim number" do
       long_desc = "An incredibly verbose description that goes on and on " * 5
       result = FilenameSanitizer.build_receipt_filename(
         bacs_date: Date.new(2026, 5, 13), budget_name: "Tech",
-        description: long_desc, original_filename: "r.jpg"
+        description: long_desc, auto_number: 417, original_filename: "r.jpg"
       )
       assert_operator result.length, :<, 200
+      assert result.end_with?(" #417.jpg"), result
     end
   end
 end

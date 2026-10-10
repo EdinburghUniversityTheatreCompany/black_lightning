@@ -1,7 +1,7 @@
 module Reimbursements
   ##
-  # Receipt attachment filenames for the BACS batch, in the scheme EUSA expects:
-  # "<YYYY-MM-DD> <budget> - <description>[ (n)].<ext>".
+  # Receipt attachment filenames for the BACS batch:
+  # "<YYYY-MM-DD> <budget> - <description> #<claim>[ (n)].<ext>".
   module FilenameSanitizer
     # Characters unsafe on at least one OS or in email/SharePoint.
     FORBIDDEN_CHARS = %r{[<>:"/\\|?*\x00-\x1f]}
@@ -26,7 +26,10 @@ module Reimbursements
 
     # bacs_date is the date of the BACS request, not the receipt's.
     # original_filename supplies only the extension.
-    def build_receipt_filename(bacs_date:, budget_name:, description:, original_filename:, index: 1)
+    # The claim number and index make the name unique per receipt: SharePoint replaces a file
+    # uploaded under a name it already holds, and two claims on one line often share a
+    # description.
+    def build_receipt_filename(bacs_date:, budget_name:, description:, auto_number:, original_filename:, index: 1)
       date_part = bacs_date.strftime("%Y-%m-%d")
       budget_part = sanitize_component(budget_name)
       desc_part = truncate_description(sanitize_component(description))
@@ -34,7 +37,7 @@ module Reimbursements
       ext = ".bin" if ext.empty?
       suffix = index > 1 ? " (#{index})" : ""
 
-      "#{date_part} #{budget_part} - #{desc_part}#{suffix}#{ext}"
+      "#{date_part} #{budget_part} - #{desc_part} ##{auto_number}#{suffix}#{ext}"
     end
 
     # One file PER payment, so the name has to tell them apart in an inbox. The

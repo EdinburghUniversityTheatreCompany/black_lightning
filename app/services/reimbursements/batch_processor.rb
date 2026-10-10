@@ -176,7 +176,8 @@ module Reimbursements
         acc[expense.record_id] = expense.receipts.each_with_index.map do |receipt, index|
           filename = FilenameSanitizer.build_receipt_filename(
             bacs_date: bacs_date, budget_name: expense.budget&.display_name.to_s,
-            description: expense.description.to_s, original_filename: receipt.filename, index: index + 1
+            description: expense.description.to_s, auto_number: expense.auto_number,
+            original_filename: receipt.filename, index: index + 1
           )
           GraphClient::Attachment.new(
             filename: filename, content: receipt.bytes,
