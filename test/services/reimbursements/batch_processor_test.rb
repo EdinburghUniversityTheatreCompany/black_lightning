@@ -466,11 +466,28 @@ module Reimbursements
       result = run_batch(processor, store)
 
       assert_not result.success
-      assert(result.errors.any? { |e| e.include?("no bank details") },
-             "the failure must say what is wrong: #{result.errors.inspect}")
-      assert(result.errors.any? { |e| e.include?("12") },
-             "the failure must name the claim: #{result.errors.inspect}")
+      assert_includes result.errors, "1 claim has no bank details and cannot be paid. Fix #12 in the payee's " \
+                                     "People record or the claim's override, or move it out of Approved."
       assert_empty graph.drafts, "nothing may reach EUSA"
+    end
+
+    # A payee's People record holds no IBAN or BIC, so an international claim is told to fill
+    # in its own.
+    test "the no-bank-details failure names each rail's own fix" do
+      processor, store, graph = build_scenario(expenses: lambda {
+        payeeless = create_reimbursements_person(name: "No Bank", email: "nobank@example.com",
+                                                 sort_code: "", account_number: "")
+        create_reimbursements_expense(person: payeeless, budget: @budget, status: Status::APPROVED,
+                                      auto_number: 12)
+        international_expense(auto_number: 21, iban_override: "", bic_override: "")
+      })
+
+      result = run_batch(processor, store)
+
+      assert_includes result.errors, "2 claims have no bank details and cannot be paid. Fix #12 in the payee's " \
+                                     "People record or the claim's override, and #21 in the claim's payee IBAN " \
+                                     "and BIC, or move them out of Approved."
+      assert_empty graph.drafts
     end
 
     test "refuses to process when SharePoint folders are not configured" do

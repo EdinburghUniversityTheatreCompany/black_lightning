@@ -50,13 +50,7 @@ module Reimbursements
       # ask EUSA to pay nobody. Fail the WHOLE batch rather than drop rows: a
       # spreadsheet quietly short of the approved claims is harder to notice.
       bankless = expenses.reject(&:effective_has_bank_details?)
-      if bankless.any?
-        return fail_with(result, "#{bankless.size} #{'claim'.pluralize(bankless.size)} have " \
-                                 "no bank details and cannot be paid: " \
-                                 "#{bankless.map { |e| "##{e.auto_number}" }.join(', ')}. " \
-                                 "Fix the payee's People record or the claim's override, " \
-                                 "or move them out of Approved.")
-      end
+      return fail_with(result, bankless_message(bankless)) if bankless.any?
 
       documents = build_payment_documents(expenses, bacs_date)
       renamed = collect_receipts(expenses, bacs_date)
@@ -113,6 +107,20 @@ module Reimbursements
       result.errors << message
       result
     end
+
+    # Each rail names its own fix: a payee's People record holds no IBAN or BIC, so an
+    # international claim is paid only to its own.
+    def bankless_message(bankless)
+      international, uk = bankless.partition(&:international?)
+      fixes = []
+      fixes << "#{claim_numbers(uk)} in the payee's People record or the claim's override" if uk.any?
+      fixes << "#{claim_numbers(international)} in the claim's payee IBAN and BIC" if international.any?
+      one = bankless.one?
+      "#{bankless.size} #{'claim'.pluralize(bankless.size)} #{one ? 'has' : 'have'} no bank details and " \
+        "cannot be paid. Fix #{fixes.join(', and ')}, or move #{one ? 'it' : 'them'} out of Approved."
+    end
+
+    def claim_numbers(expenses) = expenses.map { |expense| "##{expense.auto_number}" }.join(", ")
 
     def total(expenses)
       expenses.sum { |expense| expense.amount || 0 }

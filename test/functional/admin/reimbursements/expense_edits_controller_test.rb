@@ -381,6 +381,18 @@ module Admin
         assert_select "[data-reimbursements-receipt-target=internationalFields]"
       end
 
+      # A payee's People record holds no IBAN or BIC, so only a UK claim falls back to it.
+      test "the payee overrides hint says what blank means on each rail" do
+        expense = international_claim
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        hint = css_select("p").map { |p| p.text.squish }.find { |text| text.start_with?("To pay a third party") }
+        assert_equal "To pay a third party directly. On a UK claim, leave blank to pay the submitter's own " \
+                     "People-record details; an international claim always needs its IBAN and BIC here.", hint
+      end
+
       %w[Submitted Paid].each do |status|
         test "edit does not offer the rail on a #{status} claim" do
           expense = expense_at(status)
