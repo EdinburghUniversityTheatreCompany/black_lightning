@@ -659,6 +659,39 @@ module Admin
         assert_includes response.body, second.name
       end
 
+      # The budgets index carries the year and centre selectors; dropping the centre on the way
+      # back shows every centre's lines.
+      test "step 1's links back to the budgets keep the page's year and cost centre" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :show, params: { year: @year.key, cost_centre: second.key }
+
+        # Inside the frame: the sidebar carries the selectors too.
+        assert_select "turbo-frame#budget_import a[href=?]",
+                      admin_reimbursements_budgets_path(year: @year.key, cost_centre: second.key), count: 2
+      end
+
+      test "after an import, See the budgets opens the year and cost centre imported into" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"), cost_centre_id: second.id)
+
+        assert_select "a[href=?]", admin_reimbursements_budgets_path(year: @year.key, cost_centre: second.key),
+                      text: "See the budgets"
+      end
+
+      test "Start again and Cancel keep the cost centre chosen in the wizard" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"), cost_centre_id: second.id)
+
+        assert_select "turbo-frame#budget_import a[href=?]",
+                      admin_reimbursements_budget_import_path(year: @year.key, cost_centre: second.key), count: 2
+      end
+
       test "applying the same sheet twice creates nothing the second time" do
         sign_in @user
         post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))

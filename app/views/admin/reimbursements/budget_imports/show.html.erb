@@ -5,7 +5,7 @@
 <%# A link out of the frame needs turbo_frame: "_top", or it lands as
     "Content missing". %>
 <%= render "shared/back_link", text: "All budgets", turbo_frame: "_top",
-           path: admin_reimbursements_budgets_path(year: selected_financial_year&.key) %>
+           path: admin_reimbursements_budgets_path(**scope_params) %>
 
 <%# The layout's flash is outside this frame. %>
 <% if flash[:alert].present? %>
@@ -17,7 +17,7 @@
   <%= render CardComponent.new(title: "Import budgets") do |card| %>
     <% card.with_footer do %>
       <%= render "shared/form/actions", submit: "Preview import",
-            cancel_path: admin_reimbursements_budgets_path(year: selected_financial_year&.key),
+            cancel_path: admin_reimbursements_budgets_path(**scope_params), cancel_turbo_frame: "_top",
             submit_html: { data: { disable_with: "Reading…" } } %>
     <% end %>
 
