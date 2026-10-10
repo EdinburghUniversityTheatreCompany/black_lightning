@@ -15,7 +15,6 @@
 #  period                :string(255)
 #  reconciliation_status :string(255)
 #  ref                   :string(255)
-#  source_month          :string(255)      default(""), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  airtable_record_id    :string(255)

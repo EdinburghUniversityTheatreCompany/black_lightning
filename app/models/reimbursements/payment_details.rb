@@ -5,8 +5,6 @@
 #
 #  id             :bigint           not null, primary key
 #  account_number :string(255)      default(""), not null
-#  bic            :string(255)      default(""), not null
-#  iban           :string(255)      default(""), not null
 #  notes          :text(65535)
 #  sort_code      :string(255)      default(""), not null
 #  verified       :boolean          default(FALSE), not null
