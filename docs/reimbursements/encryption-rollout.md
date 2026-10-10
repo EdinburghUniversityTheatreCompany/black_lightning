@@ -41,7 +41,7 @@ is `text` and compresses. `test/models/reimbursements/encryption_test.rb` pins t
 | Env | Source | Notes |
 |---|---|---|
 | production | `config/credentials/production.yml.enc` under `active_record_encryption:` | Rails' `active_record` railtie reads these automatically. |
-| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV if set, else the throwaway literals in `config/application.rb` | `config/credentials/development.key` is **committed**, so `development.yml.enc` protects nothing: key material must never go there. The literals exist because an encrypted attribute needs a key on write even when blank. |
+| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV if set, else the throwaway literals in `config/environments/development.rb` | `config/credentials/development.key` is **committed**, so `development.yml.enc` protects nothing: key material must never go there. The literals exist because an encrypted attribute needs a key on write even when blank. |
 | test | literal dummy keys in `config/environments/test.rb` | Throwaway, test-only, safe to commit. |
 
 ## Rotating the keys
