@@ -107,6 +107,9 @@ view.
 - **`shared/form/field`'s `html_class` defaults to `mb-4`, and any class you pass replaces it.** In
   a `flex items-end` row a field with no width class of its own needs `html_class: ""`, or it sits
   16px above its neighbours.
+- **simple_form renders any attribute named like `*email*` as `type="email"`**, which takes one
+  address. A field holding several (`CostCentre#notification_email`) needs `as: :string`, or the
+  browser refuses `a@x; b@y` and Save silently does nothing.
 - **A select Tom Select takes over must carry only `simple-select2`.** Tom Select copies its
   classes onto `.ts-wrapper`, so a border there draws a box inside a box (simple_form's
   `CollectionSelectInput` strips them; a `select_tag` must not add them). The one border is
@@ -540,7 +543,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     alerts and falls back). Expenses, Review, Actuals, Batches and Reconcile are deliberately not year-scoped yet.
   - **`store.budgets` stays unscoped**: its callers are id→budget lookups (Review, the expenses
     index, exports, the nightly job) and the reconcile matcher, so scoping it blanks last year's
-    budget names and stops year-boundary EUSA credits matching their income line.
+    budget names. The matcher reads every year, so a credit's code shared by this year's and last
+    year's income line matches neither (see the credit-matching bullet under EUSA actuals).
     `budgets_for_year`, `budgets_with_actuals` and `budget_updates` are scoped.
     **`active_budgets` follows the active year, never the selected one**, so nobody files against
     a draft.
@@ -571,10 +575,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     click.
     - **A finance link or redirect carries the scope with `**scope_params`, never
       `cost_centre: selected_cost_centre&.key`**, which is nil for an explicit All: the key drops
-      and the sidebar puts the home centre back. Finance home and the overview's ledger links
-      still use the old form (the import-wizard links do too, harmlessly: an import takes one
-      centre, chosen in the wizard). Never run `compact_blank` over a hash holding `scope_params`
-      (it strips the All's empty string); `ActualsController#actual_filters` merges them after it.
+      and the sidebar puts the home centre back. Never run `compact_blank` over a hash holding
+      `scope_params` (it strips the All's empty string); `ActualsController#actual_filters`
+      merges them after it.
   - **A finance user's home cost centre (`users.reimbursements_cost_centre_id`) only decorates
     links**: the sidebar's day-to-day items while the page names no centre
     (`NavigationHelper#home_cost_centre_scope`, which also lets the sidebar's Build batch skip the
@@ -748,7 +751,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   `<optgroup>` markup, not the controller's ivar.
 - **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`** unless the
   destination has the same frame, or the wizard becomes "Content missing". `shared/back_link`
-  takes a `turbo_frame:` local. Only a browser test sees it.
+  takes a `turbo_frame:` local and `shared/form/actions` a `cancel_turbo_frame:` one
+  (`import_wizard_frames_js_test.rb` clicks every way out). Only a browser test sees it.
 
 - **Typed money goes through `Reimbursements::AmountParser`** (`£1,200`, `12,50` comma decimal).
   `.parse` gives nil for anything unreadable; **`.parse!` tells blank (nil) from unreadable
@@ -868,6 +872,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - `CredentialsCheckJob` (daily) and `AuthError` alerts warn `alert_email` (IT subcommittee) before
     and when the Entra client secret dies. Keep the secret under `reimbursements:`: `Graph::Settings`
     reads `graph:` first, but `Reimbursements::GraphClient` and the expiry warning do not.
+  - **`GraphAuth::AccessDeniedError` (a 403) subclasses `AuthError`**, so every rescue and the IT
+    alert still catch it. Only Settings' access check tells them apart: scope or grant advice for a
+    403, client-secret advice for any other `AuthError`, the bare message for everything else.
 - **Producer emails greet by first name through `Reimbursements::GreetingName.for`**, shared by the
   `Notifier`'s ERB templates (rejection, producer_notification) and `MailboxPollJob`'s heredoc
   replies, so they cannot drift: linked `User#first_name`, then
@@ -904,6 +911,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - The Authorisation Form's centre name and budget holder come from the centre's Settings
     (`authoriser_name`, `authoriser_designation`; blank when unset). `BacsXlsx#generate` writes
     all three cells every time, so the template's own values never reach the workbook.
+  - **`BuildBatchJob` raises on an unreadable BACS date or a missing attempt, never falls back to
+    today**, and marks an existing `BatchAttempt` failed first, or History shows the build running
+    until it goes stale (30 min).
   - `result.success` means every expense reached `Submitted`, not just that the draft exists. A
     `mark_submitted` failure is the one post-draft step that is not best effort: it leaves the
     double-draft danger the orphan-draft guard prevents.
@@ -935,6 +945,10 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   matches on it. Streamed, not redirected (same-origin `<img>`/`<iframe>` under the CSP; Chrome's
   PDF viewer wants byte ranges), cached `private`. Visible to finance, the submitter and the
   budget's owners; anyone else gets 404, not 403.
+- **Every uploaded receipt gets its own SharePoint name**: claim number plus an index
+  (`<date> <budget> - <desc> #417 (2).pdf`, `FilenameSanitizer.build_receipt_filename`). Graph's
+  `:/name:/content` PUT replaces a file of the same name, while `receipts_offloaded` tells the
+  producer their copy is backed up, so a shared name loses a receipt silently.
 - **`ReceiptIntake` strips metadata from raster receipts by re-encoding in the same format**, not
   by excising EXIF: location also hides in XMP, MakerNotes and the thumbnail. PDFs pass through
   untouched. A file merely named as an image (Marcel falls back to the filename) must decode or
@@ -966,6 +980,11 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   finds accrual/reversal legs in a paste. **Prefer missing a pair over inventing one**: a false
   positive hides real spend from the ledger and every rollup; a false negative just leaves rows
   unmatched.
+  - **A credit links to an income budget only when exactly one income line in its cost centre
+    carries its nominal code** (`Reconciliation.match_credit_to_budget`, candidates from
+    `.credit_budget_candidates`, any year). With several, the row is saved unlinked and the preview
+    says how many share the code; finance places it with Split across budgets. Never go back to
+    first match: budgets share codes.
   - **Hard gates**: same absolute amount (exact BigDecimal), opposite sign, same nominal code,
     same cost centre, same financial year; a blank code or centre never pairs. Survivors score
     (ref 4, nominal 2, period 1, narrative prefix 1, minus 1 or 2 for date distance), taken
