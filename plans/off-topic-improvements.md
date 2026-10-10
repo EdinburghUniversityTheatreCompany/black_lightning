@@ -124,11 +124,6 @@ cell until the operator scrolled right, clipping a money figure mid-word ("No bu
 the name column too. Re-measure at 1366 before doing more; if it still overflows, the remaining
 fixes are a column-visibility control or Owners behind a popover.
 
-### `Reimbursements::Area#income?` has no callers
-
-`budgets.any?(&:income?)`, added with the model and never read. `debride` does not flag an AR
-model's public reader, so it stays until someone deletes it.
-
 ## Reimbursements: claims, batches and reconciliation
 
 ### Should an unlinked EUSA credit attach to an *expense* budget? (decision)
@@ -189,6 +184,14 @@ production first:
 If it is 0, scope the validation to `status_changed? && approved?` and ship it.
 `ReviewSupport`/`approve_blocker` is the wrong home: it skips anything not Pending.
 
+### A producer's Reply reaches the polled mailbox, not finance
+
+`GraphClient#send_mail` sets no reply-to, so a producer replying to `producer_notification` or
+`rejection` writes to the centre's send mailbox, which is often the one email-in polls: the reply
+is answered "no usable receipt" and moved to the Rejected folder. The emails now point at
+`CostCentre#contact_email` instead of inviting a reply. **Fix:** pass
+`reply_to: contact_email` through `send_mail` (Graph's `replyTo`) for producer emails.
+
 ### Review and the finance edit form check budget existence only
 
 `budget_record_id_error` answers "does this row exist", which suits the edit form (it offers the
@@ -216,6 +219,10 @@ unnamed foreign-key 500. A `PersonGoneError` (or a shared `LinkGoneError`) besid
 - **The finance Expenses list and Budget updates have no centre selector.** A `?cost_centre=` in
   their URL scopes `budgets_for_year` but not their own lists. Harmless but inconsistent. Reconcile
   is per row by design and must stay so.
+- **Finance home and the overview's ledger links drop an explicit All.** They build
+  `cost_centre: selected_cost_centre&.key`, nil for All, so the next page names no centre and the
+  sidebar puts the home centre back. Switch them to `**scope_params`, as Review, Batches, the
+  ledger, New area and New budget now are.
 - **`NightlyBatchJob` and the store answer "which centre owns an unplaced claim" differently**, on
   purpose: the reminder needs one recipient list, the filter does not. If a budget's cost centre
   ever becomes mandatory, collapse the two rules into one.
@@ -242,16 +249,6 @@ sweep on 2026-07-25: **do not relaunch it without Mick asking.**
 
 ## Imports
 
-### `ImportParsing`'s categorisation helper is user-matching-specific
-
-The concern's parsing half (`parse_data`, `parse_tsv`, `parse_xlsx`, `find_column`) is generic.
-Its categorisation half is not: `build_categorized_result(multi_match_bucket:)` hardcodes
-`:existing_user` / `:existing_users`, and `determine_bucket` is expected to return a `User`. So
-`BudgetImport` and `ExpenseImport` each write their own `categorize`.
-
-**Fix:** rename the payload key to something neutral (`:match` / `:matches`), let the including
-class name its buckets, and move the two reimbursements imports onto it.
-
 ### `:canonical_tsv` is a marker `ImportParsing#parse_data` doesn't know
 
 Both reimbursements wizards translate `:canonical_tsv` to `:paste` themselves
@@ -260,13 +257,6 @@ and `:xlsx` and otherwise records "Unknown input type" and returns **zero rows**
 silently shows nothing. The concern owns the escaping, so it should own the input type too
 (`when :paste, :canonical_tsv`). A third wizard that forgets the translation gets the empty
 preview with nothing on screen to explain it.
-
-### `escape_cell` applies to every cell, `unescape_cell` only to `TEXT_FIELDS`
-
-Both wizards escape every column on the way out but unescape only `TEXT_FIELDS` on the way back,
-so a backslash in any other column survives the preview doubled (`4\000` becomes `4\\000`).
-Harmless today, since every other column is a parsed amount, date, enum or email and a stray
-backslash already gets a row error. Escape only what is unescaped, or unescape everything.
 
 ### `ImportParsing#find_column`'s substring fallback
 
@@ -479,9 +469,9 @@ hardware; **absolute humidity** was rejected because dew point already answers t
 
 `Climate::MailboxPollJob` is unit-tested against a fake mailbox but has never run against real
 Graph: it needs the mailbox, the RBAC scope covering it, and Govee's scheduled export pointed at
-it. Govee's email names no device, so `#sensor_for` uses the sole Govee sensor and otherwise
-leaves the message unread with a deduped alert. More than one sensor needs a mailbox (or
-plus-address) per sensor, resolved on the recipient.
+it. Govee's email names no device, so `#sensor_for` uses the sole active Govee sensor and
+otherwise leaves the message unread with a deduped alert. More than one active sensor needs a
+mailbox (or plus-address) per sensor, resolved on the recipient.
 
 ### The Open-Meteo forecast tail is fetched and then discarded
 
@@ -501,9 +491,6 @@ million rows, add an hourly or daily rollup table for long ranges rather than de
 
 ### Loose ends from the mise move to `mise/`
 
-- **`hk.pkl`'s `versions` step globs `mise.toml`**, which no longer exists, so a Ruby/Node bump in
-  `mise/config.toml` may not trigger the drift guard. Test by bumping a version and committing.
-  `hk.pkl`'s comments and `.devcontainer/Dockerfile.dev` / `setup.sh` still say `mise.toml` too.
 - **`Procfile.dev` and the `foreman` gem are orphaned**: `bin/dev` was their only reader.
 - The `dev-hooks:worktree-setup` script looks for a root `mise.toml` to trust and reports "No
   mise.toml, skipped mise trust" here. `mise trust` by hand works.
