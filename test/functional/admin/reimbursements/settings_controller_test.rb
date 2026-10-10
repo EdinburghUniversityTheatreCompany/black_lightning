@@ -224,6 +224,30 @@ module Admin
         assert_predicate @cost_centre, :hidden_from_submitters?
       end
 
+      # A type="email" field refuses "a@x.org; b@y.org" in the browser, so Save does nothing.
+      test "both forms take notification addresses in a plain text field" do
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+        assert_select "input[name='cost_centre[notification_email]'][type=text]"
+
+        get :new
+        assert_select "input[name='cost_centre[notification_email]'][type=text]"
+      end
+
+      test "update saves several notification addresses" do
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, cost_centre: {
+          notification_email: "finance@bedlamfringe.co.uk; business@bedlamtheatre.co.uk",
+          nightly_run_days: %w[1]
+        } }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_equal [ "finance@bedlamfringe.co.uk", "business@bedlamtheatre.co.uk" ],
+                     @cost_centre.reload.notification_emails
+      end
+
       # settings_params turns a missing nightly_run_days into [], which fails
       # validation and aborts the save.
       test "update with no run-days checked is rejected, not saved as an empty schedule" do

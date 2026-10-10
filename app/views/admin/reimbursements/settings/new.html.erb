@@ -33,7 +33,8 @@
       this cost centre.
     </p>
 
-    <%= f.input :notification_email, label: "Notification email",
+    <%# as: :string: a type="email" field refuses a list of addresses, so Save would do nothing. %>
+    <%= f.input :notification_email, as: :string, label: "Notification email",
           placeholder: "finance@bedlamfringe.co.uk",
           hint: "This cost centre's own finance mailbox, which gets its nightly reminders. " \
                 "Separate several addresses with a semicolon or a comma. Required: a cost centre whose " \

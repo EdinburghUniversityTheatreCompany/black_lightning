@@ -27,7 +27,8 @@
       check after changing it.
     </p>
 
-    <%= f.input :notification_email, label: "Notification email",
+    <%# as: :string: a type="email" field refuses a list of addresses, so Save would do nothing. %>
+    <%= f.input :notification_email, as: :string, label: "Notification email",
           placeholder: "finance@bedlamfringe.co.uk",
           wrapper_html: { class: (@cost_centre.notification_recipients_empty? ? "mb-2" : "mb-4") },
           hint: "This cost centre's own finance mailbox. It gets the nightly reminders: claims " \
