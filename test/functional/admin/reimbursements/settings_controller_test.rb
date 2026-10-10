@@ -14,7 +14,7 @@ module Admin
 
       class FakeGraph
         attr_reader :folder_calls, :site_calls, :mailbox_calls
-        attr_accessor :fail_check_mailbox, :fail_get_site, :fail_list_folder_contents
+        attr_accessor :mailbox_error, :fail_get_site, :fail_list_folder_contents, :sign_in_failed
 
         def initialize
           @folder_calls = []
@@ -24,14 +24,16 @@ module Admin
 
         def check_mailbox(address)
           @mailbox_calls << address
-          raise ::GraphAuth::AuthError, "Graph rejected the token (403)" if @fail_check_mailbox
+          refuse_sign_in!
+          raise @mailbox_error if @mailbox_error
 
           true
         end
 
         def get_site(site_url)
           @site_calls << site_url
-          raise ::GraphAuth::Error, "site not granted (403)" if @fail_get_site
+          refuse_sign_in!
+          raise ::GraphAuth::AccessDeniedError, "site not granted (403)" if @fail_get_site
 
           Site.new(id: "site-1", name: "Finance Site", web_url: site_url)
         end
@@ -42,10 +44,19 @@ module Admin
 
         def list_folder_contents(drive_id:, item_id: nil)
           @folder_calls << [ drive_id, item_id ]
+          refuse_sign_in!
           raise ::GraphAuth::Error, "folder unreachable (403)" if @fail_list_folder_contents
 
           [ Item.new(id: "folder-A", name: "BACS", folder: true, web_url: "https://sp/a"),
             Item.new(id: "file-x", name: "notes.txt", folder: false, web_url: "https://sp/x") ]
+        end
+
+        # As GraphAuth raises when Entra refuses the token request itself.
+        def refuse_sign_in!
+          return unless @sign_in_failed
+
+          raise ::GraphAuth::AuthError,
+                "Graph token request failed (401): AADSTS7000222: The provided client secret keys are expired."
         end
       end
 
@@ -337,6 +348,12 @@ module Admin
 
       # --- Access check ------------------------------------------------------
 
+      # Each row's "label: detail", scoped to the results: the page's own copy names the
+      # management scope too.
+      def access_check_results
+        css_select("#access_check_results li > span:last-child").map { |row| row.text.squish }
+      end
+
       test "access check reports reachable mailboxes, site and folders" do
         @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance",
                              sharepoint_receipts_drive_id: "drv", sharepoint_receipts_folder_id: "fld",
@@ -370,14 +387,32 @@ module Admin
       end
 
       test "access check flags a mailbox the app can't reach" do
-        @graph.fail_check_mailbox = true
+        @graph.mailbox_error = ::GraphAuth::AccessDeniedError.new("Graph rejected the token (403)")
         sign_in @user
 
         post :test_access, params: { key: @cost_centre.key }
 
         assert_response :success
-        assert_includes response.body, "403"
-        assert_includes response.body, "Exchange management scope"
+        mailbox = access_check_results.grep(/\AMailbox/).first
+        assert_includes mailbox, "403"
+        assert_includes mailbox, "Exchange management scope"
+        assert_not_includes mailbox, "client secret"
+      end
+
+      # Neither the scope nor the secret fixes a mistyped address.
+      test "access check reports any other mailbox failure as it came" do
+        @graph.mailbox_error = ::GraphAuth::NotFoundError.new(
+          "Graph GET /users/x/mailFolders/inbox failed (404): ErrorInvalidUser: The requested user is invalid."
+        )
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        mailbox = access_check_results.grep(/\AMailbox/).first
+        assert_includes mailbox, "ErrorInvalidUser"
+        assert_not_includes mailbox, "management scope"
+        assert_not_includes mailbox, "client secret"
       end
 
       test "access check flags a SharePoint site the app can't reach" do
@@ -388,8 +423,28 @@ module Admin
         post :test_access, params: { key: @cost_centre.key }
 
         assert_response :success
-        assert_includes response.body, "site not granted (403)"
-        assert_includes response.body, "Grant the app write on this site"
+        site = access_check_results.grep(/\ASharePoint site/).sole
+        assert_includes site, "site not granted (403)"
+        assert_includes site, "Grant the app write on this site"
+      end
+
+      # A failed sign-in fails every probe, and its fix is the secret: the grants are fine.
+      test "access check sends a failed sign-in to the client secret, not to the grants" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @graph.sign_in_failed = true
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        rows = access_check_results.grep(/\A(Mailbox|SharePoint site)/)
+        assert_operator rows.size, :>=, 2
+        rows.each do |row|
+          assert_includes row, "AADSTS7000222"
+          assert_includes row, "renew the Entra client secret"
+          assert_not_includes row, "management scope"
+          assert_not_includes row, "Grant the app"
+        end
       end
 
       test "access check flags a configured folder the app can't reach" do

@@ -21,6 +21,11 @@ module GraphAuth
   # Credential problems (expired or revoked secret): alerted to IT rather than retried.
   class AuthError < Error; end
 
+  # A 403: the token is good, but the app may not touch that resource (a mailbox outside the
+  # Exchange scope, a site with no Sites.Selected grant). An AuthError, so every rescue of one
+  # still catches it; only the Settings access check tells the two apart.
+  class AccessDeniedError < AuthError; end
+
   # A 404 from Graph. The mailbox mutation paths swallow it only once a re-GET confirms the
   # message is really gone (Graph::MailboxClient#swallow_only_if_gone); everywhere else it is a
   # real failure, and a subclass of Error so existing rescues still catch it.
@@ -35,7 +40,8 @@ module GraphAuth
   private
 
   # Returns the parsed JSON body ({} when empty). +path+ may be a "/..." path or a full URL
-  # (Graph returns absolute follow-up URLs). Raises AuthError on 401/403, Error on other non-2xx.
+  # (Graph returns absolute follow-up URLs). Raises AuthError on 401, AccessDeniedError on 403,
+  # Error on other non-2xx.
   def graph_request(http_method, path, params: nil, body: nil)
     uri = graph_uri(path, params)
     json = body&.to_json
@@ -60,7 +66,8 @@ module GraphAuth
   end
 
   def parse_graph_response(status, response_body, label)
-    raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
+    raise AccessDeniedError, "Graph rejected the token (403)" if status == 403
+    raise AuthError, "Graph rejected the token (401)" if status == 401
     unless (200..299).cover?(status)
       error_class = status == 404 ? NotFoundError : Error
       raise error_class, "Graph #{label} failed (#{status}): #{graph_error_detail(response_body)}"

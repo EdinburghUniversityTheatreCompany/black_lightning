@@ -17,6 +17,10 @@ module Admin
                     drive: :sharepoint_bacs_drive_id, folder: :sharepoint_bacs_folder_id }
       }.freeze
 
+      # The access check's advice when Microsoft refuses the app's own credentials.
+      SIGN_IN_FAILED = "The app could not sign in to Microsoft, so nothing here can pass: renew the Entra " \
+                       "client secret, or correct the stored one, in the production credentials.".freeze
+
       def index
         @title = "Reimbursements Settings"
         @cost_centres = ::Reimbursements::CostCentre.order(:name)
@@ -160,10 +164,10 @@ module Admin
         Check.new(label: "Mailbox #{mailbox}", status: :ok,
                   detail: "Reachable (it's in the app's Exchange management scope).")
       rescue StandardError => e
-        Check.new(label: "Mailbox #{mailbox}", status: :fail,
-                  detail: "#{e.message}. Add it to the app's Exchange management scope, passing the full " \
-                          "mailbox list (commands below). Allow up to 2 hours for the app's permission " \
-                          "cache before re-checking.")
+        failed_check("Mailbox #{mailbox}", e,
+                     access_fix: "Add it to the app's Exchange management scope, passing the full mailbox " \
+                                 "list (commands below). Allow up to 2 hours for the app's permission cache " \
+                                 "before re-checking.")
       end
 
       def site_check
@@ -174,8 +178,19 @@ module Admin
         graph.list_drives(site.id)
         Check.new(label: "SharePoint site (#{site.name})", status: :ok, detail: "Granted and reachable.")
       rescue StandardError => e
-        Check.new(label: "SharePoint site", status: :fail,
-                  detail: "#{e.message}. Grant the app write on this site (Sites.Selected, command below).")
+        failed_check("SharePoint site", e,
+                     access_fix: "Grant the app write on this site (Sites.Selected, command below).")
+      end
+
+      # The fix follows who refused: a 403 needs the grant, a failed sign-in the secret.
+      # Anything else (a wrong address, an outage) is reported as it came.
+      def failed_check(label, error, access_fix:)
+        advice = case error
+        when ::GraphAuth::AccessDeniedError then access_fix
+        when ::GraphAuth::AuthError then SIGN_IN_FAILED
+        end
+        detail = advice ? "#{error.message.chomp('.')}. #{advice}" : error.message
+        Check.new(label: label, status: :fail, detail: detail)
       end
 
       def folder_checks

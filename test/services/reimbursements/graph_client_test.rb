@@ -206,7 +206,8 @@ module Reimbursements
 
     # A 404 here means a missing drive or folder and must stay loud; only the mailbox mutation
     # paths swallow 404s.
-    { 403 => GraphAuth::AuthError, 404 => GraphAuth::NotFoundError, 500 => GraphAuth::Error }.each do |status, error|
+    { 401 => GraphAuth::AuthError, 403 => GraphAuth::AccessDeniedError, 404 => GraphAuth::NotFoundError,
+      500 => GraphAuth::Error }.each do |status, error|
       test "upload_to_folder's small-file PUT answered #{status} raises #{error.name.demodulize}" do
         client, = build_client([ graph_token_response, [ status, "{}" ] ])
 
@@ -339,7 +340,16 @@ module Reimbursements
         [ 403, { error: { code: "ErrorAccessDenied", message: "Access is denied." } }.to_json ]
       ])
 
-      assert_raises(GraphAuth::AuthError) { client.check_mailbox("locked@bedlamfringe.co.uk") }
+      assert_raises(GraphAuth::AccessDeniedError) { client.check_mailbox("locked@bedlamfringe.co.uk") }
+    end
+
+    # The Settings access check sends this one to the client secret, not to the mailbox scope.
+    test "a refused token request raises AuthError, not AccessDeniedError" do
+      client, = build_client([ [ 401, { error: "invalid_client", error_description: "AADSTS7000222" }.to_json ] ])
+
+      raised = assert_raises(GraphAuth::AuthError) { client.check_mailbox("reimbursements@bedlamfringe.co.uk") }
+      assert_instance_of GraphAuth::AuthError, raised
+      assert_includes raised.message, "AADSTS7000222"
     end
   end
 end
