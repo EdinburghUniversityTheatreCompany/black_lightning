@@ -340,6 +340,13 @@ module Reimbursements
       assert_same right, Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ wrong, right ])
     end
 
+    # Budgets share nominal codes, and a credit filed under the wrong show is worse than none.
+    test "credit stays unmatched when two income budgets carry its code" do
+      cogito = Budget.new(name: "Cogito: Sponsorship", nominal_code: "250000")
+      hamlet = Budget.new(name: "Hamlet: Sponsorship", nominal_code: "250000")
+      assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ cogito, hamlet ])
+    end
+
     # --- detect_offsetting_pairs -------------------------------------------
     # The fixtures are ANONYMISED reproductions of the pair shapes in a real 309-row EUSA F40 export:
     # codes, dates, periods, refs and amounts keep the real structure the heuristic keys on; narratives

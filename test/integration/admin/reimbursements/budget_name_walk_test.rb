@@ -347,11 +347,14 @@ module Admin
 
         # Reconcile's preview, with a credit it matches to an income line, and an
         # offsetting pair whose credit leg would be logged against one if unticked.
+        # A credit matches only the one income line on its code, so Cogito's gets
+        # a code of its own.
+        line("Cogito: Sponsorship").update!(nominal_code: "410100")
         post preview_admin_reimbursements_reconciliation_path, params: {
           pasted_text: [ ACTUALS_HEADER,
-                         "410000\tF40\tBACS002\t13/05/2026\t03\tSponsor C\tGift\t\t250.00\t-250.00",
-                         "410000\tF40\tREV7\t14/05/2026\t03\tSponsor D\tAccrual\t75.00\t\t75.00",
-                         "410000\tF40\tREV7\t14/05/2026\t03\tSponsor D\tReversal\t\t75.00\t-75.00" ].join("\n")
+                         "410100\tF40\tBACS002\t13/05/2026\t03\tSponsor C\tGift\t\t250.00\t-250.00",
+                         "410100\tF40\tREV7\t14/05/2026\t03\tSponsor D\tAccrual\t75.00\t\t75.00",
+                         "410100\tF40\tREV7\t14/05/2026\t03\tSponsor D\tReversal\t\t75.00\t-75.00" ].join("\n")
         }
         assert_response :success
         assert_select "td[colspan=7]", text: /logged against the/, count: 1

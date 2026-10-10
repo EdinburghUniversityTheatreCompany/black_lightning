@@ -169,6 +169,8 @@
                 <td class="py-1 text-gray-600">
                   <%= if row.debit.positive?
                         "No matching Submitted or Paid claim"
+                      elsif (shared = @shared_credit_codes[row])
+                        "#{shared} income budgets use this code: place it on the ledger with Split across budgets"
                       elsif row.credit.positive?
                         "No matching income budget"
                       else

@@ -153,10 +153,16 @@ module Reimbursements
       [ (compare_amount.abs * INTERNATIONAL_TOLERANCE_RATE), AMOUNT_TOLERANCE ].max
     end
 
-    # First income budget with an equal nominal code (case-insensitive); income needs no amount or
-    # date match.
+    # The only income budget with an equal nominal code (case-insensitive); income needs no amount or
+    # date match. Nil when several carry the code: budgets share codes, and a credit filed under the
+    # wrong show is worse than one left for a person to place.
     def match_credit_to_budget(row, budgets)
-      budgets.find { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
+      candidates = credit_budget_candidates(row, budgets)
+      candidates.first if candidates.one?
+    end
+
+    def credit_budget_candidates(row, budgets)
+      budgets.select { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
     end
 
     # --- offsetting pairs --------------------------------------------------

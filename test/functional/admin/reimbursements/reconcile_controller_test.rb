@@ -157,6 +157,40 @@ module Admin
       assert_equal @income.record_id, budget.record_id
     end
 
+    test "a credit whose code two income budgets share is left for finance to place" do
+      create_reimbursements_budget(name: "Sponsorship", nominal_code: "250000", budget_type: "Income")
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_equal 1, assigns(:unmatched_rows).size
+      assert_select "td", text: /\A2 income budgets use this code/
+    end
+
+    test "apply saves a credit whose code two income budgets share without linking it" do
+      create_reimbursements_budget(name: "Sponsorship", nominal_code: "250000", budget_type: "Income")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_nil ::Reimbursements::EusaActual.sole.budget_id
+      assert_equal 0, assigns(:credits_linked)
+    end
+
+    # Only lines in the row's own cost centre compete for it.
+    test "a credit still matches its centre's one income line when another centre's line shares the code" do
+      termtime = create_second_reimbursements_cost_centre
+      @income.update!(cost_centre: fringe_cost_centre)
+      create_reimbursements_budget(name: "Ticket income", nominal_code: "250000", budget_type: "Income",
+                                   cost_centre: termtime)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
     test "preview re-renders show with an alert on a malformed paste (missing header columns)" do
       sign_in @user
       bad_header = "Nominal\tCost Centre\tRef\tDate\tNarrative\tNarrative 1\tDebit\tCredit\tNet" # no Period

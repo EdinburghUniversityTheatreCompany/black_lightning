@@ -107,6 +107,7 @@ module Admin
         @matched_debits = matched_debits.map { |entry, expense| [ entry.row, expense ] }
         @matched_credits = matched_credits.map { |entry, budget| [ entry.row, budget ] }
         @unmatched_rows = unmatched.map(&:row)
+        @shared_credit_codes = shared_credit_codes(unmatched)
         @offset_pair_consequences =
           offset_pair_consequences(@offsetting_pairs, new_entries, matched_debits)
       end
@@ -261,6 +262,20 @@ module Admin
 
       def income_budgets_pool
         store.budgets.select(&:income?)
+      end
+
+      # Unmatched credits whose code several income budgets carry, as { row => how many }, so the
+      # preview does not call them unmatchable.
+      def shared_credit_codes(unmatched)
+        budgets = income_budgets_pool
+        unmatched.each_with_object({}.compare_by_identity) do |entry, counts|
+          next unless entry.row.credit.positive?
+
+          count = ::Reimbursements::Reconciliation.credit_budget_candidates(
+            entry.row, budgets_in(entry.cost_centre, budgets)
+          ).size
+          counts[entry.row] = count if count > 1
+        end
       end
 
       # An expense reaches its cost centre through its budget (Budget#cost_centre_id).
