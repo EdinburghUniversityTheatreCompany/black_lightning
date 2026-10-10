@@ -19,7 +19,7 @@
   <%= render CardComponent.new(title: "Import expenses") do |card| %>
     <% card.with_footer do %>
       <%= render "shared/form/actions", submit: "Preview import",
-            cancel_path: admin_reimbursements_expense_edits_path,
+            cancel_path: admin_reimbursements_expense_edits_path, cancel_turbo_frame: "_top",
             submit_html: { data: { disable_with: "Reading…" } } %>
     <% end %>
 

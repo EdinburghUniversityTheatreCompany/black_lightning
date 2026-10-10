@@ -39,6 +39,10 @@ module Admin
       test "the expense import's back link leaves the frame" do
         assert_escapes_frame admin_reimbursements_expense_import_path, "All expenses", "Filter & search"
       end
+
+      test "the expense import's Cancel leaves the frame" do
+        assert_escapes_frame admin_reimbursements_expense_import_path, "Cancel", "Filter & search"
+      end
     end
   end
 end
