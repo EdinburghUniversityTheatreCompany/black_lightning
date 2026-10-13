@@ -243,6 +243,13 @@ module ReimbursementsHelper
     record.owners.filter_map { |person| person.name.presence }.join(", ")
   end
 
+  # A line's name with its financial year in brackets, where the same name can be last year's line
+  # or this year's. +years+ are loaded FinancialYears: Budget does not preload its year.
+  def reimbursements_budget_name_with_year(budget, years)
+    year = years.find { |candidate| candidate.id == budget.financial_year_id }
+    year ? "#{budget.display_name} (#{year.label})" : budget.display_name
+  end
+
   # A finance budget select's options. The claim's own line is kept when no longer offered,
   # so a Save never drops it.
   def reimbursements_budget_options(budgets, current)

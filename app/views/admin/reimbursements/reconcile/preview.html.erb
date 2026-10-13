@@ -134,7 +134,7 @@
                 <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
                 <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) %></td>
-                <td class="py-1"><%= budget.display_name %></td>
+                <td class="py-1"><%= reimbursements_budget_name_with_year(budget, selectable_financial_years) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -263,7 +263,8 @@
                       <% end %>
                       <% if untick_budget %>
                         Its credit would be logged against the
-                        <strong><%= untick_budget.display_name %></strong> income budget.
+                        <strong><%= reimbursements_budget_name_with_year(untick_budget, selectable_financial_years) %></strong>
+                        income budget.
                       <% end %>
                     </td>
                   </tr>

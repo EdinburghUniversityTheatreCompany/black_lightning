@@ -212,6 +212,26 @@ module Admin
       assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
     end
 
+    # Both years' lines are called "Ticket income", so the bare name cannot say which one it went to.
+    test "the preview names the year of the income line a credit matched" do
+      this_year, next_year = create_reimbursements_tax_years
+      @income.update!(financial_year: this_year)
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_select "td", text: "Ticket income (2026/2027)"
+    end
+
+    test "the preview names a matched income line with no year bare" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_select "td", text: "Ticket income"
+    end
+
     test "apply links a credit dated on a year's first day to that year's line" do
       this_year, next_year = create_reimbursements_tax_years
       @income.update!(financial_year: this_year)
@@ -546,6 +566,7 @@ module Admin
 
       key = assigns(:offsetting_pairs).sole.key
       assert_equal this_years_line.record_id, assigns(:offset_pair_consequences)[key][:budget].record_id
+      assert_select "td[colspan=7] strong", text: "Venue hire income (2026/2027)"
     end
 
     # Two pairs that both look like the same expense must not both claim it:

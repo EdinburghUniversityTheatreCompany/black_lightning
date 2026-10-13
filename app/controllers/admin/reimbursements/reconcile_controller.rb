@@ -263,16 +263,12 @@ module Admin
       # date falls in. Every reader of a credit (the matcher, the shared-code note, the pair notes)
       # comes through here, so the preview and apply never judge a credit differently.
       def income_budgets_for(row, cost_centre)
-        year_ids = ::Reimbursements::FinancialYear.covering(row.date, financial_years).map(&:id)
+        year_ids = ::Reimbursements::FinancialYear.covering(row.date, selectable_financial_years).map(&:id)
         ::Reimbursements::Reconciliation.in_credit_years(budgets_in(cost_centre, income_budgets_pool), year_ids)
       end
 
       def income_budgets_pool
         @income_budgets_pool ||= store.budgets.select(&:income?)
-      end
-
-      def financial_years
-        @financial_years ||= ::Reimbursements::FinancialYear.all.to_a
       end
 
       # Unmatched credits whose code several income budgets carry, as { row => how many }, so the
