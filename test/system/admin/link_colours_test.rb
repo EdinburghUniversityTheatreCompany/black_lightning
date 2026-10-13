@@ -6,22 +6,6 @@ module Admin
   class LinkColoursTest < ApplicationSystemTestCase
     include ReimbursementsTestHelpers
 
-    # Resolved by the browser, so it compares like with like whatever colour space the theme uses.
-    THEME_COLOUR = <<~JS.freeze
-      ((variable) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(${variable})`;
-        document.body.appendChild(probe);
-        const colour = getComputedStyle(probe).color;
-        probe.remove();
-        return colour;
-      })(arguments[0])
-    JS
-
-    def theme_colour(variable) = evaluate_script(THEME_COLOUR, variable)
-
-    def colour_of(element) = evaluate_script("getComputedStyle(arguments[0]).color", element)
-
     test "a link that names its own colour shows it, and a plain link stays brand red" do
       grant_finance_permission(users(:member))
       login_as users(:member)

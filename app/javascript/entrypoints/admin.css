@@ -77,8 +77,18 @@ select.simple-select2 {
   }
 }
 
-/* Tailwind resets headings */
-h3 {
+/* Tailwind resets headings. In base, so an h3 given a size, weight, colour or
+   margin utility shows that instead. */
+@layer base {
+  h3 {
+    @apply text-xl font-semibold text-gray-700 mb-2;
+  }
+}
+
+/* prose styles h3 in the utilities layer, over the base rule: keep markdown h3s
+   on the admin scale. :where keeps a bare h3's specificity, so a class typed in
+   the markdown wins or loses as it did before. */
+:where(.markdown-body) h3 {
   @apply text-xl font-semibold text-gray-700 mb-2;
 }
 

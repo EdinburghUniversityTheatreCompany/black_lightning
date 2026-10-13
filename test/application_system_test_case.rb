@@ -23,6 +23,24 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     JS
   end
 
+  # Resolved by the browser, so it compares like with like whatever colour space the theme uses.
+  THEME_COLOUR = <<~JS.freeze
+    ((variable) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${variable})`;
+      document.body.appendChild(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    })(arguments[0])
+  JS
+
+  def theme_colour(variable) = evaluate_script(THEME_COLOUR, variable)
+
+  def style_of(element, property) = evaluate_script("getComputedStyle(arguments[0])[arguments[1]]", element, property)
+
+  def colour_of(element) = style_of(element, "color")
+
   def tom_select(text, from:) = tom_select_call("setValue", text, from)
 
   # For multiple selects: setValue replaces every choice, addItem adds one.
