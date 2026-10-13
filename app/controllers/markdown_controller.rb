@@ -3,6 +3,7 @@
 #
 # POST /markdown/preview with a JSON body { input_html: <markdown> } renders a preview.
 # POST /markdown/upload stores an image for a signed-in user, attached to the record being edited.
+# The editor shows the user a 422 or 429's `error` as written; it words the other refusals itself.
 ##
 
 class MarkdownController < ApplicationController
@@ -36,7 +37,7 @@ class MarkdownController < ApplicationController
 
     unless file.is_a?(ActionDispatch::Http::UploadedFile) &&
            ALLOWED_IMAGE_TYPES.include?(file.content_type)
-      render json: { error: "Invalid file type" }, status: :unprocessable_entity
+      render json: { error: "Only PNG, JPEG, GIF and WebP images can be uploaded." }, status: :unprocessable_entity
       return
     end
 

@@ -1,7 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 import { getMetaValue } from "../helpers"
+import { showFlashAlerts } from "../sweetalert/alerts"
 
 const DIALOG_WIDTH = 340
+
+// What the user is told when MarkdownController refuses an upload. A 422 or 429 is shown in the
+// server's words; any other failure gets #uploadOneFile's connection message.
+const UPLOAD_ERRORS = {
+  // Signing in, in any tab, replaces the session's CSRF token, so this page's form stops saving.
+  401: "You've been signed out. Copy what you've written before you sign in again: this page can't save it after that.",
+  403: "You can't add images to this record.",
+  404: "This record no longer exists, so the image wasn't saved."
+}
 
 const LINK_FIELDS = `
   <label class="milkdown-link-dialog__label">Text
@@ -144,6 +154,7 @@ export default class extends Controller {
   #linkDialog = null
   #tableDialog = null
   #dialogResolve = null
+  #pasted = false
 
   #cmds = {}
   #ctx = {}
@@ -338,7 +349,12 @@ export default class extends Controller {
         if (!this.hasUploadUrlValue) return
         ctx.update(uploadConfig.key, prev => ({
           ...prev,
-          uploader: (files, schema) => this.#uploadFiles(files, schema)
+          // plugin-upload hands the uploader no event, but calls this with one just before.
+          getInsertPos: (event, _ctx, pos) => {
+            this.#pasted = event instanceof ClipboardEvent
+            return pos
+          },
+          uploader: (files, schema) => this.#uploadFiles(files, schema, this.#pasted)
         }))
       })
       .use(commonmark)
@@ -670,38 +686,68 @@ export default class extends Controller {
   }
 
   async #handleFileInputChange() {
-    const files = this.#fileInput.files
-    if (!files?.length || !this.#editor) return
+    const files = Array.from(this.#fileInput.files ?? [])
+    // Cleared up front (clearing empties the FileList too), so picking the same file again after
+    // a failure still fires change.
+    this.#fileInput.value = ""
+    if (!files.length || !this.#editor) return
 
     for (const { url, alt } of await this.#uploadImages(files)) {
       this.#editor.action(this.#insert(`![${alt || "image"}](${url})`))
     }
-    this.#fileInput.value = ""
   }
 
-  // For plugin-upload (drag, drop, paste): returns ProseMirror nodes.
-  async #uploadFiles(files, schema) {
-    return (await this.#uploadImages(files))
+  // For plugin-upload (drag, drop, paste): returns ProseMirror nodes. Rejecting would leave the
+  // plugin's "Upload in progress" placeholder in the text, so #uploadImages never does.
+  async #uploadFiles(files, schema, pasted) {
+    return (await this.#uploadImages(files, pasted))
       .map(({ url, alt }) => schema.nodes.image?.createAndFill({ src: url, alt }))
       .filter(Boolean)
   }
 
-  async #uploadImages(files) {
-    const uploads = Array.from(files).filter(f => f.type.startsWith("image/")).map(f => this.#uploadOneFile(f))
-    return (await Promise.all(uploads)).filter(Boolean)
+  // Returns the uploaded images and tells the user, once, about every file that did not make it.
+  // Pasted files that are not images pass silently: the user chose the clipboard, not its files.
+  async #uploadImages(fileList, pasted = false) {
+    const files = Array.from(fileList)
+    const images = files.filter(f => f.type.startsWith("image/"))
+    const errors = pasted ? [] : files.filter(f => !images.includes(f)).map(f => `${f.name} isn't an image.`)
+
+    const results = await Promise.all(images.map(f => this.#uploadOneFile(f)))
+    errors.push(...results.filter(r => r.error).map(r => r.error))
+    // Not awaited: it resolves only when the user closes it, and the images that did upload
+    // should go in now.
+    if (errors.length) showFlashAlerts({ error: errors })
+    return results.filter(r => r.url)
   }
 
+  // Resolves to { url, alt } or { error }, never rejects.
   async #uploadOneFile(file) {
+    const name = file.name || "upload.png"
     const formData = new FormData()
-    formData.append("image", file, file.name || "upload.png")
+    formData.append("image", file, name)
     if (this.itemTypeValue) formData.append("item_type", this.itemTypeValue)
     if (this.itemIdValue) formData.append("item_id", this.itemIdValue)
-    const response = await fetch(this.uploadUrlValue, {
-      method: "POST",
-      headers: { "X-CSRF-Token": getMetaValue("csrf-token"), Accept: "application/json" },
-      body: formData
-    })
-    if (!response.ok) return null
-    return response.json()
+    try {
+      const response = await fetch(this.uploadUrlValue, {
+        method: "POST",
+        headers: { "X-CSRF-Token": getMetaValue("csrf-token"), Accept: "application/json" },
+        body: formData
+      })
+      if (response.ok) return await response.json()
+
+      const error = UPLOAD_ERRORS[response.status] ?? await serverError(response)
+      if (error) return { error: `${name}: ${error}` }
+    } catch {
+      // A dropped connection, or a body that is not JSON: both get the message below.
+    }
+    return { error: `${name} couldn't be uploaded. Check your connection and try again.` }
   }
+}
+
+// The error a 422 or 429 states, or null for any other answer.
+async function serverError(response) {
+  if (![422, 429].includes(response.status)) return null
+
+  const { error } = await response.json()
+  return typeof error === "string" ? error : null
 }
