@@ -100,13 +100,14 @@ module Reimbursements
       )
     end
 
-    # Operator: a Build Batch or nightly run failed.
-    def failure(recipients:, error_text:, run_date:)
+    # Operator: the Build Batch they started failed. +draft_link+ is present only when the failure
+    # came after the EUSA draft was made, and decides whether the email says to build again.
+    def failure(recipients:, error_text:, bacs_date:, draft_link: nil)
       send_email(
         to: recipients,
-        subject: "#{@cost_centre.subject_prefix} Batch processing FAILED: #{run_date}",
+        subject: "#{@cost_centre.subject_prefix} Batch build FAILED for BACS date #{bacs_date}",
         template: "reimbursements/emails/failure",
-        assigns: { error_text: error_text, run_date: run_date }
+        assigns: { error_text: error_text, bacs_date: bacs_date, draft_link: draft_link }
       )
     end
 

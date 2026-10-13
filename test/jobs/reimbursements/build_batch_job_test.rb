@@ -150,8 +150,21 @@ module Reimbursements
       assert_empty alerts(:batch_ready)
       failure = alerts(:failure).sole.last
       assert_match(/EUSA draft creation failed/, failure[:error_text])
+      assert_equal "13 May 2026", failure[:bacs_date]
+      assert_predicate failure[:draft_link], :blank?, "no draft was made, so the email offers a rebuild"
       assert attempt.reload.failed?
       assert_includes attempt.error_messages, "EUSA draft creation failed"
+    end
+
+    # The orphan-draft and mark-Submitted failures: the email must say not to build again.
+    test "a build that fails after making the EUSA draft hands the failure email its link" do
+      @processor = FakeBatchProcessor.new(success: false, errors: [ "ORPHAN DRAFT: do not rebuild" ],
+                                          draft_link: "https://outlook.example/draft-1")
+      approved_expense
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert_equal "https://outlook.example/draft-1", alerts(:failure).sole.last[:draft_link]
     end
 
     test "a Graph credential failure notifying the operator escalates to IT, not a doomed retry" do

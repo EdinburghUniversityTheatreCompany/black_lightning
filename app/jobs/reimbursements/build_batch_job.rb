@@ -102,7 +102,7 @@ module Reimbursements
                             errors: result.errors, batch_id: result.batch_id)
       else
         emailer.failure(recipients: recipients, error_text: Array(result.errors).join("\n"),
-                        run_date: run_date(result.bacs_date))
+                        bacs_date: run_date(result.bacs_date), draft_link: result.eusa_draft_web_link)
       end
     rescue GraphAuth::AuthError => e
       Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre.key} — #{e.message}")

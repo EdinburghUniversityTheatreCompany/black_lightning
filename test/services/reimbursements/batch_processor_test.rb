@@ -230,6 +230,7 @@ module Reimbursements
 
       assert_not result.success
       assert(result.errors.any? { |e| e.include?("EUSA draft creation failed") })
+      assert_empty result.eusa_draft_web_link, "no link, so the failure email offers a rebuild"
       assert_equal 0, Batch.count, "no batch when draft fails"
       assert_equal Status::APPROVED, @expense_a.reload.status, "expenses must stay Approved when the draft fails"
       assert_equal Status::APPROVED, @expense_b.reload.status
@@ -244,6 +245,7 @@ module Reimbursements
 
       assert_not result.success
       assert_equal 1, graph.drafts.size, "the EUSA draft was created"
+      assert_predicate result.eusa_draft_web_link, :present?, "the failure email must say not to rebuild"
       assert(result.errors.any? { |e| e.include?("ORPHAN DRAFT") && e.include?(result.eusa_draft_web_link) })
       assert_equal 0, Batch.count, "no batch record was written"
 
@@ -272,6 +274,7 @@ module Reimbursements
 
       assert_not result.success, "one expense couldn't be marked Submitted: must not report success"
       assert_equal 1, graph.drafts.size, "the EUSA draft was still created and is live"
+      assert_predicate result.eusa_draft_web_link, :present?, "the failure email must say not to rebuild"
       assert(result.errors.any? { |e| e.include?("DOUBLE-DRAFT RISK") && e.include?("11") },
              result.errors.inspect)
 

@@ -96,7 +96,7 @@ module Reimbursements
                            draft_link: "https://outlook.example/draft-1", batch_id: 9,
                            expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
                                          budget_name: "Props", description: "Paint" } ])
-      notifier.failure(recipients: recipients, error_text: "SharePoint down", run_date: "9 July 2026")
+      notifier.failure(recipients: recipients, error_text: "SharePoint down", bacs_date: "9 July 2026")
 
       reminder, approved, ready, failure = graph.send_mails
       assert_equal recipients, reminder[:to]
@@ -139,6 +139,37 @@ module Reimbursements
       [ one, three ].each { |text| assert_no_match(/readiness|checks/, text) }
     end
 
+    # Build Batch sends it, so it is the operator's own build. A draft link means the failure
+    # came after the EUSA draft was made, where building again would draft claims twice.
+    test "failure tells the operator whether building again is safe" do
+      notifier, graph = build
+      notifier.failure(recipients: [ "ops@example.com" ], error_text: "EUSA draft creation failed: timeout",
+                       bacs_date: "9 July 2026")
+      notifier.failure(recipients: [ "ops@example.com" ], error_text: "ORPHAN DRAFT: repair the batch record",
+                       bacs_date: "9 July 2026", draft_link: "https://outlook.example/draft-1")
+
+      no_draft, drafted = graph.send_mails
+      assert_equal "[Bedlam Fringe 2026] Batch build FAILED for BACS date 9 July 2026", no_draft[:subject]
+      no_draft_text, drafted_text = [ no_draft, drafted ].map { |mail| Nokogiri::HTML(mail[:html]).text.squish }
+      [ no_draft_text, drafted_text ].each do |text|
+        assert_includes text, "The batch you built for BACS date 9 July 2026 failed. Nothing was sent to EUSA."
+        assert_includes text, "If you can't fix it, forward this email to IT. They get no other report of it."
+        assert_not_includes text, "automated BACS batch run"
+      end
+
+      assert_includes no_draft_text, "EUSA draft creation failed: timeout"
+      assert_includes no_draft_text,
+                      "Its claims are still Approved. Fix the problem, then build it again from Build Batch. " \
+                      "If this build left a draft in the send mailbox, delete it first so EUSA isn't asked to pay twice."
+      assert_includes no_draft[:html], %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+
+      assert_includes drafted_text,
+                      "The EUSA draft was made before the failure, so don't build this batch again, or its claims " \
+                      "could be drafted twice. Open the draft and check it against the errors above before you send it."
+      assert_includes drafted[:html], %(href="https://outlook.example/draft-1")
+      assert_not_includes drafted[:html], "batches/new", "a rebuild is the one thing not to do"
+    end
+
     def owner_row(**attrs)
       { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
         description: "Timber", age_days: 5 }.merge(attrs)
@@ -169,7 +200,7 @@ module Reimbursements
 
       travel_to Date.new(2026, 7, 11) do
         notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom",
-                         run_date: "9 July 2026")
+                         bacs_date: "9 July 2026")
       end
 
       assert_includes graph.send_mails.sole[:subject], "9 July 2026"
@@ -197,7 +228,7 @@ module Reimbursements
                               run_date: "9 July 2026")
       notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50", batch_id: 9,
                            draft_link: "https://outlook.example/draft-1", run_date: "9 July 2026")
-      notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
+      notifier.failure(recipients: recipients, error_text: "boom", bacs_date: "9 July 2026")
 
       graph.send_mails.each do |mail|
         assert_not_includes mail[:subject], "Bedlam",
@@ -251,7 +282,7 @@ module Reimbursements
       notifier, = build
 
       assert_raises(KeyError) do
-        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", run_date: "9 July 2026")
+        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", bacs_date: "9 July 2026")
       end
     ensure
       config.default_url_options = original
@@ -262,7 +293,7 @@ module Reimbursements
       graph.fail_send = true
 
       assert_raises(::GraphAuth::Error) do
-        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", run_date: "9 July 2026")
+        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", bacs_date: "9 July 2026")
       end
     end
   end

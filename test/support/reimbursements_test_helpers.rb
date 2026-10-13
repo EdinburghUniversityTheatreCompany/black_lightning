@@ -220,21 +220,23 @@ module ReimbursementsTestHelpers
   end
 
   # Stand-in for BatchProcessor in BuildBatchJob tests: records each process call and
-  # returns a canned Result. +success: false+ drives the failure path.
+  # returns a canned Result. +success: false+ drives a failure before the EUSA draft, whose
+  # link BatchProcessor leaves blank; pass +draft_link:+ too for a failure after it.
   class FakeBatchProcessor
     Result = Struct.new(:success, :eusa_draft_web_link, :total_amount, :bacs_date, :errors,
                         :batch_id, keyword_init: true)
     attr_reader :calls
 
-    def initialize(success: true, errors: [])
+    def initialize(success: true, errors: [], draft_link: success ? "https://outlook.example/draft-1" : "")
       @success = success
       @errors = errors
+      @draft_link = draft_link
       @calls = []
     end
 
     def process(**kwargs)
       @calls << kwargs
-      Result.new(success: @success, eusa_draft_web_link: "https://outlook.example/draft-1",
+      Result.new(success: @success, eusa_draft_web_link: @draft_link,
                  total_amount: kwargs[:expenses].sum { |e| e.amount || 0 },
                  bacs_date: kwargs[:bacs_date], errors: @errors,
                  batch_id: @success ? "recBat1" : nil)
