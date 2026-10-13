@@ -34,7 +34,8 @@
     <%= render AlertComponent.new(type: :warning) do %>
       A batch build for <%= attempt.cost_centre.name %> started
       <%= time_ago_in_words(attempt.created_at) %> ago and hasn't finished; it has likely
-      failed without reporting back. Check the job queue (or ask IT) before rebuilding.
+      failed without reporting back. Before rebuilding, look in the send mailbox for its EUSA
+      draft (rebuilding would draft the same claims twice) and check the job queue, or ask IT.
       <%= dismiss_button.call(attempt) %>
     <% end %>
   <% elsif attempt.building? %>

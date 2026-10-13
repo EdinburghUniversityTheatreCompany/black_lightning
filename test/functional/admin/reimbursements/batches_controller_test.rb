@@ -202,6 +202,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "hasn't finished"
+        assert_includes response.body, "look in the send mailbox for its EUSA"
       end
 
       test "create with a blank or malformed BACS date re-renders new and enqueues nothing" do
