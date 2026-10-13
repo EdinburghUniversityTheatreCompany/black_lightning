@@ -192,8 +192,10 @@ module Reimbursements
     # Narratives agree when their normalised forms share this many leading characters; in the real
     # export the shared-prefix length is bimodal (0 or 10+), so anywhere in the gap behaves the same.
     OFFSET_NARRATIVE_PREFIX_CHARS = 8
-    # EUSA's financial year, and its accounting periods 1..12, run April to March.
+    # Matches the portal's financial years, which start on 6 April (the UK tax year), so 1 to 5
+    # April belong to the year before.
     FINANCIAL_YEAR_START_MONTH = 4
+    FINANCIAL_YEAR_START_DAY = 6
 
     # Finds the offsetting pairs in a parsed paste. Returns the OffsetPairs, strongest evidence first
     # (the order the preview shows for ticking).
@@ -315,7 +317,8 @@ module Reimbursements
     private_class_method :same_financial_year?
 
     def financial_year_start_year(date)
-      date.month >= FINANCIAL_YEAR_START_MONTH ? date.year : date.year - 1
+      year_start = Date.new(date.year, FINANCIAL_YEAR_START_MONTH, FINANCIAL_YEAR_START_DAY)
+      date >= year_start ? date.year : date.year - 1
     end
     private_class_method :financial_year_start_year
 

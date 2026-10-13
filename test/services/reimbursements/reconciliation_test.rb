@@ -470,8 +470,10 @@ module Reimbursements
       "blank nominal codes" => [ ACCRUAL_LEG.merge(nominal: ""), REVERSAL_LEG.merge(nominal: "") ],
       "amounts a penny apart" => [ ACCRUAL_LEG, REVERSAL_LEG.merge(value: "-186.24") ],
       "the same sign" => [ ACCRUAL_LEG, REVERSAL_LEG.merge(value: "186.23") ],
-      "different financial years" => [ ACCRUAL_LEG.merge(date: "31/03/2025", period: "12"),
-                                       REVERSAL_LEG.merge(date: "01/04/2025", period: "1") ],
+      "different financial years" => [ ACCRUAL_LEG.merge(date: "05/04/2025", period: "1"),
+                                       REVERSAL_LEG.merge(date: "06/04/2025", period: "1") ],
+      "dates either side of 6 April" => [ ACCRUAL_LEG.merge(date: "02/04/2025", period: "1"),
+                                          REVERSAL_LEG.merge(date: "07/04/2025", period: "1") ],
       "zero amounts" => [ ACCRUAL_LEG.merge(value: "0.00"), REVERSAL_LEG.merge(value: "-0.00") ]
     }.each do |gate, shapes|
       test "detect_offsetting_pairs never pairs rows with #{gate}" do
@@ -493,6 +495,18 @@ module Reimbursements
       pairs = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 8])
 
       assert_empty pairs, "the caller attributed these two identical-looking codes to different pots"
+    end
+
+    # The portal's financial years start on 6 April, so 1 to 5 April still belong to March's year.
+    { "31 March and 5 April" => %w[31/03/2025 05/04/2025],
+      "1 and 5 April" => %w[01/04/2025 05/04/2025] }.each do |span, (accrual_date, reversal_date)|
+      test "detect_offsetting_pairs pairs rows dated #{span} as one financial year" do
+        pairs = Reconciliation.detect_offsetting_pairs(
+          parse_shapes([ ACCRUAL_LEG.merge(date: accrual_date), REVERSAL_LEG.merge(date: reversal_date) ])
+        )
+
+        assert_equal 1, pairs.size
+      end
     end
 
     # Two identical accruals and two identical reversals are FOUR transactions, so their two pairs must
