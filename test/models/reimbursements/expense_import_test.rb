@@ -185,8 +185,8 @@ module Reimbursements
     # --- What happens to a claim imported live -------------------------------
 
     test "claims imported at a live status are counted, so the preview can warn" do
-      import = build_import(tsv(row(reference: "OLD-1", status: Status::APPROVED),
-                                row(reference: "OLD-2", status: Status::PENDING),
+      import = build_import(tsv(row(reference: "OLD-1", status: Status::APPROVED, submitted_on: "2026-05-01"),
+                                row(reference: "OLD-2", status: Status::PENDING, submitted_on: "2026-05-01"),
                                 row(reference: "OLD-3", status: Status::PAID)))
 
       assert_equal %w[OLD-1 OLD-2], import.live_entries.map { |e| e.row[:reference] }
@@ -291,6 +291,31 @@ module Reimbursements
       assert_equal Date.new(2026, 5, 1), attrs[:submitted_at].to_date
     end
 
+    test "a live claim with no Date submitted blocks the import, saying why" do
+      [ Status::PENDING, Status::APPROVED ].each do |status|
+        import = build_import(tsv(row(status: status)))
+
+        assert_not import.valid?, status
+        assert_match(/no Date submitted\. Pending and Approved claims need one: .* count the wait from it/,
+                     import.entries.sole.error, status)
+      end
+    end
+
+    test "a settled or draft claim may leave Date submitted blank" do
+      [ Status::PAID, Status::SUBMITTED, Status::REJECTED, Status::DRAFT ].each do |status|
+        assert build_import(tsv(row(status: status))).valid?, status
+      end
+    end
+
+    # The import time would read as the day it was submitted.
+    test "a settled claim imported with no date is stored undated" do
+      import = build_import(tsv(row(status: Status::PAID)))
+
+      expense = Reimbursements.build_store.import_expenses!(rows: import.creates).sole
+
+      assert_nil expense.reload.submitted_at
+    end
+
     # --- Rows that block the import --------------------------------------------
 
     test "a row wrong in any one way blocks the import and says why" do
@@ -310,7 +335,7 @@ module Reimbursements
         { amount: "-5" } => /positive/i,
         { expense_type: "Petty cash" } => /type/i,
         { auto_number: "four-one-seven" } => /"four-one-seven" isn't an expense number/,
-        { status: Status::APPROVED, expense_type: Expense::TYPE_INVOICE } => /payee/i
+        { status: Status::APPROVED, submitted_on: "2026-05-01", expense_type: Expense::TYPE_INVOICE } => /payee/i
       }.each do |cells, message|
         import = build_import(tsv(row(**cells)))
 
@@ -409,7 +434,8 @@ module Reimbursements
     end
 
     test "the payee trio from the sheet satisfies an Approved Invoice" do
-      import = build_import(tsv(row(status: Status::APPROVED, expense_type: Expense::TYPE_INVOICE,
+      import = build_import(tsv(row(status: Status::APPROVED, submitted_on: "2026-05-01",
+                                    expense_type: Expense::TYPE_INVOICE,
                                     payee_name_override: "Stage Supplies Ltd",
                                     sort_code_override: "08-99-99",
                                     account_number_override: "66374958")))

@@ -44,6 +44,18 @@ module Admin
         assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path(@pending.record_id)
       end
 
+      # An imported claim settled undated, then reopened, has no date to count a wait from.
+      test "a claim with no submitted date says nothing about how long it has waited" do
+        @pending.update_column(:submitted_at, nil)
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_select "div.items-baseline", text: /Sam Submitter/ do |row|
+          assert_no_match(/submitted|waiting/i, row.text)
+        end
+      end
+
       # The same in-page viewer as the Review queue: nothing is fetched until it is opened.
       test "a claim awaiting endorsement offers the in-page receipt viewer, closed" do
         sign_in @user

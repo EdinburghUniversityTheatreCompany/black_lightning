@@ -121,6 +121,18 @@ module Admin
         assert_not_includes assigns(:ready).map(&:record_id), gated_expense.record_id
       end
 
+      test "a gated claim with no submitted date says nothing about how long it has waited" do
+        gated_expense.update_column(:submitted_at, nil)
+        sign_in @user
+
+        get :index, params: { tab: "awaiting_owner" }
+
+        assert_response :success
+        assert_select "p.text-warning", text: /Awaiting a budget owner's endorsement/ do |paragraphs|
+          assert_no_match(/\b(submitted|waiting)\b/i, paragraphs.text)
+        end
+      end
+
       test "the awaiting-owner tab still offers the finance override" do
         gated_expense
         sign_in @user

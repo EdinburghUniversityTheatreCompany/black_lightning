@@ -95,7 +95,8 @@ module Admin
 
         assert_no_difference -> { ::Reimbursements::Expense.count } do
           post :preview, params: import_params(tsv(row(reference: "OLD-1"),
-                                                   row(reference: "OLD-2", status: STATUS::APPROVED)))
+                                                   row(reference: "OLD-2", status: STATUS::APPROVED,
+                                                       submitted_on: "2026-05-01")))
         end
 
         assert_response :success
@@ -219,8 +220,10 @@ module Admin
 
         assert_no_enqueued_jobs do
           assert_no_emails do
-            post :apply, params: import_params(tsv(row(reference: "OLD-1", status: STATUS::PENDING),
-                                                   row(reference: "OLD-2", status: STATUS::APPROVED)))
+            post :apply, params: import_params(tsv(row(reference: "OLD-1", status: STATUS::PENDING,
+                                                       submitted_on: "2026-05-01"),
+                                                   row(reference: "OLD-2", status: STATUS::APPROVED,
+                                                       submitted_on: "2026-05-01")))
           end
         end
 

@@ -104,7 +104,7 @@ module Reimbursements
       },
       submitted_on: {
         label: "Date submitted",
-        hint: "Optional; 2026-05-13 or 13/05/2026",
+        hint: "Required for Pending and Approved claims; 2026-05-13 or 13/05/2026",
         exact: [ "date submitted", "submitted", "date claimed", "claimed", "date" ],
         contains: [ "date submitted", "submitted on", "date claimed", "date of claim" ]
       },
@@ -152,6 +152,10 @@ module Reimbursements
     # Already paid, or never will be: what ExpenseForm#settled? reads. Stated as the
     # settled set, so a status added later counts as live and gets the stricter rule.
     SETTLED_STATUSES = [ Status::SUBMITTED, Status::PAID, Status::REJECTED ].freeze
+
+    # Review and the reminders count these claims' wait from Date submitted. A draft
+    # has not been submitted yet.
+    DATED_STATUSES = [ Status::PENDING, Status::APPROVED ].freeze
 
     # expenses.import_key is string(255). Checked here so an over-long ID is a row error,
     # not a ValueTooLong 500 inside the wizard's Turbo Frame with the paste lost.
@@ -387,6 +391,9 @@ module Reimbursements
           "whole amount to the budget."
       elsif row[:submitted_on] == :unreadable
         "#{row[:raw_submitted_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
+      elsif row[:submitted_on].nil? && DATED_STATUSES.include?(row[:status])
+        "This line has no Date submitted. Pending and Approved claims need one: Review and " \
+          "the reminders count the wait from it."
       elsif row[:paid_on] == :unreadable
         "#{row[:raw_paid_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
       end

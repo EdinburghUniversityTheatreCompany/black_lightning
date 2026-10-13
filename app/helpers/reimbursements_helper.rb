@@ -33,8 +33,9 @@ module ReimbursementsHelper
   end
 
   # How long a claim has been with its owner, in days: "waiting 6 days" is what is judged.
+  # nil with no date (an undated imported claim): callers then say nothing.
   def reimbursements_waiting_for(submitted_at)
-    return "just submitted" if submitted_at.blank?
+    return if submitted_at.blank?
 
     days = (Date.current - submitted_at.to_date).to_i
     case days

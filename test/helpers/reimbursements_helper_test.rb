@@ -91,6 +91,15 @@ class ReimbursementsHelperTest < ActionView::TestCase
     end
   end
 
+  test "reimbursements_waiting_for counts whole days, and says nothing with no date" do
+    travel_to Time.zone.local(2026, 5, 13, 12) do
+      assert_equal "submitted today", reimbursements_waiting_for(Time.zone.local(2026, 5, 13, 9))
+      assert_equal "waiting 1 day", reimbursements_waiting_for(Date.new(2026, 5, 12))
+      assert_equal "waiting 6 days", reimbursements_waiting_for(Time.zone.local(2026, 5, 7, 23))
+    end
+    assert_nil reimbursements_waiting_for(nil)
+  end
+
   test "reimbursements_money is GBP to 2dp, zero included, and a dash for nil" do
     { 12.5 => "£12.50", 0 => "£0.00", "1234.50" => "£1,234.50", nil => "-" }.each do |amount, expected|
       assert_equal expected, reimbursements_money(amount), amount.inspect

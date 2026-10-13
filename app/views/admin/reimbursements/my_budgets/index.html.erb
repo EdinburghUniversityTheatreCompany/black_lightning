@@ -27,9 +27,9 @@
             <span class="font-medium">#<%= expense.auto_number %>: <%= expense.effective_payee_name %></span>
             <span><strong><%= reimbursements_money(expense.amount) %></strong></span>
             <span class="text-sm text-gray-600"><%= expense.budget&.display_name %></span>
-            <span class="text-sm text-gray-500">
-              <%= reimbursements_waiting_for(expense.submitted_at) %>
-            </span>
+            <% if (waiting = reimbursements_waiting_for(expense.submitted_at)) %>
+              <span class="text-sm text-gray-500"><%= waiting %></span>
+            <% end %>
           </div>
 
           <% if expense.description.present? %>
