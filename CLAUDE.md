@@ -550,8 +550,11 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   picker. `activate!` stands the incumbent down and promotes the target in one transaction:
   `only_one_active` rejects a second active year, and a target that fails to save must never
   leave no active year. **A year's dates matter**: they decide which year's income lines an EUSA
-  credit can link to (production's run 6 April to 5 April), and a year missing either date covers
-  nothing.
+  credit can link to, and which year a newly imported ledger row (and a claim made from one with
+  Create expense) is filed under (production's run 6 April to 5 April). A year missing either date
+  covers nothing; with no covering year, or several, the active year applies. Rows imported
+  before this rule keep the year active at their paste (never re-stamped). `DatabaseStore` loads the years once per store,
+  so a test that changes years between two writes needs a fresh store.
   - **The selector is `?year=<key>`, on the budget screens only**
     (`FinanceController#resolve_financial_year!`; defaults to the active year, an unknown key
     alerts and falls back). Expenses, Review, Actuals, Batches and Reconcile are deliberately not year-scoped yet.
@@ -937,7 +940,14 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - **`Notifier#failure` is Build Batch's alone, and its `draft_link:` decides the advice**: a link
     (the draft exists) says never to build again, as the claims would be drafted twice; none says
     the claims are still Approved. A new caller must pass it. A nightly crash emails nobody: it
-    goes to Honeybadger and the unrecorded run-day retries it.
+    goes to Honeybadger and the unrecorded run-day retries it. History's failed-build banner gives
+    the same advice from `BatchAttempt#draft_web_link`; change both wordings together.
+  - **`BatchAttempt#draft_web_link` has three states**: a link (the build made its draft: don't
+    rebuild), `BatchAttempt::NO_DRAFT` (`""`, none made) and nil (nothing recorded: History
+    hedges). Never `.presence` it, or a recorded none reads as unknown. A failure path after the
+    draft must pass the result's `eusa_draft_web_link`; one before `BatchProcessor` runs passes
+    `NO_DRAFT`. A successful reopen dismisses its batch's attempts (`dismiss_for_batch!`), or their
+    "don't build again" contradicts the rebuild.
   - `result.success` means every expense reached `Submitted`, not just that the draft exists. A
     `mark_submitted` failure is the one post-draft step that is not best effort: it leaves the
     double-draft danger the orphan-draft guard prevents.
@@ -1012,7 +1022,10 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     Never go back to first match: budgets share codes. The preview, the offsetting-pair note and
     apply all read `ReconcileController#income_budgets_for`; never call the matcher around it.
   - **Hard gates**: same absolute amount (exact BigDecimal), opposite sign, same nominal code,
-    same cost centre, same financial year; a blank code or centre never pairs. Survivors score
+    same cost centre, same financial year (a fixed 6 April boundary,
+    `Reconciliation::FINANCIAL_YEAR_START_MONTH`/`_DAY`, not the `FinancialYear` rows; hand pairing
+    compares the rows' stamped years, so the two agree only while every year runs 6 April to
+    5 April); a blank code or centre never pairs. Survivors score
     (ref 4, nominal 2, period 1, narrative prefix 1, minus 1 or 2 for date distance), taken
     greedily, floor `OFFSET_MIN_SCORE` 4. Nominal is a gate because a Sage payment-run ref spans
     a whole run and would pair a cost with unrelated income; ref and date cannot be (refs match
