@@ -1065,7 +1065,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     budgets in `DatabaseStore#areas`; `:allocations` behind `eusa_actuals`.
   - **The picker is unscoped**, like `store.budgets`: a credit in a year's tail often belongs to
     the year it was raised in. Active income lines only; posted ids are checked against the ids
-    rendered.
+    rendered. It groups lines by financial year, the year holding the row's date first (else the
+    active year), because each year's lines repeat their names. One share for the whole amount is
+    how finance moves a credit to another line or year.
   - `EusaActual#allocation_summary` feeds both the ledger badge and the export's Budget cell. A
     split row's export Area cell is blank on purpose (shares can sit in different areas).
   - **Expected income is a forecast on the Income line, never a pseudo-actual**: only an EUSA
