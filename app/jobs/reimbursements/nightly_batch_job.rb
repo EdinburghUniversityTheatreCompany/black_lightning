@@ -56,7 +56,7 @@ module Reimbursements
       delivered = deliver_reminders(cost_centre, recipients, today: today)
       record_run(cost_centre, today) if delivered
     rescue StandardError => e
-      handle_failure(cost_centre, recipients, e, today)
+      handle_failure(cost_centre, e)
     end
 
     def warn_no_recipients(cost_centre)
@@ -213,25 +213,18 @@ module Reimbursements
 
     # --- Outcomes ----------------------------------------------------------
 
-    # +recipients+ is nil when the raise came before they resolved; the report
-    # has gone to Honeybadger either way.
-    def handle_failure(cost_centre, recipients, error, today)
+    # Reported, never emailed to finance: the run-day stays unrecorded, so the
+    # next run retries by itself.
+    def handle_failure(cost_centre, error)
       log_and_notify("Nightly: #{cost_centre.key} raised #{error.class}: #{error.message}", error,
                      context: { source: "reimbursements_nightly_batch", cost_centre: cost_centre.key })
-
-      recipients = Array(recipients).compact_blank
-      return if recipients.empty?
-
-      notify(cost_centre, recipients) do |emailer, to|
-        emailer.failure(recipients: to, error_text: error.message, run_date: run_date(today))
-      end
     end
 
     # --- Helpers -----------------------------------------------------------
 
-    # Rescues every send failure, so it never trips run_for's rescue into a
-    # spurious failure email. Returns false when the send failed, which stops
-    # run_for recording the run-day.
+    # Rescues every send failure, so one failed reminder never stops the next
+    # being attempted. Returns false when the send failed, which stops run_for
+    # recording the run-day.
     def notify(cost_centre, recipients)
       yield(notifier(cost_centre), recipients)
       true
@@ -245,8 +238,8 @@ module Reimbursements
       false
     end
 
-    # A failure here (a DB blip) is reported but must not reach run_for's
-    # rescue, which would follow a successful alert with a spurious FAILED email.
+    # A failure here (a DB blip) is reported as its own fault: the reminders
+    # did send, so the next run sends them again.
     def record_run(cost_centre, today)
       cost_centre.record_nightly_run!(today)
     rescue StandardError => e

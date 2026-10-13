@@ -272,7 +272,7 @@ module Reimbursements
                    "both notify calls in this run must share one GraphClient (one OAuth token fetch)"
     end
 
-    test "a Graph credential failure escalates to the IT subcommittee, not an ordinary error email" do
+    test "a Graph credential failure escalates to the IT subcommittee and leaves the run unrecorded" do
       @notifier = FakeNotifier.new(fail_only: [ :approved_ready ], fail_with: ::GraphAuth::AuthError)
       approved_expense
 
@@ -281,7 +281,6 @@ module Reimbursements
       end
 
       assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
-      assert_empty mailer_calls(:failure), "an auth failure must not also trip the ordinary failure email"
       assert_nil CostCentre.default.reload.last_nightly_run_on
     ensure
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
@@ -306,11 +305,14 @@ module Reimbursements
       pending_expense(days_ago: 5)
       approved_expense
 
-      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+      notified = capture_honeybadger_notices do
+        assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+      end
 
       assert_equal 1, mailer_calls(:pending_reminder).size
       assert_empty mailer_calls(:approved_ready)
-      assert_empty mailer_calls(:failure), "a failed send is swallowed, not a run failure"
+      assert_equal [ "reimbursements_nightly_email" ], notified.map { |_, opts| opts[:context][:source] },
+                   "a failed send is swallowed and reported as itself, not as a crashed run"
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -322,27 +324,29 @@ module Reimbursements
                    "a reminder with nothing to say counts as delivered"
     end
 
-    test "an error raised mid-run is reported, emails failure and does not record the run (so it retries)" do
+    test "an error raised mid-run is reported, emails nobody and does not record the run (so it retries)" do
       NightlyBatchJob.store_builder = -> { BoomStore.new }
 
       notified = capture_honeybadger_notices { NightlyBatchJob.perform_now(today: THURSDAY) }
 
       assert_equal [ "backend down" ], notified.map { |error, _| error.message }
-      assert_equal 1, mailer_calls(:failure).size
+      assert_equal({ source: "reimbursements_nightly_batch", cost_centre: CostCentre.default.key },
+                   notified.sole.last[:context])
+      assert_empty @notifier.calls, "a crash goes to Honeybadger only, never a failure email to finance"
       assert_nil CostCentre.default.reload.last_nightly_run_on
+      assert CostCentre.default.nightly_due?(THURSDAY + 1), "the next day's run retries it"
     end
 
-    test "a DB failure recording the run after a successful alert doesn't trip a spurious failure email" do
+    test "a DB failure recording the run after a successful alert is reported as its own fault" do
       approved_expense
       original = CostCentre.instance_method(:record_nightly_run!)
       CostCentre.define_method(:record_nightly_run!) { |*| raise "DB blip" }
 
       notified = capture_honeybadger_notices { NightlyBatchJob.perform_now(today: THURSDAY) }
 
-      # The alert sent, so a failed record write must not add a FAILED email.
       assert_equal 1, mailer_calls(:approved_ready).size
-      assert_empty mailer_calls(:failure)
-      assert_equal 1, notified.size, "the record-write failure must still be reported"
+      assert_equal [ "reimbursements_nightly_record_run" ], notified.map { |_, opts| opts[:context][:source] },
+                   "reported as a failed record write, so IT knows the reminders went and will go again"
     ensure
       CostCentre.define_method(:record_nightly_run!, original)
     end
