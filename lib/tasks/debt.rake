@@ -10,13 +10,6 @@ namespace :debt do
     p "Notified all debtors"
   end
 
-  desc "clears all debt records, staffing records, and notification records"
-  task clear_all_debts: :environment do
-    Tasks::Logic::Debt.clear_all_debts
-
-    p "All debt and staffing records cleared."
-  end
-
   desc "expires all outdated debt"
   task expire_outdated_debt: :environment do
     Tasks::Logic::Debt.expire_outdated_debt

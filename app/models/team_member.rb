@@ -6,7 +6,6 @@
 # == Schema Information
 #
 # Table name: team_members
-# Database name: primary
 #
 #  id            :integer          not null, primary key
 #  display_order :integer
@@ -96,8 +95,8 @@ class TeamMember < ActiveRecord::Base
   private
 
   # Numbers rows written outside the admin form (crew import, a proposal's
-  # Proposer row). Skipped for an unsaved teamwork, which imports.rake builds:
-  # there are no siblings to count, and archive rows sort by name anyway.
+  # Proposer row). Skipped for an unsaved teamwork (a new show built with its
+  # rows in memory): there are no siblings to count, and such rows sort by name.
   def default_display_order
     return if display_order || teamwork.nil? || !teamwork.persisted?
     # A teamwork is wholly numbered or wholly not. On an all-nil one max + 1 is 0,

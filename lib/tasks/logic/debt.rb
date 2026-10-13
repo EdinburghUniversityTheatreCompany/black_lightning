@@ -43,12 +43,4 @@ class Tasks::Logic::Debt
     false
   end
   private_class_method :deliver_debt_mail
-
-  def self.clear_all_debts
-    Admin::MaintenanceDebt.destroy_all
-    Admin::StaffingDebt.destroy_all
-    Admin::DebtNotification.destroy_all
-    Admin::Staffing.destroy_all
-    Admin::StaffingJob.destroy_all
-  end
 end

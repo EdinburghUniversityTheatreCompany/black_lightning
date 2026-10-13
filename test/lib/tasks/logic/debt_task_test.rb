@@ -47,21 +47,6 @@ class DebtTaskTest < ActiveSupport::TestCase
     assert_equal "Reminder of Debt", mail_sample.subject
   end
 
-  test "Should clear all maintenance debts, staffing debts and debt notifications" do
-    FactoryBot.create_list(:maintenance_debt, 1)
-    FactoryBot.create_list(:staffing_debt, 1)
-    FactoryBot.create_list(:initial_debt_notification, 1)
-    FactoryBot.create_list(:staffing, 1, staffed_job_count: 1)
-
-    Tasks::Logic::Debt.clear_all_debts
-
-    assert_empty Admin::MaintenanceDebt.all
-    assert_empty Admin::StaffingDebt.all
-    assert_empty Admin::DebtNotification.all
-    assert_empty Admin::Staffing.all
-    assert_empty Admin::StaffingJob.all
-  end
-
   test "expire outdated debt should remove staffing debts older than a year but preserve younger debts" do
     staffing_debt_older_than_a_year = FactoryBot.create(:staffing_debt, due_by: Date.current - 365.days)
     staffing_debt_younger_than_a_year = FactoryBot.create(:staffing_debt, due_by: Date.current - 364.days)

@@ -218,7 +218,7 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal 7, member.reload.display_order
   end
 
-  # As imports.rake builds them.
+  # A new show built with its rows in memory, as seeds and factories do.
   test "rows built on an unsaved teamwork stay unnumbered" do
     show = FactoryBot.build(:show, team_members: [
       TeamMember.new(user: FactoryBot.create(:user), position: "Director"),
