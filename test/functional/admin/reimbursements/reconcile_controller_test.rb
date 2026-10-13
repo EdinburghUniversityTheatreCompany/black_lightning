@@ -244,6 +244,15 @@ module Admin
       assert_equal 1, assigns(:credits_linked)
     end
 
+    test "apply files a row under the year its date falls in, not the active year" do
+      last_year, _active = create_reimbursements_tax_years(active: "2027/2028")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(nominal: '500000', date: '20/03/2027')}" }
+
+      assert_equal last_year, ::Reimbursements::EusaActual.sole.financial_year
+    end
+
     # A line with no year counts in every year, so it still ties with the year's own line; the
     # other year's line is no longer among them.
     test "a credit stays unlinked when a line with no year shares its code with its year's line" do

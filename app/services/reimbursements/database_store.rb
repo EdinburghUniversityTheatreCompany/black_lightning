@@ -658,8 +658,11 @@ module Reimbursements
       EusaActual.includes(:expense, :budget, allocations: :budget).find_by(id: record_id)
     end
 
+    # Stamped with the year the row's own date falls in: EUSA's March rows arrive after the
+    # switch to the new year and still belong to the old one.
     def create_actual!(attrs)
-      actual = EusaActual.create!(attrs.compact.reverse_merge(financial_year: FinancialYear.current))
+      attrs = attrs.compact
+      actual = EusaActual.create!(attrs.reverse_merge(financial_year: financial_year_for(attrs[:date])))
       bust_eusa_actuals!
       actual
     end
@@ -712,7 +715,8 @@ module Reimbursements
         actual = EusaActual.lock.find(actual_id)
         raise NotConvertibleError unless actual.convertible_to_expense?
 
-        created = create_expense!(attrs)
+        # The claim is the row's charge, so it takes the row's year, not the one active today.
+        created = create_expense!(attrs.reverse_merge(financial_year: financial_year_for(actual.date)))
         link_actual_to_expense!(actual_id, created.record_id)
         created
       end
@@ -906,6 +910,18 @@ module Reimbursements
       return records if year.nil?
 
       records.select { |record| record.financial_year_id.nil? || record.financial_year_id == year.id }
+    end
+
+    # The one year whose dates hold +date+; the active year when none does, several do, or there
+    # is no date.
+    def financial_year_for(date)
+      covering = date ? FinancialYear.covering(date, all_financial_years) : []
+      covering.one? ? covering.first : all_financial_years.find(&:active?)
+    end
+
+    # Loaded once per store, as reconcile apply stamps a whole paste one row at a time.
+    def all_financial_years
+      @all_financial_years ||= FinancialYear.all.to_a
     end
 
     # The same leniency as #in_year, for cost centres (cost_centre_id is nullable on every table

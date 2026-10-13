@@ -217,6 +217,73 @@ module Reimbursements
       assert_equal budget.id, EusaActual.find(actual.id).budget_id
     end
 
+    # --- The year an actuals row belongs to -------------------------------------
+
+    # EUSA's March rows arrive after the switch to the new year, and still belong to the old one.
+    test "create_actual! stamps the year the row's date falls in, not the active year" do
+      last_year, _active = create_reimbursements_tax_years(active: "2027/2028")
+
+      actual = store.create_actual!(nominal_code: "4000", narrative: "March hire", debit: 10,
+                                    date: Date.new(2027, 3, 20))
+
+      assert_equal last_year, actual.financial_year
+    end
+
+    test "create_actual! stamps the active year when no single year holds the row's date" do
+      _last_year, active = create_reimbursements_tax_years(active: "2027/2028")
+      FinancialYear.create!(label: "Fringe 2026", starts_on: Date.new(2026, 8, 1),
+                            ends_on: Date.new(2027, 7, 31))
+
+      { "outside every year" => Date.new(2025, 5, 1),
+        "inside two years" => Date.new(2026, 12, 1),
+        "undated" => nil }.each do |narrative, date|
+        actual = store.create_actual!(nominal_code: "4000", narrative: narrative, debit: 10, date: date)
+
+        assert_equal active, actual.financial_year, narrative
+      end
+    end
+
+    # Reconcile apply imports a whole paste through one store.
+    test "create_actual! reads the financial years once per store, not once per row" do
+      create_reimbursements_tax_years(active: "2027/2028")
+      store.create_actual!(nominal_code: "4000", narrative: "first", debit: 1, date: Date.new(2027, 3, 1))
+
+      year_reads = 0
+      count_year_reads = lambda do |*, payload|
+        year_reads += 1 if payload[:sql].include?("FROM `reimbursements_financial_years`")
+      end
+      ActiveSupport::Notifications.subscribed(count_year_reads, "sql.active_record") do
+        store.create_actual!(nominal_code: "4000", narrative: "second", debit: 2, date: Date.new(2027, 3, 2))
+        store.create_actual!(nominal_code: "4000", narrative: "third", debit: 3)
+      end
+
+      assert_equal 0, year_reads
+    end
+
+    # Stamped with the active year, a reversal imported after the switch could never be paired by
+    # hand with its accrual from the year before.
+    test "a reversal imported after the year switch pairs by hand with last year's accrual" do
+      last_year, next_year = create_reimbursements_tax_years(active: "2026/2027")
+      accrual = store.create_actual!(nominal_code: "4000", narrative: "Accrual", debit: 10,
+                                     date: Date.new(2027, 3, 31))
+      next_year.activate!
+
+      reversal = DatabaseStore.new.create_actual!(nominal_code: "4000", narrative: "Reversal", credit: 10,
+                                                  date: Date.new(2027, 4, 2))
+
+      assert_equal last_year, reversal.financial_year
+      assert_equal [ reversal ], accrual.offset_candidates([ reversal ])
+    end
+
+    test "create_expense_for_actual! files the claim under the year of the row's date" do
+      last_year, _active = create_reimbursements_tax_years(active: "2027/2028")
+      actual = create_reimbursements_actual(date: Date.new(2027, 3, 20))
+
+      expense = store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+
+      assert_equal last_year, expense.financial_year
+    end
+
     test "link_offsetting_pair! stamps both legs and points them at each other" do
       accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10)
       reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL", credit: 10)
