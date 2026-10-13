@@ -81,6 +81,7 @@ module Reimbursements
       assert attempt.reload.failed?
       assert_equal 'The BACS date "not-a-date" could not be read, so nothing was built. Build the batch again.',
                    attempt.error_messages
+      assert_equal BatchAttempt::NO_DRAFT, attempt.draft_web_link, "it failed before any draft"
     end
 
     test "a run whose click-time attempt is missing raises rather than inventing one" do
@@ -167,6 +168,54 @@ module Reimbursements
       assert_equal "https://outlook.example/draft-1", alerts(:failure).sole.last[:draft_link]
     end
 
+    # The real BatchProcessor, so the attempt records what its result says about the draft.
+    # The block may break the job's store before the processor gets it.
+    def with_real_processor(&break_store)
+      CostCentre.default.update!(sharepoint_receipts_drive_id: "drvR", sharepoint_receipts_folder_id: "fldR",
+                                 sharepoint_bacs_drive_id: "drvB", sharepoint_bacs_folder_id: "fldB")
+      graph = FakeGraphClient.new
+      BuildBatchJob.graph_builder = -> { graph }
+      BuildBatchJob.processor_builder = lambda do |store:, graph:, cost_centre:|
+        break_store&.call(store)
+        BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, sleeper: ->(_seconds) { })
+      end
+      graph
+    end
+
+    # History reads the record to say whether building again is safe.
+    test "a build that fails before its EUSA draft records that it made none" do
+      graph = with_real_processor
+      graph.fail_draft = true
+      attempt = click_time_attempt
+      approved_expense
+
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
+
+      attempt.reload
+      assert attempt.failed?
+      assert_includes attempt.error_messages, "EUSA draft creation failed"
+      assert_empty graph.drafts
+      assert_equal BatchAttempt::NO_DRAFT, attempt.draft_web_link
+      assert_not attempt.draft_unknown?
+    end
+
+    test "a build that fails after making its EUSA draft records the draft's link" do
+      graph = with_real_processor do |store|
+        store.define_singleton_method(:create_batch!) { |_attrs| raise "batch write failed" }
+      end
+      attempt = click_time_attempt
+      approved_expense
+
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
+
+      attempt.reload
+      assert attempt.failed?
+      assert_includes attempt.error_messages, "ORPHAN DRAFT"
+      assert_equal 1, graph.drafts.size
+      assert_equal "https://outlook.example/draft-1", attempt.draft_web_link
+      assert_equal attempt.draft_web_link, alerts(:failure).sole.last[:draft_link], "History and the email agree"
+    end
+
     test "a Graph credential failure notifying the operator escalates to IT, not a doomed retry" do
       @notifier = FakeNotifier.new(fail: true, fail_with: ::GraphAuth::AuthError)
       approved_expense
@@ -193,6 +242,7 @@ module Reimbursements
       assert_empty @notifier.calls, "no operator email is attempted once Graph auth itself is broken"
       assert attempt.reload.failed?
       assert_includes attempt.error_messages, "token expired"
+      assert attempt.draft_unknown?, "with no result in hand the job cannot say whether a draft was made"
     ensure
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
@@ -234,6 +284,7 @@ module Reimbursements
       assert_empty @notifier.calls
       assert attempt.reload.failed?, "the row must not linger in 'building' forever"
       assert_includes attempt.error_messages, "no longer exists"
+      assert_equal BatchAttempt::NO_DRAFT, attempt.draft_web_link, "it failed before any draft"
     end
 
     test "with no operator recipients the batch still runs and the email is skipped" do

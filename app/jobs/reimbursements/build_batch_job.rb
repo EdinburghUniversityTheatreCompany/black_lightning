@@ -32,7 +32,8 @@ module Reimbursements
       cost_centre = CostCentre.find_by(key: cost_centre_key)
       if cost_centre.nil?
         Rails.logger.warn("Build batch: no cost centre #{cost_centre_key.inspect} — skipping")
-        attempt.resolve!(status: "failed", error_messages: "Cost centre #{cost_centre_key} no longer exists.")
+        attempt.resolve!(status: "failed", error_messages: "Cost centre #{cost_centre_key} no longer exists.",
+                         draft_web_link: BatchAttempt::NO_DRAFT)
         return
       end
 
@@ -54,13 +55,14 @@ module Reimbursements
       )
       attempt.resolve!(status: result.success ? "completed" : "failed",
                        error_messages: Array(result.errors).join("\n"),
-                       batch_record_id: result.batch_id)
+                       batch_record_id: result.batch_id, draft_web_link: result.eusa_draft_web_link.to_s)
       notify(cost_centre, result, approved, operator_emails)
     rescue GraphAuth::AuthError => e
       # A credential failure dooms every further Graph call, the operator email
       # included, so escalate straight to IT.
       Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre_key} — #{e.message}")
       GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
+      # No result in hand, so the draft stays unrecorded and History hedges.
       attempt.resolve!(status: "failed", error_messages: "Microsoft authentication failed: #{e.message}")
     end
 
@@ -73,7 +75,8 @@ module Reimbursements
     rescue Date::Error
       attempt.resolve!(status: "failed",
                        error_messages: "The BACS date #{value.inspect} could not be read, so nothing was " \
-                                       "built. Build the batch again.")
+                                       "built. Build the batch again.",
+                       draft_web_link: BatchAttempt::NO_DRAFT)
       raise
     end
 

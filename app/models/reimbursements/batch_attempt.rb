@@ -7,6 +7,7 @@
 #  bacs_date          :date
 #  dismissed_at       :datetime
 #  dismissed_by_email :string(255)
+#  draft_web_link     :text(65535)
 #  error_messages     :text(65535)
 #  status             :string(255)      default("building"), not null
 #  triggered_by_email :string(255)
@@ -32,6 +33,9 @@ module Reimbursements
   # Created "building" at the click; BuildBatchJob resolves it.
   class BatchAttempt < ApplicationRecord
     STATUSES = %w[building completed failed nothing_to_build].freeze
+
+    # Blank, not nil: nil means unrecorded (see #resolve!).
+    NO_DRAFT = "".freeze
 
     # BuildBatchJob's concurrency window: a "building" row older than this
     # means the job died or the queue is stuck, not a long build.
@@ -69,9 +73,23 @@ module Reimbursements
     # invites hiding something live.
     def dismissible? = !building? || stale?
 
-    def resolve!(status:, error_messages: nil, batch_record_id: nil)
+    # Whether building again is safe turns on whether this build made its EUSA
+    # draft, so +draft_web_link+ records it: the draft's link, NO_DRAFT when it
+    # made none, nil when nothing recorded either (no result in hand, or an
+    # attempt resolved before the column existed).
+    def resolve!(status:, error_messages: nil, batch_record_id: nil, draft_web_link: nil)
       update!(status: status, error_messages: error_messages.presence,
-              batch_record_id: batch_record_id.presence)
+              batch_record_id: batch_record_id.presence, draft_web_link: draft_web_link)
+    end
+
+    def made_draft? = draft_web_link.present?
+    def draft_unknown? = draft_web_link.nil?
+
+    # Reopening a batch makes building it again safe, so its build's alerts
+    # (a failed one says not to build again) no longer apply.
+    def self.dismiss_for_batch!(batch_record_id, email: nil)
+      where(batch_record_id: batch_record_id.to_s, dismissed_at: nil)
+        .find_each { |attempt| attempt.dismiss!(email: email) }
     end
   end
 end

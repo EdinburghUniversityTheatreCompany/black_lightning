@@ -73,6 +73,7 @@ module Admin
 
         linked.each { |expense| store.revert_expense_to_approved!(expense.record_id) }
         store.delete_batch!(batch.record_id)
+        ::Reimbursements::BatchAttempt.dismiss_for_batch!(batch.record_id, email: current_user.try(:email))
 
         reverted = "Reverted #{linked.size} #{'expense'.pluralize(linked.size)} to Approved and removed the batch."
         redirect_to history_path, **draft_cleanup_flash(batch, reverted, mailbox)

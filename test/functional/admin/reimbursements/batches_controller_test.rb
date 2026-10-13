@@ -148,6 +148,49 @@ module Admin
         assert_select "form[action=?]", dismiss_admin_reimbursements_batch_attempt_path(building), count: 0
       end
 
+      # Building again after the draft was made drafts its claims twice, so History
+      # gives the failure email's advice, read off the same link.
+      def failed_attempt_text(draft_web_link)
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                               bacs_date: Date.new(2026, 5, 12), status: "failed",
+                                               error_messages: "a distinctive failure", draft_web_link: draft_web_link)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        css_select("main").text.squish
+      end
+
+      test "History tells a failed build that made its EUSA draft not to build again" do
+        text = failed_attempt_text("https://outlook.example/draft-9")
+
+        assert_includes text, "Its EUSA draft was made before the failure, so don't build this batch again, or " \
+                              "its claims could be drafted twice. Open the draft and check it against the " \
+                              "errors below before you send it."
+        assert_select "main a[href=?]", "https://outlook.example/draft-9", text: "Open the draft"
+        assert_not_includes text, "still Approved"
+      end
+
+      test "History tells a failed build that made no EUSA draft to fix it and build again" do
+        text = failed_attempt_text(::Reimbursements::BatchAttempt::NO_DRAFT)
+
+        assert_includes text, "Its claims are still Approved. Fix the problem below, then build it again. If this " \
+                              "build left a draft in the send mailbox, delete it first so EUSA isn't asked to pay twice."
+        assert_not_includes text, "Open the draft"
+        assert_not_includes text, "no EUSA draft was created", "a failed upload can leave a half-made draft"
+      end
+
+      test "History does not guess about the draft of a failed build that recorded none" do
+        text = failed_attempt_text(nil)
+
+        assert_includes text, "If the errors below say its EUSA draft was made, don't build this batch again, or " \
+                              "its claims could be drafted twice. Otherwise fix the problem, then build it again, " \
+                              "first deleting any draft it left in the send mailbox."
+        assert_not_includes text, "still Approved"
+        assert_not_includes text, "no EUSA draft was created"
+      end
+
       test "index flags a stale build that never reported back" do
         stale = ::Reimbursements::BatchAttempt.create!(
           cost_centre: ::Reimbursements::CostCentre.default, bacs_date: Date.new(2026, 5, 13)
@@ -318,6 +361,24 @@ module Admin
         assert_nil @expense.batch
         assert_not ::Reimbursements::Batch.exists?(@batch.id)
         assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
+      end
+
+      test "reopen dismisses its build's failure, which says not to build again" do
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        attempt_for = lambda do |batch_record_id|
+          ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default, status: "failed",
+                                                 error_messages: "ALREADY CLAIMED", batch_record_id: batch_record_id,
+                                                 draft_web_link: "https://outlook.example/draft-9")
+        end
+        own = attempt_for.call(@batch.record_id)
+        other = attempt_for.call((@batch.id + 1).to_s)
+        sign_in @user
+
+        post :reopen, params: { id: @batch.record_id }
+
+        assert_not ::Reimbursements::Batch.exists?(@batch.id)
+        assert_equal @user.email, own.reload.dismissed_by_email
+        assert_nil other.reload.dismissed_at, "another batch's alert stays"
       end
 
       test "a reopen from an explicit All comes back to All" do

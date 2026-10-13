@@ -21,6 +21,31 @@ module Reimbursements
       assert_nil attempt.error_messages
     end
 
+    test "records whether the build made its EUSA draft, and an older attempt has no record" do
+      drafted = build_attempt
+      drafted.resolve!(status: "failed", error_messages: "ORPHAN DRAFT",
+                       draft_web_link: "https://outlook.example/draft-1")
+      undrafted = build_attempt
+      undrafted.resolve!(status: "failed", error_messages: "EUSA draft creation failed",
+                         draft_web_link: BatchAttempt::NO_DRAFT)
+      older = build_attempt(status: "failed", error_messages: "boom")
+
+      assert_predicate drafted.reload, :made_draft?
+      assert_equal "https://outlook.example/draft-1", drafted.draft_web_link
+      assert_not undrafted.reload.made_draft?
+      assert_not undrafted.draft_unknown?, "a recorded none must survive the round trip as blank, not nil"
+      assert_predicate older, :draft_unknown?
+    end
+
+    test "keeps a draft link longer than a string column holds" do
+      link = "https://outlook.office365.com/owa/?ItemID=#{'A' * 400}&exvsurl=1&viewmodel=ReadMessageItem"
+      attempt = build_attempt
+
+      attempt.resolve!(status: "failed", error_messages: "ORPHAN DRAFT", draft_web_link: link)
+
+      assert_equal link, attempt.reload.draft_web_link
+    end
+
     test "a building attempt goes stale after the concurrency window" do
       fresh = build_attempt
       assert_not fresh.stale?

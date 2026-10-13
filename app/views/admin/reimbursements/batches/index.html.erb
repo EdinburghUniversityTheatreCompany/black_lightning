@@ -47,9 +47,22 @@
     <%= render AlertComponent.new(type: :danger) do %>
       <p>
         The batch build for <%= attempt.cost_centre.name %> on
-        <%= reimbursements_date(attempt.created_at.to_date) %> <strong>failed</strong>:
-        no EUSA draft was created, and the expenses are still Approved. Fix the problem
-        below and rebuild:
+        <%= reimbursements_date(attempt.created_at.to_date) %> <strong>failed</strong>.
+        <%# The failure email (emails/failure.html.erb) gives the same advice. %>
+        <% if attempt.made_draft? %>
+          Its EUSA draft was made before the failure, so don't build this batch again, or its
+          claims could be drafted twice.
+          <%= link_to "Open the draft", attempt.draft_web_link,
+                      class: "font-medium underline", target: "_blank", rel: "noopener" %>
+          and check it against the errors below before you send it.
+        <% elsif attempt.draft_unknown? %>
+          If the errors below say its EUSA draft was made, don't build this batch again, or its
+          claims could be drafted twice. Otherwise fix the problem, then build it again, first
+          deleting any draft it left in the send mailbox.
+        <% else %>
+          Its claims are still Approved. Fix the problem below, then build it again. If this
+          build left a draft in the send mailbox, delete it first so EUSA isn't asked to pay twice.
+        <% end %>
       </p>
       <%= render "attempt_messages", messages: attempt_messages.call(attempt) %>
       <%= dismiss_button.call(attempt) %>
