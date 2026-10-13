@@ -31,8 +31,13 @@ tool in `mise/config.toml`; CI's `pnpm/action-setup` reads the same field, so gi
   rule (`main a:not(.btn)…`) therefore sits in `@layer base`, so a colour class on an admin link
   wins; never move it back out. Markdown (`.prose`) links take their colour from the typography
   plugin instead, kept red by `--tw-prose-links` on `main .prose`
-  (`test/system/admin/link_colours_test.rb`). The unlayered `h3 { @apply text-xl … mb-2 }` rule
-  still overrides any classed admin `<h3>`.
+  (`test/system/admin/link_colours_test.rb`). The bare `h3` rule sits in `@layer base` too, so a
+  classed admin `<h3>` shows its own classes; markdown h3s keep their look through the unlayered
+  `:where(.markdown-body) h3` (`.prose h3` is a utility and would beat base; `:where` keeps a
+  bare h3's specificity). Computed-style helpers (`style_of`, `colour_of`, `theme_colour`) live in
+  `ApplicationSystemTestCase`.
+- **`text-secondary` is this theme's pale peach (`#fdc5b6`), not Bootstrap's grey**, so a
+  Bootstrap-era `text-secondary` is unreadable on white. Muted text is `text-gray-500`.
 - **`data: { confirm: }` does nothing under Turbo.** Ask with `data: { turbo_confirm: }` (a
   `button_to` takes it as `form: { data: { turbo_confirm: } }`; `get_link` takes `confirm:`).
 - **A Turbo-submitted form whose redirect lands on another layout loses its flash**: Turbo's fetch
@@ -163,7 +168,8 @@ Check for an applicable skill, and create a preview (a cop requires one).
   The uploader must resolve to `{ error }`, never reject: plugin-upload only logs a rejection and
   leaves its "Upload in progress" placeholder in the text. `MarkdownController`'s `error` for a
   422 or 429 is shown word for word, so it is user copy. Signing out in another tab fails the
-  next upload's CSRF check (before `authenticate_user!`), not with a 401.
+  next upload's CSRF check (before `authenticate_user!`), which answers 422 with
+  `ApplicationController::STALE_PAGE_MESSAGE`, not a 401.
 - **Giving a form the markdown editor means adding the form object's class to
   `MarkdownController::ITEM_TYPES`**, or its image uploads answer 422. A record edited on its
   parent's form (an answer, question, category info, review) also needs a branch in
@@ -322,6 +328,13 @@ run `mise install && hk install` once.
 - **A token lookup fed from params checks `token.is_a?(String)` first**: `find_by_token_for` and
   `find_signed` raise `NoMethodError` on `?token[]=x` (`User.find_by_profile_completion_token`).
   Changing a `generates_token_for`'s `expires_in` voids every outstanding token.
+- **A stale CSRF token answers in words, never the 500 page** (`ApplicationController#report_stale_page`,
+  declared after `rescue_from Exception` so it wins). Signing out, or in again
+  (`clean_up_csrf_token_on_authentication`), in any tab voids every open page's token. Turbo gets
+  a 422 `toast` stream (the page and its typing stay), JSON or a bare fetch a 422 `{ error: }`, a
+  plain form a redirect back with an alert. **`format.json` stays first in its `respond_to`**: a
+  `*/*` fetch gets the first format, and a redirect would hand the markdown preview a page. A
+  cross-origin post re-raises. Honeybadger ignores this error by default, so it was never reported.
 - **`ClientIpStripper` drops every Client-IP header**, ahead of `ActionDispatch::RemoteIp`. Never
   make it conditional on the caller: a Client-IP disagreeing with X-Forwarded-For makes `remote_ip`
   raise `IpSpoofAttackError` in `Rails::Rack::Logger`, outside `ShowExceptions`, so the visitor gets
@@ -1516,6 +1529,10 @@ Start the test database using `docker start /mysql8` before running any tests.
 - **A system test can never see a hover colour**: Tailwind v4 wraps `hover:` and `group-hover:` in
   `@media (hover: hover)`, which headless Chrome reports false. Assert the classes in a request
   test.
+- **The test env turns forgery protection off, so pages render no CSRF token.** A CSRF test sets
+  `ActionController::Base.allow_forgery_protection = true` in setup, before any visit, and
+  restores it in teardown. Warden's `login_as` voids no token; to make an open page stale, sign in
+  through the real form (`test/system/stale_page_test.rb`).
 - **A system test needing a server-side failed save on a form with `required` fields sets
   `form.noValidate` first, and asserts the error banner**: otherwise the browser blocks the submit
   and the test passes without reaching the server.
