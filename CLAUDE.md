@@ -27,6 +27,12 @@ tool in `mise/config.toml`; CI's `pnpm/action-setup` reads the same field, so gi
   `text:` or an element built with `textContent`.
 - **A Tailwind class in SweetAlert's `customClass` loses to any property SweetAlert's own CSS sets**
   (`swalCustomTheme.scss` is unlayered, utilities are layered). Put the class on an inner element.
+- **Any unlayered rule in admin.css beats every utility on what it matches.** The brand-red link
+  rule (`main a:not(.btn)…`) therefore sits in `@layer base`, so a colour class on an admin link
+  wins; never move it back out. Markdown (`.prose`) links take their colour from the typography
+  plugin instead, kept red by `--tw-prose-links` on `main .prose`
+  (`test/system/admin/link_colours_test.rb`). The unlayered `h3 { @apply text-xl … mb-2 }` rule
+  still overrides any classed admin `<h3>`.
 - **`data: { confirm: }` does nothing under Turbo.** Ask with `data: { turbo_confirm: }` (a
   `button_to` takes it as `form: { data: { turbo_confirm: } }`; `get_link` takes `confirm:`).
 - **A Turbo-submitted form whose redirect lands on another layout loses its flash**: Turbo's fetch
@@ -153,6 +159,11 @@ Check for an applicable skill, and create a preview (a cop requires one).
   Only vertical styles the `<label>`. **`uploads:`** (default true) must be `user_signed_in?` on
   those three, as `MarkdownController#upload` needs sign-in. With `uploads: false` the editor
   offers no image button and swallows a dropped file.
+- **A failed image upload is reported once per batch** through `showFlashAlerts` (text only).
+  The uploader must resolve to `{ error }`, never reject: plugin-upload only logs a rejection and
+  leaves its "Upload in progress" placeholder in the text. `MarkdownController`'s `error` for a
+  422 or 429 is shown word for word, so it is user copy. Signing out in another tab fails the
+  next upload's CSRF check (before `authenticate_user!`), not with a 401.
 - **Giving a form the markdown editor means adding the form object's class to
   `MarkdownController::ITEM_TYPES`**, or its image uploads answer 422. A record edited on its
   parent's form (an answer, question, category info, review) also needs a branch in
@@ -538,14 +549,16 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   `activate!`, never a checkbox on the edit form: activating changes every submitter's budget
   picker. `activate!` stands the incumbent down and promotes the target in one transaction:
   `only_one_active` rejects a second active year, and a target that fails to save must never
-  leave no active year.
+  leave no active year. **A year's dates matter**: they decide which year's income lines an EUSA
+  credit can link to (production's run 6 April to 5 April), and a year missing either date covers
+  nothing.
   - **The selector is `?year=<key>`, on the budget screens only**
     (`FinanceController#resolve_financial_year!`; defaults to the active year, an unknown key
     alerts and falls back). Expenses, Review, Actuals, Batches and Reconcile are deliberately not year-scoped yet.
   - **`store.budgets` stays unscoped**: its callers are id→budget lookups (Review, the expenses
     index, exports, the nightly job) and the reconcile matcher, so scoping it blanks last year's
-    budget names. The matcher reads every year, so a credit's code shared by this year's and last
-    year's income line matches neither (see the credit-matching bullet under EUSA actuals).
+    budget names. The reconcile matcher narrows to a credit's own year itself (see the
+    credit-matching bullet under EUSA actuals).
     `budgets_for_year`, `budgets_with_actuals` and `budget_updates` are scoped.
     **`active_budgets` follows the active year, never the selected one**, so nobody files against
     a draft.
@@ -627,6 +640,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
       is deactivated (leaves the pickers, still labels those rows); only an unreferenced one is
       deleted. The row's Retire/Delete label reads the same counts as `#in_use?`. A row with no
       centre counts in every centre.
+    - **A label is unique only among a centre's active codes** (the budget form's datalist offers
+      only those, and Firefox shows the label instead of the code), so a retired code's label can
+      be reused; putting a code back whose label is now taken is refused.
     - **`code` is never updatable**: rows and exports store it as a string. The Settings
       `before_action` loading the section covers `update` too, as a refused save re-renders
       `:edit`.
@@ -715,6 +731,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   an unreadable amount, unknown payee or budget, or bad status stops the lot, naming the rows.
   - **`Status` is mandatory and never guessed**; blank or unrecognised blocks. Approved enters
     Build Batch and emails its producer, Paid never does.
+  - **`Date submitted` is required on every line, whatever its status**, so the importer picks
+    each claim's date; a blank one would be stamped with the import time and read as submitted
+    that day.
   - **The `ID` column (`Reference` still accepted) is the double-apply guard**: written to
     `expenses.import_key` behind a unique index, since a claim has no natural key and a second
     click re-posts. The preview's "already imported" bucket is a pre-flight read; when stale, the
@@ -915,6 +934,10 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - **`BuildBatchJob` raises on an unreadable BACS date or a missing attempt, never falls back to
     today**, and marks an existing `BatchAttempt` failed first, or History shows the build running
     until it goes stale (30 min).
+  - **`Notifier#failure` is Build Batch's alone, and its `draft_link:` decides the advice**: a link
+    (the draft exists) says never to build again, as the claims would be drafted twice; none says
+    the claims are still Approved. A new caller must pass it. A nightly crash emails nobody: it
+    goes to Honeybadger and the unrecorded run-day retries it.
   - `result.success` means every expense reached `Submitted`, not just that the draft exists. A
     `mark_submitted` failure is the one post-draft step that is not best effort: it leaves the
     double-draft danger the orphan-draft guard prevents.
@@ -982,10 +1005,12 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   positive hides real spend from the ledger and every rollup; a false negative just leaves rows
   unmatched.
   - **A credit links to an income budget only when exactly one income line in its cost centre
-    carries its nominal code** (`Reconciliation.match_credit_to_budget`, candidates from
-    `.credit_budget_candidates`, any year). With several, the row is saved unlinked and the preview
-    says how many share the code; finance places it with Split across budgets. Never go back to
-    first match: budgets share codes.
+    carries its nominal code, within the credit's own financial year** (the year whose dates hold
+    the credit's date, `FinancialYear.covering`; lines with no year count in every year; a date no
+    year covers means any year). With several, the row is saved unlinked and the preview says how
+    many share the code; finance places it with Split across budgets (one share moves it whole).
+    Never go back to first match: budgets share codes. The preview, the offsetting-pair note and
+    apply all read `ReconcileController#income_budgets_for`; never call the matcher around it.
   - **Hard gates**: same absolute amount (exact BigDecimal), opposite sign, same nominal code,
     same cost centre, same financial year; a blank code or centre never pairs. Survivors score
     (ref 4, nominal 2, period 1, narrative prefix 1, minus 1 or 2 for date distance), taken
@@ -1395,7 +1420,7 @@ from `Pretix::SyncPerformancesJob` every 15 minutes.
 
 An `Opportunity` is a posting (a "project"). It `belongs_to :company` (optional), `has_many :roles` (`OpportunityRole`: a position + `category` enum), and carries `project`/`author`, the `compensation_type`/`experience_level` enums, `apply_url` and `email_visibility`/`contact_email`. `title` is optional: `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
 
-- **Submission is public** (`GetInvolvedController#new/#create`, honeypot + reCAPTCHA). A logged-out submitter gives `submitter_name`/`submitter_email` and has no creator (`external?`); a member is the creator. On the admin form a manager may pick another creator, or enter an external submitter, which records the manager as creator (`on_behalf_of?`: both present). `attribution_label` renders all three cases; `creator_or_submitter` requires one of the two. Every submission starts `approved: false`. A public submission cannot create a `Department` (`OpportunityRole#existing_department_only`): an unknown name goes into the role's note as "Department: <name>" for the reviewer to add on the admin form. The public filter lists `Department.with_listable_roles` only.
+- **Submission is public** (`GetInvolvedController#new/#create`, honeypot + reCAPTCHA). A logged-out submitter gives `submitter_name`/`submitter_email` and has no creator (`external?`); a member is the creator. On the admin form a manager may pick another creator, or enter an external submitter, which records the manager as creator (`on_behalf_of?`: both present). `attribution_label` renders all three cases; `creator_or_submitter` requires one of the two. Every submission starts `approved: false`. A public submission cannot create a `Department` (`OpportunityRole#existing_department_only`): an unknown name goes into `suggested_department` (cut to 255 characters, as the public form has no field to show an error on), shown only to reviewers and cleared once the role has a department. `admin/opportunities/_opportunity_role_fields` is shared with the public form, so anything reviewer-only in it needs an `@admin_site` check. The public filter lists `Department.with_listable_roles` only.
 - **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company, compensation, experience) + a `?category=` tab, EUTC first. `active` is `listable` ordered internal-first. Per-society share links use `?q[company_slug_eq]=…`. **`ransackable_attributes` on Opportunity and Company list only what the searches and sort headers use**: a wider list let `q[contact_email_start]` read out an email `email_visibility` hides, letter by letter.
 - **`OpportunityCardComponent`** renders the project and its roles on the public list and the home/dashboard widgets.
 - **Review** is the `Opportunity Reviewer` role, who also gets the `OpportunityDigestJob` digest. Approve/reject emails `notification_email` via `OpportunityMailer`, with an optional note: the creator when present (so an on-behalf decision goes to the internal user), else the external submitter. The `close` member action (aliased to `:update` in Ability) expires a posting at once.

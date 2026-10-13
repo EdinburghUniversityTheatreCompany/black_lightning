@@ -111,7 +111,7 @@ by hand after any such rollback.
 
 The producer half of the area design was never built. As designed: a submitter picks an area,
 then a category. The categories are the area's lines plus "another category…", which offers the
-cost centre's nominal codes by label. Picking one creates
+cost centre's active nominal codes by label (labels are unique only among those). Picking one creates
 `Budget(area:, nominal_code:, name: <label>, initial_budget: nil)` inside the claim's transaction,
 re-taking the find under a lock. A line made this way is flagged on the Review queue until someone
 with the finance permission has seen it; the claim is never held up. The picker keeps
