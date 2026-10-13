@@ -25,6 +25,14 @@ class ApplicationController < ActionController::Base
   end
   rescue_from CanCan::AccessDenied, with: :report_access_denied
   rescue_from ActiveRecord::RecordNotFound, ActionController::RoutingError, with: :report_404
+  rescue_from ActionController::InvalidAuthenticityToken, with: :report_stale_page
+
+  # Signing out, or in again, in another tab replaces the session's CSRF token, so a page
+  # already open fails its next save.
+  STALE_PAGE_MESSAGE = "This page went out of date (you signed out or in again in another tab), " \
+                       "so nothing was saved. Copy anything you typed, reload the page and try again.".freeze
+  STALE_FORM_MESSAGE = "The page had gone out of date (you signed out or in again in another tab), " \
+                       "so nothing was saved. Please try again.".freeze
 
   def set_globals
     @base_url = request.protocol + request.host_with_port
@@ -98,6 +106,26 @@ class ApplicationController < ActionController::Base
 
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:account_update, keys: [ :calendar_email ])
+  end
+
+  # Expected, so not reported. A Turbo save or a fetch keeps the page and what was typed on it; a
+  # plain form submit has already left it. A post from another site is not a stale page.
+  def report_stale_page(exception)
+    raise exception unless valid_request_origin?
+
+    logger.info "Stale CSRF token: #{request.method} #{request.path}"
+
+    # JSON first: a fetch that sends no Accept (*/*) gets the first format, and a redirect would
+    # hand it a page.
+    respond_to do |format|
+      format.json { render json: { error: STALE_PAGE_MESSAGE }, status: :unprocessable_entity }
+      format.turbo_stream do
+        render turbo_stream: helpers.turbo_stream_action_tag(:toast, type: "error", message: STALE_PAGE_MESSAGE),
+               status: :unprocessable_entity
+      end
+      format.html { redirect_back_or_to root_path, alert: STALE_FORM_MESSAGE }
+      format.any { head :unprocessable_entity }
+    end
   end
 
   def render_error_page(exception, template, status_code)
