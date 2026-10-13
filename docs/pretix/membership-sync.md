@@ -287,6 +287,9 @@ already buys unlimited member tickets.
 
 ## Rollout
 
+**October 2026: the box office has rolled the rollout back**, citing issues it has not described.
+The code stays as it is. Ask them what is live before redoing any step below.
+
 Order matters. Step 3 must not happen before step 2, or anyone with a pretix account could still
 grant themselves a membership.
 

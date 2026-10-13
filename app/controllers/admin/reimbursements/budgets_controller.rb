@@ -195,6 +195,12 @@ module Admin
 
       # The lines either side of +budget+ in the index's order, nil at the ends
       # or when the line is outside the page's year and centre.
+      #
+      # Slow by design for now: it loads every budget (all years and centres, with
+      # forecasts, owners and areas) to name two lines, about 20-80 ms at 2026's
+      # size. If the edit page gets slow, scope in SQL, pluck ids and names, sort
+      # them with the index's key (extracted from Budget.index_order so the two
+      # cannot drift) and load only the two neighbours.
       def neighbours(budget)
         list = ::Reimbursements::Budget.index_order(store.budgets_for_year)
         index = list.index { |other| other.record_id == budget.record_id }
@@ -235,6 +241,10 @@ module Admin
 
       # Lenient like mismatch_error (an unset side matches anything), so the
       # picker never offers an area the Save refuses.
+      #
+      # The edit page's heaviest load: store.areas preloads every area's budgets
+      # with their claims and forecasts, in every year, to fill one select. Look
+      # here first if the page gets slow; the select needs only the areas.
       def assignable_areas(year:, centre: nil)
         store.areas.select do |area|
           lenient_match?(area.financial_year_id, year&.id) &&
