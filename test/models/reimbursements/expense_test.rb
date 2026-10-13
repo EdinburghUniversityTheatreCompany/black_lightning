@@ -28,16 +28,6 @@ module Reimbursements
       assert_equal 41, first.auto_number
     end
 
-    test "a claim is stamped with its creation time unless it is an imported settled one" do
-      freeze_time do
-        assert_equal Time.current, create_expense.submitted_at
-        assert_equal Time.current, create_expense(status: Status::DRAFT, import_key: "OLD-1").submitted_at
-        [ Status::SUBMITTED, Status::PAID, Status::REJECTED ].each do |status|
-          assert_nil create_expense(status: status, import_key: "OLD-#{status}").submitted_at, status
-        end
-      end
-    end
-
     test "sharepoint_receipt_urls splits the newline column into an array" do
       expense = create_expense
       expense.update!(sharepoint_receipt_urls: "https://sp/a.pdf\n https://sp/b.pdf \n\n")

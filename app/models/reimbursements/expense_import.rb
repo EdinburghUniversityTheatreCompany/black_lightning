@@ -104,7 +104,7 @@ module Reimbursements
       },
       submitted_on: {
         label: "Date submitted",
-        hint: "Required for Pending and Approved claims; 2026-05-13 or 13/05/2026",
+        hint: "Required; 2026-05-13 or 13/05/2026",
         exact: [ "date submitted", "submitted", "date claimed", "claimed", "date" ],
         contains: [ "date submitted", "submitted on", "date claimed", "date of claim" ]
       },
@@ -142,20 +142,16 @@ module Reimbursements
 
     # The columns a sheet must carry. The submitter is required too, but either of its
     # two columns will do (#report_missing_columns).
-    REQUIRED_FIELDS = %i[reference status budget amount].freeze
+    REQUIRED_FIELDS = %i[reference status budget amount submitted_on].freeze
 
     # Columns whose CELL every row must fill, unlike REQUIRED_FIELDS (columns the sheet
     # must carry). The cell rules are ExpenseForm's; #required_cell_labels is what the
     # form prints, so the copy cannot call one of these optional.
-    REQUIRED_CELL_FIELDS = %i[reference status budget amount description payment_reference].freeze
+    REQUIRED_CELL_FIELDS = %i[reference status budget amount description payment_reference submitted_on].freeze
 
     # Already paid, or never will be: what ExpenseForm#settled? reads. Stated as the
     # settled set, so a status added later counts as live and gets the stricter rule.
     SETTLED_STATUSES = [ Status::SUBMITTED, Status::PAID, Status::REJECTED ].freeze
-
-    # Review and the reminders count these claims' wait from Date submitted. A draft
-    # has not been submitted yet.
-    DATED_STATUSES = [ Status::PENDING, Status::APPROVED ].freeze
 
     # expenses.import_key is string(255). Checked here so an over-long ID is a row error,
     # not a ValueTooLong 500 inside the wizard's Turbo Frame with the paste lost.
@@ -391,9 +387,9 @@ module Reimbursements
           "whole amount to the budget."
       elsif row[:submitted_on] == :unreadable
         "#{row[:raw_submitted_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
-      elsif row[:submitted_on].nil? && DATED_STATUSES.include?(row[:status])
-        "This line has no Date submitted. Pending and Approved claims need one: Review and " \
-          "the reminders count the wait from it."
+      elsif row[:submitted_on].nil?
+        "This line has no Date submitted. Give every claim the date it was made: without one " \
+          "it would be dated by this import."
       elsif row[:paid_on] == :unreadable
         "#{row[:raw_paid_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
       end

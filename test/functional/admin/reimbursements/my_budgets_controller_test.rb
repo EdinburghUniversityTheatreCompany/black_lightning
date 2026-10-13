@@ -44,7 +44,7 @@ module Admin
         assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path(@pending.record_id)
       end
 
-      # An imported claim settled undated, then reopened, has no date to count a wait from.
+      # A row older than the column has no date to count a wait from.
       test "a claim with no submitted date says nothing about how long it has waited" do
         @pending.update_column(:submitted_at, nil)
         sign_in @user

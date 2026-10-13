@@ -88,14 +88,14 @@ module Reimbursements
     # Every other test builds its sheet from TSV_HEADERS, which the column matcher cannot
     # get wrong. These use the headings a real spreadsheet carries, where it did.
 
-    REAL_HEADERS = "Claim ID\tStatus\tPayee email\tBudget\tAmount\t" \
+    REAL_HEADERS = "Claim ID\tStatus\tPayee email\tBudget\tAmount\tDate claimed\t" \
                    "Payment reference\tDescription\tPayee name\tSort code\t" \
                    "Account number\tNotes".freeze
 
     def real_sheet(*rows) = ([ REAL_HEADERS ] + rows).join("\n")
 
     def real_row(id, amount: "120.00", payment_reference: "PROPS ALICE", account: "66374958")
-      [ id, Status::PAID, "alice@example.com", "Props", amount,
+      [ id, Status::PAID, "alice@example.com", "Props", amount, "01/05/2026",
         payment_reference, "Fake blood #{id}", "Stage Supplies Ltd", "08-99-99",
         account, "Petty cash" ].join("\t")
     end
@@ -291,29 +291,14 @@ module Reimbursements
       assert_equal Date.new(2026, 5, 1), attrs[:submitted_at].to_date
     end
 
-    test "a live claim with no Date submitted blocks the import, saying why" do
-      [ Status::PENDING, Status::APPROVED ].each do |status|
-        import = build_import(tsv(row(status: status)))
+    # The import time would otherwise read as the day each claim was made.
+    test "a claim with no Date submitted blocks the import, whatever its status" do
+      Status.all.each do |status|
+        import = build_import(tsv(row(status: status, submitted_on: "")))
 
         assert_not import.valid?, status
-        assert_match(/no Date submitted\. Pending and Approved claims need one: .* count the wait from it/,
-                     import.entries.sole.error, status)
+        assert_match(/no Date submitted\. Give every claim the date it was made/, import.entries.sole.error, status)
       end
-    end
-
-    test "a settled or draft claim may leave Date submitted blank" do
-      [ Status::PAID, Status::SUBMITTED, Status::REJECTED, Status::DRAFT ].each do |status|
-        assert build_import(tsv(row(status: status))).valid?, status
-      end
-    end
-
-    # The import time would read as the day it was submitted.
-    test "a settled claim imported with no date is stored undated" do
-      import = build_import(tsv(row(status: Status::PAID)))
-
-      expense = Reimbursements.build_store.import_expenses!(rows: import.creates).sole
-
-      assert_nil expense.reload.submitted_at
     end
 
     # --- Rows that block the import --------------------------------------------

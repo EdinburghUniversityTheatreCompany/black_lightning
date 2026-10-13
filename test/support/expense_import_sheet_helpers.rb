@@ -9,7 +9,7 @@ module ExpenseImportSheetHelpers
     cells = { reference: "OLD-1", status: ::Reimbursements::Status::PAID,
               payee_email: "alice@example.com", budget: "Props", amount: "120.00",
               amount_excl_vat: "100.00", description: "Fake blood",
-              payment_reference: "PROPS ALICE" }.merge(overrides)
+              payment_reference: "PROPS ALICE", submitted_on: "2026-05-01" }.merge(overrides)
     ::Reimbursements::ExpenseImport::FIELDS.each_key.map { |field| cells.fetch(field, "") }.join("\t")
   end
 

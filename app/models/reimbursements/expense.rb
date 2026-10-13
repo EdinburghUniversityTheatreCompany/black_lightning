@@ -140,11 +140,10 @@ module Reimbursements
     }
 
     # auto_number continues from MAX, not the PK, so imported numbers are
-    # never handed out twice. An imported settled claim with no date stays
-    # undated: the import time would read as the day it was submitted.
+    # never handed out twice.
     before_create lambda {
       self.auto_number ||= (self.class.maximum(:auto_number) || 0) + 1
-      self.submitted_at ||= Time.current unless import_key && ExpenseImport::SETTLED_STATUSES.include?(status)
+      self.submitted_at ||= Time.current
     }
 
     def international? = payment_method == PAYMENT_METHOD_INTERNATIONAL
