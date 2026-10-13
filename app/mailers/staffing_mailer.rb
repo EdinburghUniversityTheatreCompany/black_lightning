@@ -1,31 +1,18 @@
 class StaffingMailer < ApplicationMailer
-  ##
-  # Sends a calendar invite (.ics attachment) for a staffing job.
-  ##
-  def calendar_invite(job, method:, recipient: nil)
+  def calendar_invite(job)
     @job      = job
     @staffing = job.staffable
-    @user     = recipient || job.user
+    @user     = job.user
 
     return if @user.nil?
 
-    ics_data = job.ical_calendar(method: method).to_ical
-
-    attachments["staffing.ics"] = {
-      mime_type: "text/calendar; charset=utf-8; method=#{method.to_s.upcase}",
-      content:   ics_data
-    }
-
-    mail(
-      to:      email_address_with_name(@user.calendar_email_for_invites, @user.full_name),
-      subject: "Staffing confirmed: #{@staffing.show_title} on #{l @staffing.start_time, format: :long} (#{@job.name})"
+    ics_mail(
+      job.ical_calendar(method: :request).to_ical, "REQUEST",
+      "Staffing confirmed: #{@staffing.show_title} on #{l @staffing.start_time, format: :long} (#{@job.name})"
     )
   end
 
-  ##
-  # Sends a calendar cancellation without needing the job record.
-  # Used by after_destroy callbacks where the record may be gone by the time the job runs.
-  ##
+  # Takes no job: after_destroy enqueues it, and the record may be gone by the time it runs.
   def calendar_cancellation(recipient:, staffing:, job_name:, ics_data:)
     @user     = recipient
     @staffing = staffing
@@ -33,15 +20,7 @@ class StaffingMailer < ApplicationMailer
 
     return if @user.nil?
 
-    attachments["staffing.ics"] = {
-      mime_type: "text/calendar; charset=utf-8; method=CANCEL",
-      content:   ics_data
-    }
-
-    mail(
-      to:      email_address_with_name(@user.calendar_email_for_invites, @user.full_name),
-      subject: "Staffing removed: #{@staffing.show_title} on #{l @staffing.start_time, format: :long}"
-    )
+    ics_mail(ics_data, "CANCEL", "Staffing removed: #{@staffing.show_title} on #{l @staffing.start_time, format: :long}")
   end
 
   def staffing_reminder(job)
@@ -67,5 +46,13 @@ class StaffingMailer < ApplicationMailer
     end
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
+  end
+
+  private
+
+  def ics_mail(ics, method, subject)
+    attachments["staffing.ics"] = { mime_type: "text/calendar; charset=utf-8; method=#{method}", content: ics }
+
+    mail(to: email_address_with_name(@user.calendar_email_for_invites, @user.full_name), subject:)
   end
 end

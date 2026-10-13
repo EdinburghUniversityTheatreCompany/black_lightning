@@ -17,7 +17,6 @@
 #  index_event_tags_on_ordering  (ordering)
 #
 class EventTag < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :description, length: { maximum: 16777215 }
   validates :name, :description, presence: true

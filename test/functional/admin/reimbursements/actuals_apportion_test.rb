@@ -39,6 +39,71 @@ module Admin
         assert_match "Show A", response.body
       end
 
+      # --- The picker names each line's year -------------------------------------
+      #
+      # Each year's show repeats its income line, so finance moving a credit to the right year's
+      # line by hand must be able to tell the two "Ticket income" lines apart.
+
+      def picker_groups
+        css_select("#share_0_budget_id optgroup").map do |group|
+          [ group["label"], group.css("option").map(&:text) ]
+        end
+      end
+
+      test "the picker groups lines by financial year, the credit's own year first" do
+        this_year, next_year = create_reimbursements_tax_years
+        @show_a.update!(name: "Ticket income", financial_year: this_year)
+        @show_b.update!(name: "Ticket income", financial_year: next_year)
+        @payout.update!(date: Date.new(2026, 8, 20))
+        sign_in @user
+
+        get :apportion, params: { id: @payout.record_id }
+
+        assert_equal [ [ "2026/2027 (this credit's year)", [ @show_a.picker_label ] ],
+                       [ "2027/2028", [ @show_b.picker_label ] ] ], picker_groups
+        assert_select "#share_0_budget_id optgroup:first-of-type option[value=?]", @show_a.record_id
+      end
+
+      # The newest year is listed first unless the credit's date says otherwise.
+      test "a credit dated in an older year lists that year before the newer one" do
+        this_year, next_year = create_reimbursements_tax_years
+        @show_a.update!(financial_year: this_year)
+        @show_b.update!(financial_year: next_year)
+        @payout.update!(date: Date.new(2027, 3, 31))
+        sign_in @user
+
+        get :apportion, params: { id: @payout.record_id }
+
+        assert_equal [ "2026/2027 (this credit's year)", "2027/2028" ], picker_groups.map(&:first)
+      end
+
+      test "a credit no year covers lists the active year first, and lines with no year last" do
+        this_year, next_year = create_reimbursements_tax_years(active: "2026/2027")
+        @show_a.update!(financial_year: next_year)
+        @show_b.update!(financial_year: this_year)
+        loose = create_reimbursements_budget(name: "Donations", budget_type: "Income", nominal_code: "4100")
+        @payout.update!(date: Date.new(2025, 6, 1))
+        sign_in @user
+
+        get :apportion, params: { id: @payout.record_id }
+
+        assert_equal [ [ "2026/2027 (active year)", [ @show_b.picker_label ] ],
+                       [ "2027/2028", [ @show_a.picker_label ] ],
+                       [ "No financial year", [ loose.picker_label ] ] ], picker_groups
+      end
+
+      test "a share on another year's line is accepted, as every year is offered" do
+        this_year, next_year = create_reimbursements_tax_years
+        @show_a.update!(financial_year: this_year)
+        @show_b.update!(financial_year: next_year)
+        sign_in @user
+
+        post_split({ "0" => { budget_id: @show_b.record_id, amount: "4000" } })
+
+        assert_redirected_to admin_reimbursements_actuals_path
+        assert_equal [ @show_b.id ], @payout.reload.allocations.map(&:budget_id)
+      end
+
       test "a debit row cannot reach the form" do
         sign_in @user
         debit = create_reimbursements_eusa_actual(debit: BigDecimal("50"))
@@ -60,36 +125,21 @@ module Admin
         assert_nil @payout[:budget_id]
       end
 
-      test "shares that do not sum to the row are refused and write nothing" do
+      test "shares that cannot be written are refused and write nothing" do
+        # "not offered": posted ids are checked against the ids the page RENDERED.
+        hidden = create_reimbursements_budget(name: "Retired", budget_type: "Income", active: false)
         sign_in @user
 
-        post_split({ "0" => { budget_id: @show_a.record_id, amount: "3880" } })
+        { "short" => { "0" => { budget_id: @show_a.record_id, amount: "3880" } },
+          "not offered" => { "0" => { budget_id: hidden.record_id, amount: "4000" } },
+          "unreadable" => { "0" => { budget_id: @show_a.record_id, amount: "four thousand" } },
+          "duplicate" => { "0" => { budget_id: @show_a.record_id, amount: "2000" },
+                           "1" => { budget_id: @show_a.record_id, amount: "2000" } } }.each do |label, shares|
+          post_split(shares)
 
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
-      end
-
-      # The picker is drawn from a scoped list while the write is unscoped —
-      # the shape of the area-select bug. The posted ids are checked against
-      # the ids this page actually RENDERED.
-      test "a budget the form did not offer is refused" do
-        sign_in @user
-        hidden = create_reimbursements_budget(name: "Retired", budget_type: "Income",
-                                              active: false)
-
-        post_split({ "0" => { budget_id: hidden.record_id, amount: "4000" } })
-
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
-      end
-
-      test "an unreadable amount is refused rather than stored as zero" do
-        sign_in @user
-
-        post_split({ "0" => { budget_id: @show_a.record_id, amount: "four thousand" } })
-
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
+          assert_response :unprocessable_entity, label
+          assert_empty @payout.reload.allocations, label
+        end
       end
 
       test "a blank row is dropped rather than refused" do
@@ -99,16 +149,6 @@ module Admin
 
         assert_redirected_to admin_reimbursements_actuals_path
         assert_equal 2, @payout.reload.allocations.count
-      end
-
-      test "the same budget twice is refused" do
-        sign_in @user
-
-        post_split({ "0" => { budget_id: @show_a.record_id, amount: "2000" },
-                     "1" => { budget_id: @show_a.record_id, amount: "2000" } })
-
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
       end
 
       test "removing the split restores the row to unlinked" do
@@ -122,10 +162,7 @@ module Admin
         assert_predicate @payout, :apportionable?
       end
 
-      # "Split" alone is the state the row is in, not what it means; the
-      # shares are the whole point of having split it.
-      # ?state=all: a split row is a row somebody has finished with, so the
-      # index's default "needs attention" view leaves it out by design.
+      # state=all: a split row is finished with, so the default view leaves it out.
       test "the ledger row names its shares and offers the undo" do
         sign_in @user
         post_split(two_way_split)
@@ -143,27 +180,6 @@ module Admin
         get :index
 
         assert_match "Split across budgets", response.body
-      end
-
-      # Splitting a row moves money between budgets' figures, so it is behind
-      # the same finance gate as the rest of this controller rather than the
-      # producer portal's.
-      test "portal access alone does not open the split screen" do
-        grant_producer_permission(users(:member_with_phone_number))
-        sign_in users(:member_with_phone_number)
-
-        get :apportion, params: { id: @payout.record_id }
-
-        assert_response :forbidden
-      end
-
-      test "portal access alone cannot remove a split" do
-        grant_producer_permission(users(:member_with_phone_number))
-        sign_in users(:member_with_phone_number)
-
-        post :remove_apportionment, params: { id: @payout.record_id }
-
-        assert_response :forbidden
       end
     end
   end

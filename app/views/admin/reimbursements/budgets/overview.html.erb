@@ -10,11 +10,9 @@
                   "are totalled separately, since adding spend to income gives a figure that is neither.",
            terms: ::Reimbursements::Glossary.terms(:nominal_code, :area, :projected, :committed,
                                                    :pipeline, :remaining, :eusa_actual,
-                                                   :unattributed) %>
+                                                   :expected_outturn, :unattributed) %>
 
-<%# The health check in one line. This page is read monthly to answer "is
-    anything wrong", and both answers used to be buried: the over-budget lines
-    were unmarked entirely, and the unattributed total sat under ~120 rows. %>
+<%# The health check in one line, above the tables. %>
 <%= render AlertComponent.new(type: @over_budget_count.positive? ? :warning : :info) do %>
   <% if @over_budget_count.positive? %>
     <strong><%= pluralize(@over_budget_count, "line") %></strong>
@@ -23,10 +21,8 @@
   <% else %>
     No line is over budget.
   <% end %>
-  <%# The COUNT is the headline and the net is a parenthetical in the card's
-      own words, because "debits less credits" is legitimately negative when
-      more unattributed income than spend is sitting there — and a bare
-      negative money figure means bad news everywhere else in this portal. %>
+  <%# The COUNT leads and the net is a parenthetical: debits less credits can be
+      negative, and a bare negative reads as bad news. %>
   <% if @unattributed_count.zero? %>
     Every EUSA ledger row is attributed to a budget.
   <% else %>
@@ -37,18 +33,12 @@
   <% end %>
 <% end %>
 
-<%
-  expected_tip = "The greater of the current projection and what's already been spent or " \
-                 "committed, so the number never drops below reality. Blank on income lines."
-%>
-
-<%# The anchors the summary above jumps to. A wrapper rather than an id on the
-    card, since CardComponent takes no id. %>
+<%# The summary's anchor (CardComponent takes no id). %>
 <div id="budgets-by-code">
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
   <div class="table-scroll">
     <table class="table table-hover table-sticky-head tabular-nums">
-      <%= render "overview_head", expected_tip: expected_tip %>
+      <%= render "overview_head" %>
       <% @rollups.each do |rollup| %>
         <tbody>
           <tr class="bg-gray-50">
@@ -60,8 +50,7 @@
             </th>
           </tr>
           <%= render partial: "overview_budget_row", collection: rollup.rows, as: :budget %>
-          <%# One subtotal per budget type in the group: a code holding both an
-              expense and an income budget has no single meaningful subtotal. %>
+          <%# One subtotal per type: spend and income never add up. %>
           <% rollup.by_type.each do |subtotal| %>
             <%= render "rollup_row", rollup: subtotal,
                   label: "Subtotal #{rollup.code} (#{subtotal.budget_type})" %>
@@ -81,20 +70,16 @@
 </div>
 
 <%= render CardComponent.new(title: "Budgets by area", html_class: "mt-4", flush: true) do %>
-  <%# No grand total here: this card regroups exactly the budgets the card above
-      totals, so a footer would restate that card's grand total rather than
-      answer anything new. %>
+  <%# No grand total: it would restate the card above's. %>
   <% if @area_rollups.empty? && @unassigned_rollup.nil? %>
     <p class="px-4 py-4 text-center text-gray-600">No budgets to group.</p>
   <% else %>
     <div class="table-scroll">
       <table class="table table-hover table-sticky-head tabular-nums">
-        <%= render "overview_head", expected_tip: expected_tip %>
+        <%= render "overview_head" %>
         <% @area_rollups.each do |rollup| %>
           <%= render "area_group", rollup: rollup, label: rollup.name %>
         <% end %>
-        <%# Every line not in an area, under one heading — which is also what a
-            portal with no areas at all renders. %>
         <% if @unassigned_rollup %>
           <%= render "area_group", rollup: @unassigned_rollup, label: "Not in an area" %>
         <% end %>
@@ -106,15 +91,13 @@
 <div id="unattributed-actuals">
 <%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>
   <%
-    # Reconcile is the paste wizard; it has no per-row linking at all. Link to
-    # a claim, Create expense and Split across budgets all live on the EUSA
-    # Actuals ledger, which this card had been sending people away from.
-    # The same cost centre the tables above are scoped to travels with it.
+    # The ledger, not Reconcile, which has no per-row linking. It carries the
+    # cost centre the tables above are scoped to, merged after compact_blank,
+    # which would drop an explicit All.
     ledger_path = lambda do |extra = {}|
       admin_reimbursements_actuals_path(
-        { cost_centre: selected_cost_centre&.key,
-          state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION }
-          .merge(extra).compact_blank
+        { state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION }
+          .merge(extra).compact_blank.merge(scope_params)
       )
     end
   %>
@@ -149,7 +132,7 @@
               <th scope="rowgroup" colspan="5" class="text-left font-semibold py-2">
                 Nominal code <%= code %>
                 <span class="font-normal text-gray-600">
-                  (net <%= reimbursements_money(reimbursements_actuals_net(actuals)) %>)
+                  (net <%= reimbursements_money(::Reimbursements::EusaActual.net(actuals)) %>)
                 </span>
               </th>
             </tr>
@@ -157,10 +140,8 @@
               <% debit = actual.debit&.positive? %>
               <tr class="border-b border-gray-100">
                 <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(actual.date) %></td>
-                <%# Each row is a link to ITSELF on the ledger: the search term
-                    is the row's own ref (or its narrative), plus its period,
-                    so the operator lands on the row they clicked rather than
-                    on 200 rows to scroll. %>
+                <%# Each row links to itself on the ledger: its ref (or
+                    narrative) plus its period. %>
                 <td class="py-2 pr-3">
                   <%= link_to actual.narrative.presence || "(no narrative)",
                               ledger_path.call(period: actual.period,
@@ -178,7 +159,7 @@
           <tr class="border-t-2 border-gray-400 font-semibold">
             <td colspan="4" class="py-2 text-right">Total unattributed (debits less credits)</td>
             <td class="py-2 text-right">
-              <%= reimbursements_money(reimbursements_actuals_net(@unattributed_by_code.values.flatten)) %>
+              <%= reimbursements_money(@unattributed_total) %>
             </td>
           </tr>
         </tfoot>

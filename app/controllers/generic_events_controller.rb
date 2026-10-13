@@ -6,7 +6,6 @@ class GenericEventsController < ApplicationController
   load_and_authorize_resource find_by: :slug
 
   def show
-    # Eager load associations needed for the show page
     resource_id = get_resource.id
     @event = resource_class.includes(
       :venue,
@@ -18,11 +17,10 @@ class GenericEventsController < ApplicationController
       { image_attachment: :blob }
     ).find(resource_id)
 
-    # Set the instance variable that load_and_authorize_resource expects
+    # The instance variable load_and_authorize_resource expects.
     instance_variable_set("@#{resource_name.singularize}", @event)
 
-    # Revivals share a name, so a finished run is disambiguated by the year it ran. A current one
-    # is not, so what is on sale reads cleanly.
+    # Revivals share a name, so a finished run's title carries its year.
     @title = "#{@event.name} (#{@event.end_date.year})" if @event.end_date&.past?
 
     @meta[:description] = helpers.render_plain(get_resource.publicity_text)
@@ -37,9 +35,8 @@ class GenericEventsController < ApplicationController
     "/events/index"
   end
 
-  # All event-type controllers (events, shows, workshops, seasons, and their
-  # archives/public variants) render events/index, so they share one results
-  # partial regardless of their own controller_path.
+  # Every event-type controller renders events/index, so they share its results
+  # partial whatever their controller_path.
   def index_results_partial
     "events/index_results"
   end

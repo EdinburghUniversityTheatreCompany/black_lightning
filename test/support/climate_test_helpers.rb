@@ -1,78 +1,43 @@
-# Builders and fakes for the climate monitor tests: database seed helpers for
-# sensors and readings, permission grants, and fake external clients (Govee,
-# outdoor weather). External services are always faked through the +http:+ or
-# builder seams — this suite has no mocking library.
+# Seed helpers and permission grants for the climate tests.
 module ClimateTestHelpers
   include HoneybadgerTestHelpers
 
-  # --- Database seed helpers -------------------------------------------------
-
-  def create_climate_sensor(display_name: "Crypt, north wall", source: Climate::Sensor::SOURCE_GOVEE,
-                            placement: Climate::Sensor::PLACEMENT_INDOOR,
-                            active: true, location: nil, position: 0,
-                            latitude: nil, longitude: nil, in_crypt: false)
-    Climate::Sensor.create!(
-      display_name: display_name, source: source, placement: placement,
-      active: active, location: location, position: position,
-      latitude: latitude, longitude: longitude, in_crypt: in_crypt
-    )
+  # An indoor Govee sensor: source and placement take the column defaults.
+  def create_climate_sensor(display_name: "Crypt, north wall", active: true, location: nil,
+                            position: 0, in_crypt: false)
+    Climate::Sensor.create!(display_name: display_name, active: active, location: location,
+                            position: position, in_crypt: in_crypt)
   end
 
-  # The one outdoor row, through the same ensure the poll job uses.
   def outdoor_climate_sensor = Climate::Sensor.outdoor_source!
 
   def create_climate_reading(sensor:, recorded_at: Time.current, temperature_c: 12.0,
-                             relative_humidity: 78.0, dew_point_c: nil,
-                             raw_temperature: nil, raw_temperature_unit: "C")
+                             relative_humidity: 78.0, dew_point_c: nil)
     dew_point_c ||= Climate::DewPoint.celsius(temperature_c: temperature_c,
                                               relative_humidity: relative_humidity)
 
     Climate::Reading.create!(
       sensor: sensor, recorded_at: recorded_at,
       temperature_c: temperature_c, relative_humidity: relative_humidity,
-      dew_point_c: dew_point_c,
-      raw_temperature: raw_temperature || temperature_c,
-      raw_temperature_unit: raw_temperature_unit
+      dew_point_c: dew_point_c, raw_temperature: temperature_c, raw_temperature_unit: "C"
     )
   end
 
-  # --- Permission grants -----------------------------------------------------
+  def grant_climate_read_permission(user) = grant_permission(user, "Climate Viewer", "read", "climate")
 
-  # :read, :climate — sees the dashboard, cannot touch sensor configuration.
-  def grant_climate_read_permission(user)
-    role = ::Role.find_by(name: "Climate Viewer") || ::Role.create!(name: "Climate Viewer").tap do |r|
-      r.permissions << Admin::Permission.create(action: "read", subject_class: "climate")
+  # CanCan's :manage matches any action, so this implies :read; tests assert
+  # that rather than granting both.
+  def grant_climate_manage_permission(user) = grant_permission(user, "Climate Manager", "manage", "climate")
+
+  def grant_backend(user) = grant_permission(user, "Backend", "access", "backend")
+
+  private
+
+  def grant_permission(user, role_name, action, subject)
+    role = ::Role.find_by(name: role_name) || ::Role.create!(name: role_name).tap do |r|
+      r.permissions << Admin::Permission.create(action: action, subject_class: subject)
     end
-    user.add_role("Climate Viewer")
+    user.add_role(role_name)
     role
-  end
-
-  # :manage, :climate — CanCan's :manage matches any action, so this implies
-  # :read as well; the tests assert that rather than granting both.
-  def grant_climate_manage_permission(user)
-    role = ::Role.find_by(name: "Climate Manager") || ::Role.create!(name: "Climate Manager").tap do |r|
-      r.permissions << Admin::Permission.create(action: "manage", subject_class: "climate")
-    end
-    user.add_role("Climate Manager")
-    role
-  end
-
-  # --- Fake external clients -------------------------------------------------
-
-  # Stands in for Climate::OpenMeteoClient.
-  class FakeOutdoorSource
-    attr_reader :calls
-
-    def initialize(rows: [])
-      @rows = rows
-      @calls = []
-    end
-
-    def hourly_series(latitude:, longitude:, **options)
-      @calls << { latitude: latitude, longitude: longitude, **options }
-      raise @rows if @rows.is_a?(Exception)
-
-      @rows
-    end
   end
 end

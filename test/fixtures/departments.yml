@@ -17,8 +17,3 @@ set:
   name: "Set"
   match_terms: "set, scenic, build"
   ordering: 3
-
-acting:
-  name: "Acting"
-  match_terms: "actor, acting, cast"
-  ordering: 4

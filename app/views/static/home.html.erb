@@ -1,20 +1,19 @@
-<%# The page's heading for crawlers and screen readers. Visually hidden because the masthead
-    already carries the name as artwork, and the public stylesheet's unlayered h1-h6 rules beat
-    the Tailwind utilities that would otherwise size a visible one down. %>
+<%# For crawlers and screen readers: the masthead carries the name as artwork, and the public
+    stylesheet's unlayered h1-h6 rules beat the Tailwind sizing a visible one would need. %>
 <h1 class="sr-only">Bedlam Theatre &mdash; student theatre in the heart of Edinburgh</h1>
 
-<div class="flex flex-col md:flex-row gap-4" data-controller="pretix-modal">
+<div class="flex flex-col md:flex-row gap-4"
+     data-controller="pretix-modal"
+     data-pretix-modal-base-url-value="<%= pretix_shop_url %>">
   <div class="w-full md:w-1/2 xl:w-2/3">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
     <% cache [ @carousel_events, @standard_carousel_items ] do %>
       <%= render Public::CarouselComponent.new(
             carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items),
-            aspect_ratio: carousel_config[:aspect_ratio]&.join("/"),
-            fit_mode: carousel_config.fetch(:fit_mode, "cover")) %>
+            aspect_ratio: carousel_config[:aspect_ratio]&.join("/")) %>
     <% end %>
 
     <%= render CardComponent.new(title: "What's On", html_class: "mt-3") do %>
-      <%# Cache key is the @events AR collection; changes to pretix_shown/pretix_slug bust it correctly %>
       <% cache @events do %>
         <% if @events.empty? %>
           <%= display_block("Home - No Events On", false) %>

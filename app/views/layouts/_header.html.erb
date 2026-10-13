@@ -1,9 +1,7 @@
 <%# locals: () %>
 
 <div class="container">
-  <%# The largest thing above the fold and the desktop LCP element, so it opts out of the
-      app-wide lazy default. alt names the theatre because the masthead is the only place the
-      name appears as text-in-artwork rather than text. %>
+  <%# The desktop LCP element, so it opts out of the app-wide lazy loading. %>
   <%= link_to image_tag('Header.png', class: "img-fluid", width: 1873, height: 300,
                         alt: "Bedlam Theatre, Edinburgh University Theatre Company",
                         loading: "eager", fetchpriority: "high"), root_url() %>
@@ -35,7 +33,7 @@
               </li>
             <% else %>
               <li class="nav-item <%= navbar_item[:item_class] %>">
-                <% navbar_item_class = "nav-link mx-1 #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]}" %>
+                <% navbar_item_class = "nav-link mx-1 bedlam-nav-text#{' active' if @current_path == navbar_item[:path]}" %>
                 <% if navbar_item[:method].blank? || navbar_item[:method] == :get %>
                   <%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: navbar_item_class) %>
                 <% else %>

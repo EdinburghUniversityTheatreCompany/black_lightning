@@ -8,17 +8,13 @@
 # Table name: admin_answers
 # Database name: primary
 #
-#  id                :integer          not null, primary key
-#  answer            :text(16777215)
-#  answerable_type   :string(255)
-#  file_content_type :string(255)
-#  file_file_name    :string(255)
-#  file_file_size    :integer
-#  file_updated_at   :datetime
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  answerable_id     :integer
-#  question_id       :integer
+#  id              :integer          not null, primary key
+#  answer          :text(16777215)
+#  answerable_type :string(255)
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  answerable_id   :integer
+#  question_id     :integer
 #
 # Indexes
 #
@@ -27,11 +23,11 @@
 #  index_admin_proposals_answers_on_question_id              (question_id)
 #
 class Admin::Answer < ApplicationRecord
-  # Length validations enforcing database column limits
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[file_content_type file_file_name file_file_size file_updated_at]
+
   validates :answer, length: { maximum: 16777215 }
   validates :answerable_type, length: { maximum: 255 }
-  validates :file_file_name, length: { maximum: 255 }
-  validates :file_content_type, length: { maximum: 255 }
   validates :question_id, presence: true
 
   belongs_to :question, class_name: "Admin::Question"

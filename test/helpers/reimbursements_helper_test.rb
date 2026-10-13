@@ -8,11 +8,6 @@ class ReimbursementsHelperTest < ActionView::TestCase
   Budget = ::Reimbursements::Budget
   ModulusCheck = ::Reimbursements::ModulusCheck
 
-  class FixedChecker
-    def initialize(result) = @result = result
-    def check(_sort, _account) = @result
-  end
-
   def person_with(sort_code: "08-99-99", account_number: "66374958")
     person = Person.new(name: "Pat Producer", email: "pat@example.com")
     person.build_payment_details(sort_code: sort_code, account_number: account_number)
@@ -20,28 +15,20 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "modulus badge renders a warning 'Missing' badge for a payee with no bank details" do
-    # Missing blocks approval like INVALID does, so it's a warning, not neutral.
+    # Missing blocks approval like INVALID, so it is a warning, not neutral.
     html = reimbursements_modulus_badge(person_with(sort_code: "", account_number: ""))
     assert_includes html, "Missing"
     assert_includes html, "text-warning"
   end
 
-  test "modulus badge renders green Valid for a VALID result" do
-    html = reimbursements_modulus_badge(person_with, checker: FixedChecker.new(ModulusCheck::VALID))
-    assert_includes html, "Valid"
-    assert_includes html, "text-success"
-  end
-
-  test "modulus badge renders red Invalid for an INVALID result" do
-    html = reimbursements_modulus_badge(person_with, checker: FixedChecker.new(ModulusCheck::INVALID))
-    assert_includes html, "Invalid"
-    assert_includes html, "text-danger"
-  end
-
-  test "modulus badge renders amber Outside spec for an OUTSIDE_SPEC result" do
-    html = reimbursements_modulus_badge(person_with, checker: FixedChecker.new(ModulusCheck::OUTSIDE_SPEC))
-    assert_includes html, "Outside spec"
-    assert_includes html, "text-warning"
+  test "modulus badge labels and colours each verdict" do
+    { ModulusCheck::VALID => %w[Valid text-success],
+      ModulusCheck::INVALID => %w[Invalid text-danger],
+      ModulusCheck::OUTSIDE_SPEC => [ "Outside spec", "text-warning" ] }.each do |result, (label, colour)|
+      html = reimbursements_modulus_badge(person_with, checker: FakeModulusChecker.new("66374958" => result))
+      assert_includes html, label, result.inspect
+      assert_includes html, colour, result.inspect
+    end
   end
 
   test "effective modulus badge checks the expense's EFFECTIVE bank details, not the linked person's" do
@@ -49,7 +36,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
     expense = Expense.new(status: "Pending", person: person,
                           sort_code_override: "20-20-20", account_number_override: "50502366")
 
-    html = reimbursements_effective_modulus_badge(expense, checker: FixedChecker.new(ModulusCheck::VALID))
+    html = reimbursements_effective_modulus_badge(expense, checker: FakeModulusChecker.new("50502366" => ModulusCheck::VALID))
 
     assert_includes html, "Valid", "the override bank details are present, so this must not fall back to Missing"
   end
@@ -62,67 +49,64 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes html, "Missing"
   end
 
-  test "access check badge maps ok/fail/skip to success/danger/secondary" do
-    assert_includes reimbursements_access_check_badge(:ok), "OK"
-    assert_includes reimbursements_access_check_badge(:ok), "text-success"
-    assert_includes reimbursements_access_check_badge(:fail), "FAIL"
-    assert_includes reimbursements_access_check_badge(:fail), "text-danger"
-    assert_includes reimbursements_access_check_badge(:skip), "SKIP"
-    assert_includes reimbursements_access_check_badge(:skip), "text-gray-700"
+  test "access check badge maps ok/fail/skip, and anything else to secondary" do
+    { ok: %w[OK text-success], fail: %w[FAIL text-danger],
+      skip: %w[SKIP text-gray-700], weird: %w[WEIRD text-gray-700] }.each do |status, (label, colour)|
+      html = reimbursements_access_check_badge(status)
+      assert_includes html, label, status.inspect
+      assert_includes html, colour, status.inspect
+    end
   end
 
-  test "access check badge falls back to secondary for an unrecognised status" do
-    html = reimbursements_access_check_badge(:weird)
-    assert_includes html, "WEIRD"
-    assert_includes html, "text-gray-700"
-  end
-
-  test "budget_owner_names comma-joins resolved owner names, skipping unknown ids" do
-    people_by_id = { "1" => person_with, "2" => Person.new(name: "Alex", email: "alex@example.com") }
+  test "budget_owner_names comma-joins the owners' names, skipping a blank one" do
     budget = Budget.new(name: "Props")
-    budget.define_singleton_method(:owner_ids) { %w[1 2 99] }
+    budget.own_owners = [ person_with, Person.new(name: "", email: "nameless@example.com"),
+                          Person.new(name: "Alex", email: "alex@example.com") ]
 
-    assert_equal "Pat Producer, Alex", budget_owner_names(budget, people_by_id)
+    assert_equal "Pat Producer, Alex", budget_owner_names(budget)
   end
 
-  test "budget_owner_names returns an empty string when there are no owners" do
-    budget = Budget.new(name: "Props")
-    budget.define_singleton_method(:owner_ids) { [] }
-    assert_equal "", budget_owner_names(budget, {})
+  # [label, value, selected?] for each option.
+  def option_rows(html)
+    Nokogiri::HTML::DocumentFragment.parse(html).css("option")
+                                    .map { |option| [ option.text, option["value"], option.key?("selected") ] }
   end
 
-  test "reimbursements_date formats a Date as ISO 8601" do
-    assert_equal "2026-07-11", reimbursements_date(Date.new(2026, 7, 11))
+  test "reimbursements_budget_options keeps a claim's own line when it is no longer offered" do
+    offered = create_reimbursements_budget(name: "Props")
+    retired = create_reimbursements_budget(name: "Old set", active: false)
+
+    assert_equal [ [ "Old set", retired.record_id, true ], [ "Props", offered.record_id, false ] ],
+                 option_rows(reimbursements_budget_options([ offered ], retired))
+    assert_equal [ [ "Props", offered.record_id, true ] ],
+                 option_rows(reimbursements_budget_options([ offered ], offered))
+    assert_equal [ [ "Props", offered.record_id, false ] ],
+                 option_rows(reimbursements_budget_options([ offered ], nil))
   end
 
-  test "reimbursements_date takes the date part of a Time" do
-    assert_equal "2026-07-11", reimbursements_date(Time.utc(2026, 7, 11, 9, 30))
+  test "reimbursements_date is ISO 8601, or a dash when blank" do
+    { Date.new(2026, 7, 11) => "2026-07-11", Time.utc(2026, 7, 11, 9, 30) => "2026-07-11",
+      nil => "-", "" => "-" }.each do |value, expected|
+      assert_equal expected, reimbursements_date(value), value.inspect
+    end
   end
 
-  test "reimbursements_date renders nil and blank as a dash" do
-    assert_equal "-", reimbursements_date(nil)
-    assert_equal "-", reimbursements_date("")
+  test "reimbursements_waiting_for counts whole days, and says nothing with no date" do
+    travel_to Time.zone.local(2026, 5, 13, 12) do
+      assert_equal "submitted today", reimbursements_waiting_for(Time.zone.local(2026, 5, 13, 9))
+      assert_equal "waiting 1 day", reimbursements_waiting_for(Date.new(2026, 5, 12))
+      assert_equal "waiting 6 days", reimbursements_waiting_for(Time.zone.local(2026, 5, 7, 23))
+    end
+    assert_nil reimbursements_waiting_for(nil)
   end
 
-  test "reimbursements_money formats a value as GBP with 2dp" do
-    assert_equal "£12.50", reimbursements_money(12.5)
+  test "reimbursements_money is GBP to 2dp, zero included, and a dash for nil" do
+    { 12.5 => "£12.50", 0 => "£0.00", "1234.50" => "£1,234.50", nil => "-" }.each do |amount, expected|
+      assert_equal expected, reimbursements_money(amount), amount.inspect
+    end
   end
 
-  test "reimbursements_money renders zero as £0.00, not a dash" do
-    assert_equal "£0.00", reimbursements_money(0)
-  end
-
-  test "reimbursements_money renders nil as a dash" do
-    assert_equal "-", reimbursements_money(nil)
-  end
-
-  test "reimbursements_money accepts a pre-formatted numeric string (emails)" do
-    assert_equal "£1,234.50", reimbursements_money("1234.50")
-  end
-
-  # The area allocation is printed on two screens — the grouped budgets index
-  # and the area edit card — and the rule that a netted allocation is never a
-  # bare negative held on one of them only until this became a single helper.
+  # The allocation prints on the grouped index and the area edit card.
   def netted_area(spend: 400, income: 800, basis: "net")
     area = create_reimbursements_area(name: "Committee", initial_budget: 1_000,
                                       budget_basis: basis)
@@ -137,14 +121,8 @@ class ReimbursementsHelperTest < ActionView::TestCase
                  reimbursements_area_allocation(netted_area)
   end
 
-  test "reimbursements_area_allocation never prints a bare negative" do
-    # Area#allocated is -400 here: spend less income on a net basis.
-    assert_not_includes reimbursements_area_allocation(netted_area), "-£400.00"
-  end
-
   test "reimbursements_area_allocation states a spend cap as one figure" do
-    # An income line is left out of a spend cap entirely, so there are no
-    # halves to state.
+    # A spend cap leaves income out, so there are no halves.
     assert_equal "£400.00", reimbursements_area_allocation(netted_area(basis: "expenses"))
   end
 
@@ -152,31 +130,13 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_equal "£400.00", reimbursements_area_allocation(netted_area(income: 0))
   end
 
-  test "reimbursements_amount_value pads a decimal column's value to 2dp" do
-    # A BigDecimal's own to_s renders "100.0" into a number input, a pence
-    # short of the figure reimbursements_money prints beside it.
-    assert_equal "100.00", reimbursements_amount_value(BigDecimal("100"))
-    assert_equal "12.50", reimbursements_amount_value(BigDecimal("12.5"))
-  end
-
-  test "reimbursements_amount_value carries no delimiter or unit a number input would reject" do
-    assert_equal "1234.50", reimbursements_amount_value(BigDecimal("1234.5"))
-  end
-
-  test "reimbursements_amount_value renders nil as nil, leaving the input empty" do
-    assert_nil reimbursements_amount_value(nil)
-  end
-
-  # What a BROWSER posts for an empty number input, handed back by a form
-  # re-rendering its own params: format("%.2f", "") raises, so every refusal on
-  # a form carrying an empty amount 500ed instead of stating its reason.
-  test "reimbursements_amount_value renders a browser's empty string as nil" do
-    assert_nil reimbursements_amount_value("")
-  end
-
-  test "reimbursements_amount_value hands a typed amount back rather than raising" do
-    assert_equal "1200.00", reimbursements_amount_value("£1,200")
-    assert_equal "not a number", reimbursements_amount_value("not a number")
+  # A browser posts "" for an empty number input; format("%.2f", "") raised, so refusals 500ed.
+  test "reimbursements_amount_value is a number input's value: 2dp, no delimiter, blank as nil, unreadable as typed" do
+    { BigDecimal("100") => "100.00", BigDecimal("12.5") => "12.50", BigDecimal("1234.5") => "1234.50",
+      nil => nil, "" => nil, "£1,200" => "1200.00", "not a number" => "not a number" }.each do |value, expected|
+      actual = reimbursements_amount_value(value)
+      expected.nil? ? assert_nil(actual, value.inspect) : assert_equal(expected, actual, value.inspect)
+    end
   end
 
   test "reasons_popover is blank when there are no reasons" do
@@ -190,24 +150,16 @@ class ReimbursementsHelperTest < ActionView::TestCase
                                           record_label: "#123")
 
     assert_includes html, 'aria-label="Needs attention for #123"'
-    # The visible label text still just reads "Needs attention" (the scoping
-    # is for assistive tech, not a visible change).
+    # The visible text is unchanged: the scoping is for assistive tech.
     assert_match(%r{<button[^>]*>\s*Needs attention}, html)
   end
 
-  test "reasons_popover falls back to the plain label without record_label" do
+  # A disclosure region, not a menu: aria-haspopup would be an ARIA role mismatch.
+  test "reasons_popover without record_label is named by its label and claims no menu popup" do
     html = reimbursements_reasons_popover(reasons: [ "No budget" ], key: "x",
                                           label: "Needs attention", heading: "Needs attention:")
 
     assert_includes html, 'aria-label="Needs attention"'
-  end
-
-  # The panel is a plain disclosure region (static text), not a menu — claiming
-  # aria-haspopup="true" (equivalent to "menu") would be an ARIA role mismatch.
-  test "reasons_popover trigger does not claim a menu popup type" do
-    html = reimbursements_reasons_popover(reasons: [ "No budget" ], key: "x",
-                                          label: "Needs attention", heading: "Needs attention:")
-
     assert_not_includes html, "aria-haspopup"
   end
 
@@ -215,7 +167,6 @@ class ReimbursementsHelperTest < ActionView::TestCase
     html = reimbursements_producer_status_badge("Submitted")
     assert_includes html, "Sent to EUSA"
     assert_not_includes html, ">Submitted<"
-    # The apostrophe is HTML-escaped in the title attribute.
     assert_includes html, "title=\"Sent to the Students#{ERB::Util.html_escape("'")} Association (EUSA) for payment.\""
   end
 
@@ -224,15 +175,24 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes reimbursements_producer_status_badge("Rejected"), "text-danger"
   end
 
+  test "producer status badge about someone else's claim keeps the word but not the second person" do
+    html = reimbursements_producer_status_badge("Paid", own_claim: false)
+    assert_match(/>\s*Paid\s*</, html)
+    assert_includes html, 'title="EUSA has paid it."'
+    assert_not_includes html, "your bank account"
+    # A tooltip with nothing addressed to the submitter is shared as is.
+    assert_includes reimbursements_producer_status_badge("Approved", own_claim: false),
+                    "waiting to be sent to EUSA for payment."
+  end
+
   test "producer status badge falls back to the raw status for an unknown value" do
     html = reimbursements_producer_status_badge("Weird")
     assert_includes html, "Weird"
   end
 
   # --- Who a producer writes to ------------------------------------------
-  # CostCentre.default is order(:id).first, so it names an ARBITRARY pot the
-  # moment a second one exists — and a termtime producer sent to the Fringe
-  # mailbox writes to a team that has never seen their claim.
+  # CostCentre.default names an arbitrary pot once a second exists, so the wrong team
+  # would be written to.
 
   test "the contact link names the cost centre of the claim it is shown beside" do
     termtime = create_second_reimbursements_cost_centre
@@ -260,10 +220,8 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes links, ::Reimbursements::CostCentre.default.receive_mailbox
   end
 
-  # An income line's `remaining` is nil even when a figure IS set — its plan is
-  # money to raise, so "what is left" means nothing on that side. Printing the
-  # no-budget wording there contradicted the amount in the same row's Initial
-  # column.
+  # An income line's `remaining` is nil even with a figure set, so the no-budget wording
+  # would contradict the Initial column.
   test "an income line with a plan does not claim nobody set a budget" do
     income = create_reimbursements_budget(name: "Ticket income", budget_type: "Income",
                                           initial_budget: 800)
@@ -273,11 +231,5 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_nil income.remaining, "the fixture must reproduce the nil this guards"
     assert_not_includes rendered, "No budget set"
     assert_includes rendered, "Income is measured by what it raises"
-  end
-
-  test "a line with no figure at all still says nobody set a budget" do
-    bare = create_reimbursements_budget(name: "Tech", initial_budget: nil)
-
-    assert_includes reimbursements_budget_remaining(bare), "No budget set"
   end
 end

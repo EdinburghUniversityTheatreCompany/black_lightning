@@ -11,10 +11,6 @@
 #
 #  id                :integer          not null, primary key
 #  access_level      :integer          default(1), not null
-#  file_content_type :string(255)
-#  file_file_name    :string(255)
-#  file_file_size    :integer
-#  file_updated_at   :datetime
 #  item_type         :string(255)
 #  name              :string(255)
 #  created_at        :datetime         not null
@@ -28,17 +24,15 @@
 #  index_attachments_on_item_type_and_item_id  (item_type,item_id)
 #
 class Attachment < ApplicationRecord
-  # Length validations enforcing database column limits
-  validates :name, length: { maximum: 255 }
-  validates :file_file_name, length: { maximum: 255 }
-  validates :file_content_type, length: { maximum: 255 }
-  validates :item_type, length: { maximum: 255 }
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[file_content_type file_file_name file_file_size file_updated_at]
+
+  validates :name, :item_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :item, polymorphic: true, optional: true
 
-  # Sheet-music / music-notation content types are registered with Marcel in
-  # config/initializers/sheet_music_mime_types.rb so they resolve correctly here.
+  # Sheet-music types are registered with Marcel in config/initializers/sheet_music_mime_types.rb.
   ALLOWED_CONTENT_TYPES = %w[
     application/pdf
     image/png image/jpeg image/gif image/webp

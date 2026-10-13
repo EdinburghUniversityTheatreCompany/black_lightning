@@ -23,35 +23,15 @@
 #
 module Reimbursements
   ##
-  # One budget's share of a single EUSA credit row.
-  #
-  # +amount+ is POSITIVE and unsigned: the row's own direction says whether it
-  # is income or spend, and a negative money figure means bad news everywhere
-  # else in this portal. The shares of one row must sum to that row's own
-  # income, which no per-row validation can see — DatabaseStore#apportion_actual!
-  # owns that invariant.
+  # One budget's share of a single EUSA credit row. +amount+ is positive and unsigned (the row's
+  # direction says income or spend). The shares must sum to the row's income, which no per-row
+  # validation can see: DatabaseStore#apportion_actual! owns that.
   class ActualAllocation < ApplicationRecord
-    self.table_name = "reimbursements_actual_allocations"
-
     belongs_to :eusa_actual, class_name: "Reimbursements::EusaActual",
                              inverse_of: :allocations
     belongs_to :budget, class_name: "Reimbursements::Budget"
 
     validates :amount, numericality: { greater_than: 0 }
     validates :budget_id, uniqueness: { scope: :eusa_actual_id }
-    validate :actual_is_not_attached_whole
-
-    private
-
-    # Budget#credit_actual_total ADDS these shares to the rows attached to a
-    # budget whole, so the two sets must be disjoint or a row is counted twice.
-    # apportion_actual! clears budget_id to keep them apart, but that is a
-    # writer's promise and MySQL cannot check it across two tables — a console
-    # edit or a future writer could leave a row holding both.
-    def actual_is_not_attached_whole
-      return if eusa_actual.nil? || eusa_actual[:budget_id].blank?
-
-      errors.add(:eusa_actual, "is already attached to a budget in full")
-    end
   end
 end

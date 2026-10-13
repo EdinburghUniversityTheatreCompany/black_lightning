@@ -14,14 +14,6 @@ module Admin
         sign_in @user
       end
 
-      def grant_backend(user)
-        role = ::Role.find_by(name: "Backend") || ::Role.create!(name: "Backend").tap do |r|
-          r.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
-        end
-        user.add_role("Backend")
-        role
-      end
-
       def sign_in_read_only
         viewer = FactoryBot.create(:user)
         grant_backend(viewer)
@@ -30,10 +22,9 @@ module Admin
         viewer
       end
 
-      # --- index -----------------------------------------------------------
-
-      test "lists the sensors" do
+      test "lists the sensors, for a read-only user too" do
         create_climate_sensor(display_name: "Crypt north")
+        sign_in_read_only
 
         get :index
 
@@ -41,36 +32,17 @@ module Admin
         assert_match "Crypt north", response.body
       end
 
-      test "a read-only user may look at the list" do
-        sign_in_read_only
-
-        get :index
-
-        assert_response :success
-      end
-
-      # --- create ----------------------------------------------------------
-
-      test "creates a sensor" do
+      test "creates an indoor Govee sensor whatever source and placement the form posts" do
+        # A second "outdoor" row would be polled by nothing.
         assert_difference -> { ::Climate::Sensor.count }, 1 do
-          post :create, params: { climate_sensor: { display_name: "Crypt south",
-                                                    location: "By the stairs", active: "1" } }
+          post :create, params: { climate_sensor: { display_name: "Crypt south", location: "By the stairs",
+                                                    active: "1", source: "open_meteo", placement: "outdoor" } }
         end
 
         sensor = ::Climate::Sensor.order(:id).last
 
         assert_equal "Crypt south", sensor.display_name
-        assert_equal ::Climate::Sensor::SOURCE_GOVEE, sensor.source
-        assert_equal ::Climate::Sensor::PLACEMENT_INDOOR, sensor.placement
-      end
-
-      test "a form cannot smuggle in a second outdoor feed" do
-        # source and placement are controller-set. A second "outdoor" row would
-        # be polled by nothing and would sit dead on the dashboard.
-        post :create, params: { climate_sensor: { display_name: "Fake outside",
-                                                  source: "open_meteo", placement: "outdoor" } }
-        sensor = ::Climate::Sensor.order(:id).last
-
+        assert_equal "By the stairs", sensor.location
         assert_equal ::Climate::Sensor::SOURCE_GOVEE, sensor.source
         assert_equal ::Climate::Sensor::PLACEMENT_INDOOR, sensor.placement
       end
@@ -83,59 +55,36 @@ module Admin
         assert_response :unprocessable_content
       end
 
-      test "a read-only user cannot create a sensor" do
-        sign_in_read_only
-
-        assert_no_difference -> { ::Climate::Sensor.count } do
-          post :create, params: { climate_sensor: { display_name: "Sneaky" } }
-        end
-
-        assert_response :forbidden
-      end
-
-      # --- update ----------------------------------------------------------
-
-      test "updates the operator-owned fields" do
+      test "updates the operator-owned fields but not how a sensor is fed" do
         sensor = create_climate_sensor
 
         patch :update, params: { id: sensor.id,
-                                 climate_sensor: { display_name: "Crypt, north wall",
-                                                   location: "Behind the bar", active: "1" } }
+                                 climate_sensor: { display_name: "Crypt, north wall", location: "Behind the bar",
+                                                   in_crypt: "1", source: "open_meteo" } }
         sensor.reload
 
         assert_equal "Crypt, north wall", sensor.display_name
         assert_equal "Behind the bar", sensor.location
+        assert_predicate sensor, :in_crypt?
+        assert_equal ::Climate::Sensor::SOURCE_GOVEE, sensor.source
       end
 
-      test "update cannot change how a sensor is fed" do
-        sensor = create_climate_sensor
-
-        patch :update, params: { id: sensor.id,
-                                 climate_sensor: { display_name: "Renamed", source: "open_meteo" } }
-
-        assert_equal ::Climate::Sensor::SOURCE_GOVEE, sensor.reload.source
-      end
-
-      test "a manager can tick a sensor as being in the crypt" do
-        sensor = create_climate_sensor
-
-        patch :update, params: { id: sensor.id,
-                                 climate_sensor: { display_name: sensor.display_name, in_crypt: "1" } }
-
-        assert_predicate sensor.reload, :in_crypt?
-      end
-
-      test "a read-only user cannot edit a sensor" do
+      test "a read-only user cannot create, edit or delete a sensor" do
         sensor = create_climate_sensor
         sign_in_read_only
 
-        patch :update, params: { id: sensor.id, climate_sensor: { display_name: "Hijacked" } }
+        [ [ :post, :create, { climate_sensor: { display_name: "x" } } ],
+          [ :patch, :update, { id: sensor.id, climate_sensor: { display_name: "x" } } ],
+          [ :delete, :destroy, { id: sensor.id } ] ].each do |verb, action, params|
+          assert_no_difference -> { ::Climate::Sensor.count } do
+            send(verb, action, params: params)
+          end
 
-        assert_response :forbidden
-        assert_not_equal "Hijacked", sensor.reload.display_name
+          assert_response :forbidden, action.to_s
+        end
+
+        assert_not_equal "x", sensor.reload.display_name
       end
-
-      # --- destroy ---------------------------------------------------------
 
       test "deleting a sensor takes its readings with it" do
         sensor = create_climate_sensor
@@ -157,15 +106,17 @@ module Admin
         assert_match(/cannot be deleted/i, flash[:alert])
       end
 
-      test "a read-only user cannot delete a sensor" do
-        sensor = create_climate_sensor
-        sign_in_read_only
+      test "only a Govee sensor's edit form offers the In the crypt box" do
+        # Ticking it on the outdoor row always fails validation.
+        get :edit, params: { id: create_climate_sensor.id }
 
-        assert_no_difference -> { ::Climate::Sensor.count } do
-          delete :destroy, params: { id: sensor.id }
-        end
+        assert_select "input[type=checkbox][name='climate_sensor[in_crypt]']", 1
 
-        assert_response :forbidden
+        get :edit, params: { id: outdoor_climate_sensor.id }
+
+        assert_response :success
+        assert_select "input[type=checkbox][name='climate_sensor[active]']", 1
+        assert_select "input[name='climate_sensor[in_crypt]']", 0
       end
     end
   end

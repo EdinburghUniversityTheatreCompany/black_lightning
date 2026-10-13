@@ -1,23 +1,17 @@
 module Climate
   ##
-  # How much of the range the crypt spent close to condensing.
+  # How much of the range the crypt spent close to condensing. Mould follows how
+  # LONG the air sat near saturation, so the unit is the hour: hourly buckets
+  # taking the worst margin inside each, counted as hours at risk, the longest
+  # unbroken spell and a per-day tally for the bars.
   #
-  # Mould is a function of how LONG the air sat near saturation, not of how low
-  # the margin ever got, so the unit here is the hour: hourly buckets, each
-  # taking the worst margin inside it, counted three ways — total hours at
-  # risk, the longest unbroken spell, and a per-day tally for the bars.
-  #
-  # The denominator is hours that HAVE readings, never hours in the range. The
-  # sensors sync over an intermittent access point and routinely miss days, so
-  # "41 of 720 hours" reads as 6% of a month when it may be 8% of the six days
-  # actually covered.
+  # The denominator is hours WITH readings, never hours in the range: sensors
+  # miss days, so "41 of 720 hours" reads as 6% of a month when it may be 8% of
+  # the days covered.
   class RiskSummary
-    HOUR = 3_600
-
-    def initialize(sensors:, range:, threshold: Climate::CONDENSATION_RISK_MARGIN)
+    def initialize(sensors:, range:)
       @sensors = Array(sensors)
       @range = range
-      @threshold = threshold
       @colors = SeriesColors.new
     end
 
@@ -25,35 +19,14 @@ module Climate
     #       longest_spell_hours:, longest_spell_ended_at:,
     #       days: [{ date:, hours_with_readings:, at_risk_hours: }] }]
     def summaries
-      grouped = hourly_margins
+      # One query feeds the three counts and the bars, so they cannot disagree.
+      hourly = Buckets.new(@range, seconds: Buckets::HOUR)
+      grouped = MarginSeries.new(sensors: @sensors, range: @range, buckets: hourly).margins
 
       @sensors.map { |sensor| summarise(sensor, grouped.fetch(sensor.id, [])) }
     end
 
     private
-
-    # One query for every sensor and every figure below: the three counts and
-    # the bars all have to agree, so they all come off the same rows.
-    #
-    # Arel.sql args are literals, not interpolated: Brakeman flags
-    # interpolation as a possible injection even from a frozen constant (see
-    # Climate::SeriesQuery for the same pattern).
-    def hourly_margins
-      return {} if @sensors.empty?
-
-      Reading
-        .where(sensor_id: @sensors.map(&:id), recorded_at: @range.starts_at..@range.ends_at)
-        .where.not(temperature_c: nil).where.not(dew_point_c: nil)
-        .group(:sensor_id, Arel.sql("DATE_SUB(recorded_at, INTERVAL (TIME_TO_SEC(TIME(recorded_at)) % 3600) SECOND)"))
-        .order(Arel.sql("1 ASC, 2 ASC"))
-        .pluck(:sensor_id,
-               Arel.sql("DATE_SUB(recorded_at, INTERVAL (TIME_TO_SEC(TIME(recorded_at)) % 3600) SECOND)"),
-               Arel.sql("MIN(temperature_c - dew_point_c)"))
-        .group_by(&:first)
-        .transform_values do |rows|
-          rows.map { |(_sensor_id, hour, margin)| [ hour.in_time_zone, margin.to_f ] }
-        end
-    end
 
     def summarise(sensor, hours)
       spell = longest_spell(hours)
@@ -67,11 +40,10 @@ module Climate
         days: by_day(hours) }
     end
 
-    def at_risk?(margin) = margin < @threshold
+    def at_risk?(margin) = margin < Climate::CONDENSATION_RISK_MARGIN
 
-    # A missing hour BREAKS the run, the same way SeriesQuery refuses to draw a
-    # line across an outage. Claiming thirty unbroken damp hours across a
-    # twenty-hour hole is a measurement that never happened.
+    # A missing hour BREAKS the run: a damp spell across a coverage hole was
+    # never measured.
     def longest_spell(hours)
       best = { hours: 0, ended_at: nil }
       run = 0
@@ -80,12 +52,12 @@ module Climate
       hours.each do |(hour, margin)|
         run = if !at_risk?(margin)
                 0
-        elsif previous && (hour - previous) == HOUR && run.positive?
+        elsif previous && (hour - previous) == Buckets::HOUR && run.positive?
                 run + 1
         else
                 1
         end
-        best = { hours: run, ended_at: hour + HOUR } if run > best[:hours]
+        best = { hours: run, ended_at: hour + Buckets::HOUR } if run > best[:hours]
         previous = hour
       end
 

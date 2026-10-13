@@ -1,36 +1,27 @@
 module Climate
   ##
-  # Fetches the outdoor comparison series hourly.
-  #
-  # Unlike the Govee job this one needs no credentials and cannot lose history:
-  # it asks for a rolling window (past_days) and upserts the whole thing, so any
-  # gap left by an outage fills itself on the next successful run. That is the
-  # entire backfill strategy for outdoor data, and the reason Open-Meteo was
-  # chosen over sources with a better uptime guarantee but no history.
+  # Fetches the outdoor comparison series hourly. It asks for a rolling window
+  # and upserts all of it, so an outage gap fills itself on the next run (see
+  # OpenMeteoClient).
   class OutdoorPollJob < ::ApplicationJob
     include ::ErrorReporting
 
     queue_as :default
     limits_concurrency key: "climate_outdoor_poll", duration: 5.minutes
 
-    # How far behind the outdoor line has to fall before a failure is worth
-    # reporting. Open-Meteo's free tier sheds load with the odd 503, and by the
-    # self-heal above a failure costs nothing until it outlasts the window — so
-    # only a feed that is actually DOWN is Honeybadger's business. Quieter
-    # failures still reach last_error, which the dashboard's staleness badge
-    # reads on its own tighter window (Sensor::STALE_AFTER).
+    # Open-Meteo's free tier sheds load with the odd 503, and the next poll
+    # re-serves the window, so a failure costs nothing until it outlasts it. Only
+    # a feed DOWN this long is Honeybadger's business; every failure still reaches
+    # last_error, which the dashboard's staleness badge reads.
     REPORT_FAILURE_AFTER = 1.day
 
-    # Injection seam for tests. Takes the sensor so the source column picks the
-    # client. See Climate::OUTDOOR_SOURCES.
-    class_attribute :client_builder, default: ->(sensor) { Climate.outdoor_client_for(sensor.source) }
+    # Test seam.
+    class_attribute :client_builder, default: -> { OpenMeteoClient.new }
 
     def perform
-      # Ensured rather than seeded by a data migration: test and CI databases
-      # are schema-loaded, so a migration would never have run there.
       Sensor.outdoor_source!
 
-      Sensor.active.outdoor.find_each { |sensor| poll_safely(sensor) }
+      Sensor.active.open_meteo.find_each { |sensor| poll_safely(sensor) }
     end
 
     private
@@ -53,15 +44,14 @@ module Climate
                                 latest_reading_at: latest&.recorded_at })
     end
 
-    # Never having had a reading counts: the feed is no less missing for the
-    # sensor being new.
+    # Never having had a reading counts as missing.
     def missing_for_a_day?(latest)
       latest.nil? || latest.recorded_at < REPORT_FAILURE_AFTER.ago
     end
 
     def poll(sensor)
-      rows = client_builder.call(sensor).hourly_series(latitude: sensor.latitude.to_f,
-                                                       longitude: sensor.longitude.to_f)
+      rows = client_builder.call.hourly_series(latitude: sensor.latitude.to_f,
+                                               longitude: sensor.longitude.to_f)
       ReadingIngest.upsert_series!(sensor: sensor, rows: rows)
       sensor.update_columns(last_polled_at: Time.current, last_error: nil)
     end

@@ -21,7 +21,6 @@
 #  fk_rails_...  (profile_id => marketing_creatives_profiles.id)
 #
 class MarketingCreatives::CategoryInfo < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :description, length: { maximum: 16777215 }
   validates :profile, :category, :image, presence: true
 

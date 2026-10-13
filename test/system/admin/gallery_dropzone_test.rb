@@ -1,13 +1,10 @@
 require "application_system_test_case"
 
-# The admin event form's gallery uploader is the only place the dropzone library
-# is used, and the drag-and-drop is the library's own — so no request test can
-# reach it, and a major upgrade (5 → 6 removed Dropzone.autoDiscover, .extend
-# and .version) could break every admin picture upload with nothing red to show.
+# The gallery uploader is the only user of the dropzone library, which no request test can reach:
+# an upgrade like 5 to 6 could break every admin picture upload with nothing red to show.
 class Admin::GalleryDropzoneTest < ApplicationSystemTestCase
-  # DirectUploadController copies the file input's name onto the hidden field it
-  # fills with the signed id, so this is what proves the upload reached the FORM
-  # rather than just the screen.
+  # DirectUploadController gives the hidden signed-id field this name, which proves the upload
+  # reached the form rather than just the screen.
   FIELD_NAME = "dropzone_pictures[files][]".freeze
 
   setup do
@@ -20,15 +17,20 @@ class Admin::GalleryDropzoneTest < ApplicationSystemTestCase
 
     assert_selector ".dropzone[data-controller='dropzone']"
 
-    # The blob row comes from POST /rails/active_storage/direct_uploads, so
-    # counting it separates "a preview was drawn" from "the file reached us".
+    # Dropzone sets `element.dropzone` on attach. The dz-* classes are in the markup regardless,
+    # so they prove nothing.
+    assert page.evaluate_script(
+      "!!document.querySelector('[data-controller=\"dropzone\"]').dropzone"
+    ), "the dropzone widget was never constructed on the drop target"
+    assert_no_selector "input[type='file'][name='#{FIELD_NAME}']", visible: true
+
+    # The blob comes from the direct upload, so this separates a drawn preview from a received file.
     assert_difference -> { ActiveStorage::Blob.count }, 1 do
       drop_file("test.png", "image/png")
       assert_selector ".dz-preview.dz-success", wait: 15
     end
 
-    # Two hidden fields carry this name: the empty one Rails emits so a
-    # `multiple` file input still posts, and the one DirectUploadController adds.
+    # Two hidden fields carry this name: Rails' empty one for a `multiple` input, and the upload's.
     signed_ids = all("input[type='hidden'][name='#{FIELD_NAME}']", visible: :all)
                  .map(&:value).reject(&:blank?)
 
@@ -36,24 +38,9 @@ class Admin::GalleryDropzoneTest < ApplicationSystemTestCase
                  "the direct upload's signed id never reached the form"
   end
 
-  test "the drop target is live rather than relying on the library's own discovery" do
-    show = FactoryBot.create(:show)
-    visit edit_admin_show_url(show)
-
-    # Dropzone sets `element.dropzone` to itself on attach. The
-    # dropzone/dz-clickable/dz-message classes are in the partial's own markup
-    # and are there whether or not anything attached, so they prove nothing.
-    assert page.evaluate_script(
-      "!!document.querySelector('[data-controller=\"dropzone\"]').dropzone"
-    ), "the dropzone widget was never constructed on the drop target"
-
-    assert_no_selector "input[type='file'][name='#{FIELD_NAME}']", visible: true
-  end
-
   private
 
-    # attach_file would drive the native input the controller has disabled;
-    # Dropzone only listens for a drop carrying a DataTransfer.
+    # attach_file would drive the disabled native input; Dropzone listens for a DataTransfer drop.
     def drop_file(filename, content_type)
       encoded = Base64.strict_encode64(Rails.root.join("test", filename).binread)
 

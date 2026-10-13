@@ -1,27 +1,21 @@
 module Reimbursements
   ##
-  # Resolves a Black Lightning user to their payee (People) record: stored
-  # link first, then email match (persisted for next time), and — on first
-  # submission — creates the People record.
-  #
-  # Which users column holds the stored link is the STORE's knowledge
-  # (stored_person_link / remember_person_link!), not a global setting: a
-  # PersonLink can then never pair a store with the wrong column, however it
-  # was built (the test seams inject stores directly).
+  # Resolves a user to their payee (People) record: the stored link
+  # (users.reimbursements_person_id), then email match (remembered), else creates one.
   class PersonLink
     def initialize(store:)
       @store = store
     end
 
     def person_for(user)
-      stored = @store.stored_person_link(user)
+      stored = user.reimbursements_person_id
       if stored.present?
         person = @store.find_person(stored)
         return person if person
       end
 
       match = @store.person_by_email(user.email)
-      @store.remember_person_link!(user, match) if match
+      remember!(user, match) if match
       match
     end
 
@@ -33,8 +27,13 @@ module Reimbursements
 
     def create_person(user)
       person = @store.create_person!(name: user.full_name.presence || user.email, email: user.email)
-      @store.remember_person_link!(user, person)
+      remember!(user, person)
       person
+    end
+
+    # update_column: a legacy user that no longer validates must still reach the portal.
+    def remember!(user, person)
+      user.update_column(:reimbursements_person_id, person.id) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

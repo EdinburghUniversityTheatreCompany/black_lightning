@@ -3,15 +3,12 @@ require "bigdecimal"
 
 module Reimbursements
   class ReviewSupportTest < ActiveSupport::TestCase
-    # These exercise the pure ReviewSupport predicates. The AR models keep the
-    # POROs' public interface, so they serve as value objects built unpersisted:
-    # the computed record_id/remaining/receipts (derived from the DB in
-    # production) are pinned per-instance to isolate the logic under test.
+    # Unpersisted models with record_id, remaining and receipts pinned per instance.
     Person = Reimbursements::Person
     Budget = Reimbursements::Budget
     Expense = Reimbursements::Expense
 
-    # Records the (sort, account) it was asked to check and returns a preset result.
+    # Records each (sort, account) it checks and returns a preset result.
     class FakeChecker
       attr_reader :calls
 
@@ -45,17 +42,16 @@ module Reimbursements
 
     def international_payee
       person = Person.new(name: "Ausland GmbH", email: "konto@example.de")
-      person.build_payment_details(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
       person.define_singleton_method(:record_id) { "recPerson3" }
       person
     end
 
-    # An international claim as it looks once finance has done its part: the EUR
-    # figure from the invoice and the GBP equivalent they typed at review.
+    # With the invoice's EUR figure and the GBP one finance types at review.
     def international_expense(payee: nil, **extra)
       expense(payee: payee || international_payee, budget: budget, receipts: [ receipt ],
         payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
         foreign_amount: BigDecimal("266.69"), foreign_currency: Expense::CURRENCY_EUR,
+        iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500",
         **extra)
     end
 
@@ -70,7 +66,7 @@ module Reimbursements
 
     def receipt
       Attachment.new(attachment_id: "att1", filename: "receipt.pdf",
-        url: "https://example.com/receipt.pdf", size_bytes: 1024)
+        url: "https://example.com/receipt.pdf")
     end
 
     def expense(payee:, budget:, amount_excl_vat: BigDecimal("50.00"), receipts: [], **extra)
@@ -88,91 +84,37 @@ module Reimbursements
       FakeChecker.new(ModulusCheck::VALID)
     end
 
-    # --- needs_attention: gross amount -------------------------------------
-
-    test "nil gross amount needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ], amount: nil)
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
+    test "each data problem is named as a reason" do
+      [
+        [ { amount: BigDecimal("0") }, "no amount" ],
+        [ { amount_excl_vat: nil }, "no ex-VAT amount" ],
+        [ { amount_excl_vat: BigDecimal("0") }, "no ex-VAT amount" ],
+        [ { receipts: [] }, "no receipt" ],
+        [ { budget: nil }, "no budget" ],
+        [ { payee: payee_without_bank }, "no bank details" ],
+        # Gross tracks ex-VAT, or the ex-VAT-over-gross flag trips instead.
+        [ { amount: BigDecimal("600.00"), amount_excl_vat: BigDecimal("600.00") }, "over budget" ]
+      ].each do |attrs, reason|
+        exp = expense(**{ payee: valid_payee, budget: budget, receipts: [ receipt ] }.merge(attrs))
+        assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker),
+                        reason, attrs.inspect
+      end
     end
 
-    test "zero gross amount needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ], amount: BigDecimal("0"))
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
+    test "no reason at the budget's limit, without a remaining figure, for OUTSIDE_SPEC or an offloaded receipt" do
+      no_remaining = budget(remaining: nil, record_id: "recBudget2")
+      large = { amount: BigDecimal("9999.00"), amount_excl_vat: BigDecimal("9999.00") }
+      [
+        [ { amount: BigDecimal("500.00"), amount_excl_vat: BigDecimal("500.00") }, { "recBudget1" => budget }, valid_checker ],
+        [ large.merge(budget: no_remaining), { "recBudget2" => no_remaining }, valid_checker ],
+        [ large, {}, valid_checker ],
+        [ {}, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::OUTSIDE_SPEC) ],
+        [ { receipts: [], sharepoint_receipt_urls: [ "https://sp/receipt.pdf" ] }, { "recBudget1" => budget }, valid_checker ]
+      ].each do |attrs, budgets, checker|
+        exp = expense(**{ payee: valid_payee, budget: budget, receipts: [ receipt ] }.merge(attrs))
+        assert_empty ReviewSupport.needs_attention_reasons(exp, budgets, checker), attrs.inspect
+      end
     end
-
-    # --- needs_attention: amount_excl_vat ---------------------------------
-
-    test "nil ex-VAT amount needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: nil, receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    test "zero ex-VAT amount needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("0"), receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    test "positive ex-VAT amount does not trigger" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("50.00"), receipts: [ receipt ])
-      assert_not ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    # --- needs_attention: receipts ----------------------------------------
-
-    test "no receipts needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [])
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    # --- needs_attention: modulus -----------------------------------------
-
-    test "invalid modulus needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::INVALID))
-    end
-
-    test "outside spec modulus does not need attention" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
-      assert_not ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::OUTSIDE_SPEC))
-    end
-
-    # --- needs_attention: bank details ------------------------------------
-
-    test "no effective bank details needs attention" do
-      exp = expense(payee: payee_without_bank, budget: budget, receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    # --- needs_attention: over budget -------------------------------------
-
-    # Gross tracks the ex-VAT figure so these isolate the over-budget check
-    # (a gross far below the ex-VAT would trip the ex-VAT-over-gross flag instead).
-    test "over budget needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, amount: BigDecimal("600.00"),
-                    amount_excl_vat: BigDecimal("600.00"), receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    test "exactly at remaining does not trigger" do
-      exp = expense(payee: valid_payee, budget: budget, amount: BigDecimal("500.00"),
-                    amount_excl_vat: BigDecimal("500.00"), receipts: [ receipt ])
-      assert_not ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
-    end
-
-    test "nil remaining does not trigger over-budget" do
-      no_remaining = budget(remaining: nil, nominal_code: "439000", record_id: "recBudget2")
-      exp = expense(payee: valid_payee, budget: no_remaining, amount: BigDecimal("9999.00"),
-                    amount_excl_vat: BigDecimal("9999.00"), receipts: [ receipt ])
-      assert_not ReviewSupport.needs_attention(exp, { "recBudget2" => no_remaining }, valid_checker)
-    end
-
-    test "budget not in lookup does not trigger over-budget" do
-      exp = expense(payee: valid_payee, budget: budget, amount: BigDecimal("9999.00"),
-                    amount_excl_vat: BigDecimal("9999.00"), receipts: [ receipt ])
-      assert_not ReviewSupport.needs_attention(exp, {}, valid_checker)
-    end
-
-    # --- needs_attention: ex-VAT exceeds gross ----------------------------
 
     test "ex-VAT amount above the gross is an advisory flag" do
       exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ],
@@ -189,21 +131,6 @@ module Reimbursements
       assert_not_includes summary[:advisory], "ex-VAT amount exceeds the gross"
     end
 
-    # --- needs_attention: missing budget ----------------------------------
-
-    test "missing budget (nil) needs attention" do
-      exp = expense(payee: valid_payee, budget: nil, receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, {}, valid_checker)
-    end
-
-    test "blank-record-id budget needs attention" do
-      placeholder = budget(record_id: "", nominal_code: "")
-      exp = expense(payee: valid_payee, budget: placeholder, receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, {}, valid_checker)
-    end
-
-    # --- needs_attention: payee override uses effective details -----------
-
     test "modulus runs on the override account, not the empty linked payee" do
       exp = expense(payee: payee_without_bank, budget: budget, receipts: [ receipt ],
         payee_name_override: "Carol Supplier", sort_code_override: "12-34-56",
@@ -213,44 +140,21 @@ module Reimbursements
       assert_equal [ [ "12-34-56", "12345678" ] ], checker.calls
     end
 
-    test "invalid override account needs attention" do
+    test "an invalid override account is named a modulus failure" do
       exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ],
         sort_code_override: "12-34-56", account_number_override: "00000000")
       checker = FakeChecker.new(ModulusCheck::INVALID)
-      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, checker)
+      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, checker),
+                      "failed the bank modulus check"
       assert_equal [ [ "12-34-56", "00000000" ] ], checker.calls
     end
-
-    # --- needs_attention_reasons ------------------------------------------
 
     test "a clean expense has no attention reasons" do
       exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
       assert_empty ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker)
     end
 
-    test "reasons name a missing ex-VAT amount" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: nil, receipts: [ receipt ])
-      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker), "no ex-VAT amount"
-    end
-
-    test "reasons name a missing budget" do
-      exp = expense(payee: valid_payee, budget: nil, receipts: [ receipt ])
-      assert_includes ReviewSupport.needs_attention_reasons(exp, {}, valid_checker), "no budget"
-    end
-
-    test "reasons name a missing receipt" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [])
-      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker), "no receipt"
-    end
-
-    test "an offloaded SharePoint receipt is not flagged as missing" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [],
-        sharepoint_receipt_urls: [ "https://sp/receipt.pdf" ])
-      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker)
-      assert_not_includes reasons, "no receipt"
-      assert_empty reasons
-    end
-
+    # On a blank pair the checker returns INVALID, which drew "likely a typo" under "no bank details".
     test "reasons name missing bank details and skip the modulus check" do
       exp = expense(payee: payee_without_bank, budget: budget, receipts: [ receipt ])
       checker = valid_checker
@@ -260,32 +164,6 @@ module Reimbursements
       assert_empty checker.calls
     end
 
-    test "reasons name a failed modulus check" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
-      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::INVALID))
-      assert_includes reasons, "failed the bank modulus check"
-    end
-
-    test "an outside-spec modulus is not named a failure" do
-      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
-      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::OUTSIDE_SPEC))
-      assert_not_includes reasons, "failed the bank modulus check"
-    end
-
-    test "reasons name an over-budget expense" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("600.00"), receipts: [ receipt ])
-      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker), "over budget"
-    end
-
-    test "reasons collect every failing check at once" do
-      exp = expense(payee: payee_without_bank, budget: nil, amount_excl_vat: nil, receipts: [])
-      reasons = ReviewSupport.needs_attention_reasons(exp, {}, valid_checker)
-      assert_includes reasons, "no ex-VAT amount"
-      assert_includes reasons, "no budget"
-      assert_includes reasons, "no receipt"
-      assert_includes reasons, "no bank details"
-    end
-
     test "needs_attention is true exactly when there are reasons" do
       clean = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
       assert_not ReviewSupport.needs_attention(clean, { "recBudget1" => budget }, valid_checker)
@@ -293,73 +171,28 @@ module Reimbursements
       assert ReviewSupport.needs_attention(dirty, { "recBudget1" => budget }, valid_checker)
     end
 
-    # --- auto_payment_reference -------------------------------------------
-
-    test "normal budget name returned as-is" do
-      assert_equal "Production", ReviewSupport.auto_payment_reference("Production")
+    # A double space wastes one of EUSA's 18 reference characters. Area-qualified
+    # names must stay distinct: payments are reconciled by reference.
+    test "auto_payment_reference keeps 18 BACS-safe characters" do
+      {
+        "Production" => "Production",
+        "A very long budget name that exceeds limit" => "A very long budget",
+        "Show & Tell" => "Show Tell",
+        "Cogito: Marketing" => "Cogito Marketing",
+        "Budget: 100 production costs!" => "Budget 100 product",
+        "Tech-Theatre" => "Tech-Theatre",
+        "  Production  " => "Production",
+        "@ Production" => "Production",
+        "!A very long name that exceeds" => "A very long name t",
+        "" => "",
+        "@#$%^&*()" => "",
+        "Exactly18CharsLong" => "Exactly18CharsLong",
+        "Budget 2026" => "Budget 2026",
+        "£100 Budget" => "100 Budget"
+      }.each do |input, expected|
+        assert_equal expected, ReviewSupport.auto_payment_reference(input), input.inspect
+      end
     end
-
-    test "name truncated to 18 characters" do
-      result = ReviewSupport.auto_payment_reference("A very long budget name that exceeds limit")
-      assert_equal 18, result.length
-      assert_equal "A very long budget", result
-    end
-
-    # Was "Show  Tell": the gsub leaves a space either side of what it dropped,
-    # and #auto_payment_reference now collapses that run — a double space wastes
-    # one of the 18 characters EUSA reads.
-    test "special chars stripped before truncation, and the gap they leave collapsed" do
-      assert_equal "Show Tell", ReviewSupport.auto_payment_reference("Show & Tell")
-    end
-
-    # It is fed Budget#display_name, whose em dash is not BACS-safe: three
-    # shows' "Marketing" lines otherwise derive one identical reference, and
-    # the reference is what a payment is reconciled back to a claim by.
-    test "an area-qualified budget name reads as the show and the line" do
-      assert_equal "Cogito Marketing", ReviewSupport.auto_payment_reference("Cogito — Marketing")
-    end
-
-    test "colon and bang stripped and truncated" do
-      result = ReviewSupport.auto_payment_reference("Budget: 100 production costs!")
-      refute_includes result, ":"
-      refute_includes result, "!"
-      assert_operator result.length, :<=, 18
-    end
-
-    test "hyphens are kept" do
-      assert_equal "Tech-Theatre", ReviewSupport.auto_payment_reference("Tech-Theatre")
-    end
-
-    test "leading/trailing whitespace stripped from result" do
-      assert_equal "Production", ReviewSupport.auto_payment_reference("  Production  ")
-      assert_equal "Production", ReviewSupport.auto_payment_reference("@ Production")
-    end
-
-    test "truncation after stripping a leading unsafe char" do
-      assert_equal "A very long name t", ReviewSupport.auto_payment_reference("!A very long name that exceeds")
-    end
-
-    test "empty name returns empty" do
-      assert_equal "", ReviewSupport.auto_payment_reference("")
-    end
-
-    test "all special chars returns empty" do
-      assert_equal "", ReviewSupport.auto_payment_reference("@#$%^&*()")
-    end
-
-    test "exactly 18 chars unchanged" do
-      assert_equal "Exactly18CharsLong", ReviewSupport.auto_payment_reference("Exactly18CharsLong")
-    end
-
-    test "numbers kept" do
-      assert_equal "Budget 2026", ReviewSupport.auto_payment_reference("Budget 2026")
-    end
-
-    test "pound sign stripped" do
-      assert_equal "100 Budget", ReviewSupport.auto_payment_reference("£100 Budget")
-    end
-
-    # --- find_duplicate_submissions ---------------------------------------
 
     NOW = Time.utc(2026, 7, 9)
 
@@ -386,26 +219,13 @@ module Reimbursements
       assert_equal [ a ], result["recB"]
     end
 
-    test "outside window not flagged" do
-      a, b = pair(valid_payee, valid_payee, gap_days: 31)
-      assert_empty ReviewSupport.find_duplicate_submissions([ a, b ])
-    end
-
-    test "different amount not flagged" do
-      a, b = pair(valid_payee, valid_payee, amount_b: "61.00")
-      assert_empty ReviewSupport.find_duplicate_submissions([ a, b ])
-    end
-
-    test "different payee not flagged" do
-      a, b = pair(valid_payee, payee_without_bank)
-      assert_empty ReviewSupport.find_duplicate_submissions([ a, b ])
-    end
-
-    test "missing payee record id never matched" do
-      missing = build_person(record_id: "", name: "(missing payee)", email: "")
-      a = dup_expense("recA", missing, amount: "60.00", auto_number: 1, submitted_at: NOW)
-      b = dup_expense("recB", missing, amount: "60.00", auto_number: 2, submitted_at: NOW)
-      assert_empty ReviewSupport.find_duplicate_submissions([ a, b ])
+    test "a gap past the window, another amount or payee, or a lone claim is no duplicate" do
+      [
+        pair(valid_payee, valid_payee, gap_days: 31),
+        pair(valid_payee, valid_payee, amount_b: "61.00"),
+        pair(valid_payee, payee_without_bank),
+        [ pair(valid_payee, valid_payee).first ]
+      ].each_with_index { |set, i| assert_empty ReviewSupport.find_duplicate_submissions(set), "case #{i}" }
     end
 
     test "missing submitted_at still flags (over-warn)" do
@@ -426,25 +246,14 @@ module Reimbursements
       assert_equal [ a, b ], result["recC"]
     end
 
-    test "single expense yields no duplicates" do
-      a = dup_expense("recA", valid_payee, amount: "60.00", auto_number: 1, submitted_at: NOW)
-      assert_empty ReviewSupport.find_duplicate_submissions([ a ])
-    end
-
-    # --- attention_summary: blocking vs advisory --------------------------
-
     test "attention_summary puts approval-blocking reasons in :blocking, the rest in :advisory" do
-      # No budget + no bank details -> both hard-block approve_expense.
-      # No receipt + over budget -> advisory (approval still proceeds).
-      exp = expense(payee: payee_without_bank, budget: nil, amount_excl_vat: BigDecimal("600.00"),
-                    receipts: [])
+      exp = expense(payee: payee_without_bank, budget: nil, amount_excl_vat: nil, receipts: [])
       summary = ReviewSupport.attention_summary(exp, { "recBudget1" => budget }, valid_checker)
 
+      assert_includes summary[:blocking], "no ex-VAT amount"
       assert_includes summary[:blocking], "no budget"
       assert_includes summary[:blocking], "no bank details"
       assert_includes summary[:advisory], "no receipt"
-      # over budget can't be evaluated with a nil budget, so just assert the
-      # split keeps advisory-only reasons out of :blocking.
       assert_not_includes summary[:blocking], "no receipt"
     end
 
@@ -466,21 +275,12 @@ module Reimbursements
       end
     end
 
-    # --- needs_attention: the international rail ----------------------------
-    #
-    # These are the rules that decide whether an international claim can ever
-    # leave the review queue. Before payment_method existed the UK sort-code
-    # pair was read for every claim, so an IBAN-only one was permanently stuck.
-
     test "a complete international claim has no attention reasons" do
       exp = international_expense
       assert_empty ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker)
     end
 
     test "the modulus check never runs on an international claim" do
-      # It is a UK sort-code/account-number algorithm; running it on a payee
-      # with no sort code would fail every international claim on a check that
-      # does not apply to it.
       checker = FakeChecker.new(ModulusCheck::INVALID)
       reasons = ReviewSupport.needs_attention_reasons(international_expense, { "recBudget1" => budget }, checker)
 
@@ -488,67 +288,34 @@ module Reimbursements
       assert_not_includes reasons, "failed the bank modulus check"
     end
 
-    test "an international claim with no IBAN is blocked" do
-      payee = Person.new(name: "Ausland GmbH", email: "konto@example.de")
-      payee.build_payment_details(iban: "", bic: "")
-      payee.define_singleton_method(:record_id) { "recPerson3" }
-      summary = ReviewSupport.attention_summary(international_expense(payee: payee),
-                                                { "recBudget1" => budget }, valid_checker)
-
-      assert_includes summary[:blocking], "no bank details"
+    test "an international claim is blocked without an IBAN or a foreign amount" do
+      blank_iban = Person.new(name: "Ausland GmbH", email: "konto@example.de")
+      blank_iban.define_singleton_method(:record_id) { "recPerson3" }
+      [
+        [ { payee: blank_iban, iban_override: "", bic_override: "" }, "no bank details" ],
+        # A UK sort code does not satisfy it.
+        [ { payee: valid_payee, iban_override: "", bic_override: "" }, "no bank details" ],
+        [ { foreign_amount: nil }, "no EUR amount" ],
+        [ { foreign_amount: BigDecimal("0") }, "no EUR amount" ],
+        [ { foreign_amount: nil, foreign_currency: "USD" }, "no USD amount" ]
+      ].each do |attrs, reason|
+        summary = ReviewSupport.attention_summary(international_expense(**attrs),
+                                                  { "recBudget1" => budget }, valid_checker)
+        assert_includes summary[:blocking], reason, attrs.inspect
+      end
     end
 
-    test "a UK sort code does not satisfy an international claim" do
-      # The whole reason the predicate had to become rail-aware.
-      summary = ReviewSupport.attention_summary(international_expense(payee: valid_payee),
-                                                { "recBudget1" => budget }, valid_checker)
-
-      assert_includes summary[:blocking], "no bank details"
-    end
-
-    test "an international claim with no EUR amount is blocked" do
-      # foreign_amount is what goes on EUSA's form. Without it there is nothing
-      # to send, and the GBP figure beside it cannot stand in — EUSA's bank
-      # pays the supplier in their own currency.
-      summary = ReviewSupport.attention_summary(international_expense(foreign_amount: nil),
-                                                { "recBudget1" => budget }, valid_checker)
-
-      assert_includes summary[:blocking], "no EUR amount"
-    end
-
-    test "a zero EUR amount is blocked too" do
-      summary = ReviewSupport.attention_summary(international_expense(foreign_amount: BigDecimal("0")),
-                                                { "recBudget1" => budget }, valid_checker)
-
-      assert_includes summary[:blocking], "no EUR amount"
-    end
-
-    test "an international claim with no GBP amount is BLOCKED, not merely flagged" do
-      # This is what enforces "finance types the GBP figure at review": the
-      # budget rollups are all GBP, so approving without one would book the
-      # claim against the budget at nothing.
-      summary = ReviewSupport.attention_summary(international_expense(amount: nil),
-                                                { "recBudget1" => budget }, valid_checker)
-
-      assert_includes summary[:blocking], "no GBP amount"
-      assert_not_includes summary[:advisory], "no GBP amount"
-    end
-
-    # Its ex-VAT amount mirrors its gross, so a blank GBP amount trips both
-    # rules — and "no ex-VAT amount" would send finance looking for a field this
-    # rail does not have.
-    test "a blank international amount is reported once, as the GBP amount" do
+    # Ex-VAT mirrors the gross, so a blank GBP amount must not also say "no ex-VAT amount".
+    test "a blank international GBP amount blocks, reported once" do
       summary = ReviewSupport.attention_summary(international_expense(amount: nil),
                                                 { "recBudget1" => budget }, valid_checker)
 
       assert_includes summary[:blocking], "no GBP amount"
       assert_not_includes summary[:blocking], "no ex-VAT amount"
+      assert_not_includes summary[:advisory], "no GBP amount"
     end
 
     test "a missing gross amount stays ADVISORY on the UK rail" do
-      # Only the international rail hard-blocks on it. A UK claim's amount is
-      # the submitter's own figure and has always been a soft flag; promoting
-      # it would start refusing approvals that work today.
       summary = ReviewSupport.attention_summary(
         expense(payee: valid_payee, budget: budget, receipts: [ receipt ], amount: nil),
         { "recBudget1" => budget }, valid_checker
@@ -556,48 +323,6 @@ module Reimbursements
 
       assert_includes summary[:advisory], "no amount"
       assert_empty summary[:blocking]
-    end
-
-    # --- modulus_result: when the check applies at all ----------------------
-
-    test "no modulus result for a claim with no bank details" do
-      # The algorithm takes a sort code and an account number. Run on a blank
-      # pair it returns INVALID, which rendered "Modulus check failed ... likely
-      # a typo" directly beneath "no bank details" on the expense edit page —
-      # two contradictory red banners, one of them sending finance to hunt for a
-      # typo in an empty field.
-      result = ReviewSupport.modulus_result(
-        expense(payee: payee_without_bank, budget: budget), FakeChecker.new(ModulusCheck::INVALID)
-      )
-
-      assert_nil result
-    end
-
-    test "no modulus result for an international claim" do
-      result = ReviewSupport.modulus_result(
-        expense(payee: valid_payee, budget: budget, payment_method: "international"),
-        FakeChecker.new(ModulusCheck::INVALID)
-      )
-
-      assert_nil result
-    end
-
-    test "a UK claim with bank details is checked" do
-      result = ReviewSupport.modulus_result(
-        expense(payee: valid_payee, budget: budget), FakeChecker.new(ModulusCheck::INVALID)
-      )
-
-      assert_equal ModulusCheck::INVALID, result
-    end
-
-    test "the EUR amount is not read on a UK claim" do
-      # A UK claim never has one, and demanding it would block every one of them.
-      summary = ReviewSupport.attention_summary(
-        expense(payee: valid_payee, budget: budget, receipts: [ receipt ]),
-        { "recBudget1" => budget }, valid_checker
-      )
-
-      assert_not_includes summary[:blocking], "no EUR amount"
     end
   end
 end

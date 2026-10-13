@@ -1,26 +1,19 @@
 <%# locals: (event:, cast:, crew:, tonight:) %>
 <%
-  # Which of the two layouts this show gets, and how big the names may be --
-  # the measured arithmetic lives in DisplayHelper, next to the pixel figures
-  # it depends on.
+  # Which layout this show gets and how big the names may be; the arithmetic is in DisplayHelper.
   layout = display_credits_layout(cast.size, crew.size)
   name_size = layout[:name_size]
-  # Flattened to name/detail pairs so one partial can render either list: the
-  # two read the same on screen and differ only in where the second column of
-  # text comes from.
+  # Flattened to name/detail pairs so one partial renders either list.
   cast_members = cast.map { |member| [ member.user_name, member.cast_display_name ] }
   crew_members = crew.map { |member| [ member.user_name, member.position ] }
-  # Say what is behind the code. display_programme_url falls back to the event's
-  # own page when no programme has been linked, and "Scan for the digital
-  # programme" over a QR that opens a listing is worse than no QR at all.
+  # Say what is behind the code: display_programme_url falls back to the event's
+  # own page, and "Scan for the digital programme" over a listing is worse than no QR.
   qr_label = event.digital_programme_url.present? ? "Scan for the digital programme" : "Scan for more about this show"
 %>
-<%# Captured, not written out repeatedly: it goes under one column or the other,
-    or under both, depending on the layout. %>
+<%# Captured because it goes under one column, the other, or both. %>
 <% qr_block = capture do %>
-  <%# mt-auto, not a fixed offset: for a short list this drops the QR to the
-      foot of the column beside it, so the two end together rather than leaving
-      it floating under three names. %>
+  <%# mt-auto: a short list drops the QR to the foot of its column rather than
+      leaving it floating under three names. %>
   <div class="mt-auto flex items-center gap-6 pt-8">
     <%= display_qr_code(display_programme_url(event), css_class: "h-32 w-32", label: qr_label) %>
     <p class="text-3xl leading-snug text-neutral-300"><%= qr_label %></p>
@@ -39,10 +32,9 @@
   </div>
 
   <% if layout[:mode] == :flowed %>
-    <%# Both lists as one sequence, down the first column and on into the second,
-        so a short cast beside a long company list stops wasting half the screen.
-        The browser balances the two itself, which also absorbs a name long
-        enough to wrap -- something the row arithmetic cannot see coming. %>
+    <%# Both lists as one sequence, down the first column and into the second, so a
+        short cast beside a long company stops wasting half the screen. The browser
+        balances the columns, which absorbs a name that wraps. %>
     <div class="columns-2 gap-16 overflow-hidden" style="height: <%= layout[:flow_height] %>px">
       <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
       <%= render "display/panels/credits_section", title: "Company", members: crew_members,
@@ -52,9 +44,8 @@
   <% else %>
     <div class="grid flex-1 grid-cols-2 gap-16 overflow-hidden <%= layout[:block_position] %>">
       <div class="flex flex-col">
-        <%# Capped in pixels rather than by a Tailwind class: the figure is
-            derived from the measured constants in DisplayHelper, and Tailwind
-            never generates a class name that is only ever built at runtime. %>
+        <%# Capped in pixels: the figure comes from DisplayHelper's measured constants,
+            and Tailwind never generates a class built at runtime. %>
         <div class="overflow-hidden" style="max-height: <%= layout[:cast_list_height] %>px">
           <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
         </div>

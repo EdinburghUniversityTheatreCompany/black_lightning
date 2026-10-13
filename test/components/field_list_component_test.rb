@@ -1,8 +1,6 @@
 require "test_helper"
 
 class FieldListComponentTest < ViewComponent::TestCase
-  # A nil hides the field. Showing a placeholder is the caller's job, where it
-  # builds the spec.
   test "a nil value hides its field entirely" do
     render_inline(FieldListComponent.new(fields: { name: "Hamlet", venue: nil }))
 
@@ -50,7 +48,6 @@ class FieldListComponentTest < ViewComponent::TestCase
     assert_text "Download original image"
   end
 
-  # A record carrying only a generated placeholder has no image worth showing.
   test "a placeholder attachment counts as no image" do
     event = FactoryBot.create(:show)
     event.fetch_image

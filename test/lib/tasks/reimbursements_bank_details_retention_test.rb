@@ -19,15 +19,7 @@ class ReimbursementsBankDetailsRetentionTaskTest < ActiveSupport::TestCase
     assert_match(/1 payee\(s\) would have their bank details cleared/, output)
     assert_match(/Dormant Dora/, output)
     assert_equal "66374958", person.reload.account_number, "a preview must not clear anything"
-  end
-
-  # A preview is for pasting into a chat with the committee, so it must not be
-  # the one place the full number turns up.
-  test "the preview never prints an account number" do
-    dormant_payee
-
-    output = run_rake_task("reimbursements:bank_details_retention_preview")
-
+    # Pasted into a chat with the committee.
     assert_no_match(/66374958/, output)
   end
 

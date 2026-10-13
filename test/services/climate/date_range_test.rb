@@ -9,11 +9,13 @@ class Climate::DateRangeTest < ActiveSupport::TestCase
     assert_equal 7, range.days
   end
 
-  test "honours explicit from and to" do
+  test "honours explicit from and to, with no notice and readable iso dates in to_param" do
     range = Climate::DateRange.from_params({ from: "2026-08-01", to: "2026-08-06" })
 
     assert_equal Date.new(2026, 8, 1), range.from
     assert_equal Date.new(2026, 8, 6), range.to
+    assert_nil range.notice
+    assert_equal({ from: "2026-08-01", to: "2026-08-06" }, range.to_param)
   end
 
   test "covers the whole of the end day" do
@@ -43,22 +45,12 @@ class Climate::DateRangeTest < ActiveSupport::TestCase
   end
 
   test "falls back to the default and says so when a date cannot be read" do
-    # Never silently render a different range as though it were the one asked
-    # for. That is how someone reads last week's damp as this week's.
+    # Never silently render a different range: that is how last week's damp reads
+    # as this week's.
     range = Climate::DateRange.from_params({ from: "not-a-date", to: "" })
 
     assert_equal 7, range.days
     assert_match(/could not be read/i, range.notice)
-  end
-
-  test "a valid range carries no notice" do
-    assert_nil Climate::DateRange.from_params({ from: "2026-08-01", to: "2026-08-06" }).notice
-  end
-
-  test "to_param round-trips as readable iso dates" do
-    range = Climate::DateRange.from_params({ from: "2026-08-01", to: "2026-08-06" })
-
-    assert_equal({ from: "2026-08-01", to: "2026-08-06" }, range.to_param)
   end
 
   test "a single day is a valid one-day range" do

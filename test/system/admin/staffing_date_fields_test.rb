@@ -1,18 +1,8 @@
 require "application_system_test_case"
 
-##
-# System test for the Stimulus-driven "Add Date" / "Remove" controls on the
-# New Staffing form (app/javascript/controllers/staffing_date_fields_controller.js).
-#
-# Regression: the remove link used to be looked up via the obsolete Bootstrap
-# class `a.btn-danger`, which no longer renders (buttons now use ButtonComponent
-# Tailwind classes), so clicking "Add Date" threw
-#   TypeError: ... querySelector(...) is null
-# and the cloned row's Remove button was never wired up.
-##
+# The "Add Date" and "Remove" controls on the New Staffing form (staffing_date_fields_controller.js).
 class Admin::StaffingDateFieldsTest < ApplicationSystemTestCase
   setup do
-    # Admin has every backend permission, including creating staffings.
     @user = FactoryBot.create(:admin)
     login_as @user
   end
@@ -20,15 +10,13 @@ class Admin::StaffingDateFieldsTest < ApplicationSystemTestCase
   test "Add Date appends a date row and Remove deletes it" do
     visit new_admin_staffing_path
 
-    # The blueprint row is display:none, so no date rows are visible initially.
+    # The blueprint row is hidden.
     assert_selector ".control-group.datetime", count: 0
 
     find("button[data-action~='click->staffing-date-fields#addDate']").click
 
-    # A cloned, visible date row should appear (no JS error).
     assert_selector ".control-group.datetime", count: 1
 
-    # The cloned inputs are wired up with indexed names so the row submits.
     within(".control-group.datetime") do
       assert_selector "input[name='start_times[0]']"
       assert_selector "input[name='end_times[0]']"
@@ -38,7 +26,6 @@ class Admin::StaffingDateFieldsTest < ApplicationSystemTestCase
       find("button[data-action~='click->staffing-date-fields#removeDate']").click
     end
 
-    # The row is removed again.
     assert_selector ".control-group.datetime", count: 0
   end
 end

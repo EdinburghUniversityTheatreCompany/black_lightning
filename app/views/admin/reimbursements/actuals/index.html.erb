@@ -11,21 +11,21 @@
   # Every filter the page is on, so each row action comes back to the list
   # the operator was reading rather than to an unfiltered first page.
   filters = { period: @period.presence, search: @search.presence, state: @state,
-              include_offsets: (@include_offsets ? "1" : nil),
-              cost_centre: selected_cost_centre&.key }.compact
-  needs_attention = @state == ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
+              include_offsets: (@include_offsets ? "1" : nil) }.compact.merge(scope_params)
+  attention_state = ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
+  needs_attention = @state == attention_state
   all_state = ::Admin::Reimbursements::ActualsController::STATE_ALL
 %>
 
 <%= render CardComponent.new(title: "Filter") do %>
   <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
-    <%= hidden_field_tag :cost_centre, selected_cost_centre.key if selected_cost_centre %>
-    <%# The state rides in the URL like every other filter, so a "what is left
-        to do" view is a link somebody can bookmark or send. %>
+    <% scope_params.each do |key, value| %>
+      <%= hidden_field_tag key, value %>
+    <% end %>
     <div>
       <%= label_tag :state, "Show", class: FormStyles::LABEL %>
       <%= select_tag :state,
-                     options_for_select([ [ "Rows needing attention", ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION ],
+                     options_for_select([ [ "Rows needing attention", attention_state ],
                                           [ "All rows", all_state ] ], @state),
                      class: input_classes(width: "w-56") %>
     </div>
@@ -42,8 +42,7 @@
       <%= search_field_tag :search, @search, placeholder: "Narrative, ref or amount",
                            class: input_classes(width: "w-64") %>
     </div>
-    <%# Only on the full ledger: an offsetting leg nets to zero, so it is never
-        a row needing attention and the tickbox could only ever add nothing. %>
+    <%# Full ledger only: an offset leg never needs attention. %>
     <% unless needs_attention %>
       <div class="flex items-center gap-2 pb-1">
         <%= check_box_tag :include_offsets, "1", @include_offsets, class: "h-4 w-4" %>
@@ -52,15 +51,14 @@
     <% end %>
     <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
     <% if @period.present? || @search.present? || @include_offsets || !needs_attention %>
-      <%= link_to "Clear", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key), class: "text-sm text-gray-600 underline" %>
+      <%= link_to "Clear", admin_reimbursements_actuals_path(scope_params), class: "text-sm text-gray-600 underline" %>
     <% end %>
   <% end %>
 <% end %>
 
 <div class="my-2 flex flex-wrap items-center justify-between gap-3">
   <p class="mb-0 text-sm text-gray-600">
-    <%# The headline count sits outside the branch: both readings lead on a
-        count, and herb-lint flags a tag repeated across every branch. %>
+    <%# Outside the branch: herb-lint flags a tag repeated across every branch. %>
     <strong><%= pluralize(needs_attention ? @needs_attention_count : @actuals.total_count, "row") %></strong>
     <% if needs_attention %>
       <%= @needs_attention_count == 1 ? "needs" : "need" %> attention
@@ -72,16 +70,13 @@
     <% end %>
   </p>
   <div class="flex flex-wrap items-center gap-2">
-    <%# The switch between the two views, as a button rather than only as the
-        select above: this is the one control the page is read for. %>
     <% if needs_attention %>
       <%= link_to "Show all rows",
                   admin_reimbursements_actuals_path(filters.merge(state: all_state)),
                   class: btn_classes(:secondary, :sm) %>
     <% else %>
       <%= link_to "Show only rows needing attention",
-                  admin_reimbursements_actuals_path(filters.except(:include_offsets)
-                                                      .merge(state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION)),
+                  admin_reimbursements_actuals_path(filters.except(:include_offsets).merge(state: attention_state)),
                   class: btn_classes(:secondary, :sm) %>
     <% end %>
     <%= link_to "Download CSV",
@@ -90,9 +85,7 @@
   </div>
 </div>
 
-<%# The hidden-offsets sentence IS the way to those rows — it was a statement
-    with no route to what it described, and "Not offsetting" (the only undo for
-    a mis-detected pair) was reachable nowhere else. %>
+<%# Hidden-offsets sentence: the only route to "Not offsetting" from the default view. %>
 <% if @offset_count.positive? && !@include_offsets %>
   <p class="mb-2 text-sm text-gray-600">
     <%= pluralize(@offset_count, "row") %> cancel out against a counterpart
@@ -106,8 +99,6 @@
 
 <% if @actuals.total_count.zero? %>
   <%= render CardComponent.new(title: @title) do %>
-    <%# "Nothing imported yet" and "nothing left to do" are different answers,
-        and the default filter makes the second one the common case. %>
     <p class="py-4 text-center text-gray-600">
       <% if needs_attention && @matching_count.positive? %>
         Nothing here needs attention: every row is attached to a claim or a budget.
@@ -127,20 +118,18 @@
        linked =
          if actual.offset?
            render(BadgeComponent.new(type: :warning, pill: true).with_content("Offset"))
-         elsif actual.linked_expense_ids.any?
-           link_to(edit_admin_reimbursements_expense_edit_path(actual.linked_expense_ids.first), class: "no-underline") do
+         elsif actual.expense_id?
+           link_to(edit_admin_reimbursements_expense_edit_path(actual.expense_id), class: "no-underline") do
              render(BadgeComponent.new(type: :primary, pill: true).with_content("Expense"))
            end
          elsif actual.apportioned?
-           # Name the lines and their shares: "Split" on its own is the state
-           # this row is in, not what it means, and the shares are the whole
-           # point of having split it.
+           # Name the lines and shares: "Split" alone is only the state the row is in.
            safe_join([
              render(BadgeComponent.new(type: :info, pill: true).with_content("Split")),
              content_tag(:span, actual.allocation_summary,
                          class: "block text-xs text-gray-600")
            ], " ")
-         elsif actual.linked_budget_ids.any?
+         elsif actual.budget_id?
            render(BadgeComponent.new(type: :info, pill: true).with_content("Budget"))
          else
            render(BadgeComponent.new(type: :secondary, pill: true).with_content("Unlinked"))
@@ -150,18 +139,13 @@
            actual,
            content_tag(:span, actual.nominal_code.presence || "-", class: "font-mono"),
            content_tag(:span, actual.period.presence || "-", class: "font-mono"),
-           # nowrap: the actions cell grew when Unlink joined it, and an ISO
-           # date is the column that gives way first — "2026-09-21" wrapping
-           # after the month reads as two dates.
+           # nowrap: an ISO date wrapping after the month reads as two dates.
            content_tag(:span, reimbursements_date(actual.date), class: "whitespace-nowrap"),
            actual.narrative.presence || "-",
            (reimbursements_money(actual.debit) if actual.debit&.positive?),
            (reimbursements_money(actual.credit) if actual.credit&.positive?),
            linked,
            safe_join([ (if actual.convertible_to_expense?
-              # Two ways a stray debit row gets resolved: it paid a claim
-              # somebody filed (link it), or it is a cost EUSA levied directly
-              # and nobody claimed (convert it).
               safe_join([
                 link_to("Link to claim",
                         link_expense_admin_reimbursements_actual_path(actual.record_id, **filters),
@@ -171,15 +155,10 @@
                         class: btn_classes(:secondary, :sm))
               ], " ")
             elsif actual.apportionable?
-              # A credit covering several shows: split it rather than letting
-              # the whole payout land on one income line.
               link_to("Split across budgets",
                       apportion_admin_reimbursements_actual_path(actual.record_id, **filters),
                       class: btn_classes(:secondary, :sm))
             elsif actual.apportioned?
-              # The way back out, finance-gated as "Not offsetting" is. The row
-              # returns to the unattributed card, so income nobody has placed
-              # is visible again rather than silently gone.
               button_to("Remove split",
                         remove_apportionment_admin_reimbursements_actual_path(
                           actual.record_id, **filters
@@ -188,8 +167,7 @@
                         data: { turbo_confirm: "Undo this split? The row goes back to being an " \
                                                "unplaced credit and each budget loses its share." })
             elsif actual.offset?
-              # The pairing heuristic can be wrong, and a wrong pair hides real
-              # spend from every rollup, so the operator can always undo one.
+              # A wrong pair hides real spend from every rollup, so it must stay undoable.
               button_to("Not offsetting",
                         unoffset_admin_reimbursements_actual_path(
                           actual.record_id, **filters
@@ -198,28 +176,15 @@
                         data: { turbo_confirm: "Treat these two rows as real spend or income " \
                                                "again? Both stay on the ledger." })
             end),
-           # Unlink sits in the SAME cell and is ADDITIVE, not another branch in
-           # the chain above: a row can carry a link AND still be offered
-           # something else. A budget-linked DEBIT is convertible
-           # (convertible_to_expense? reads expense_id, not budget_id), and an
-           # offsetting leg that carries a link must keep "Not offsetting" —
-           # the only control that un-hides it from every rollup. Written as an
-           # elsif, Unlink was unreachable on both.
-           #
-           # A wrong match had no way back short of a console, and a whole
-           # settlement attached to one income line could never be split,
-           # because apportionable? refuses a row that carries a budget.
-           # Also additive: a row needing attention is offered its main action
-           # (link, convert or split) AND this. "Not offsetting" was one-way,
-           # so an operator who undid a pair to look at it could not put it
-           # back, and a pair the detector's score missed could not be recorded
-           # at all.
+           # Additive: a row needing attention gets its main action AND this.
            (if actual.pairable?
               link_to("Mark as offsetting",
                       offset_pair_admin_reimbursements_actual_path(actual.record_id, **filters),
                       class: btn_classes(:secondary, :sm))
             end),
-           (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+           # Additive, not an elsif: a budget-linked debit is still convertible, and a linked
+           # offset leg must keep "Not offsetting".
+           (if actual.expense_id? || actual.budget_id?
               button_to("Unlink",
                         unlink_admin_reimbursements_actual_path(actual.record_id, **filters),
                         class: btn_classes(:secondary, :sm), form_class: "inline-block",

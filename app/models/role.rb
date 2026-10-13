@@ -22,20 +22,17 @@
 #
 class Role < ApplicationRecord
   # Length validations enforcing database column limits
-  validates :name, length: { maximum: 255 }
-  validates :resource_type, length: { maximum: 255 }
-  # The roles that are referenced directly in the code (`has_role?` / `with_role`).
-  # Renaming one would silently break every such check, so these names cannot be changed.
-  # Matched case-insensitively (`hardcoded_name?`): the code asks for :member and "Member" alike,
-  # which MySQL's collation happily equates, so the guard must not be the one place casing matters.
-  # Archiving is unaffected — it creates a suffixed sibling role and never renames this one.
+  validates :name, :resource_type, length: { maximum: 255 }
+  # Roles the code names directly (`has_role?` / `with_role`), so they cannot be renamed.
+  # Matched case-insensitively: the code asks for :member and "Member" alike. Archiving is
+  # unaffected, as it creates a suffixed sibling.
   HARDCODED_NAMES = [ "Admin", "Committee", "Member", "Life Member", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer", "Advance Proposal Checker" ].freeze
   NON_PURGEABLE_ROLES = [ "member", "life member" ]
 
   validates :name, presence: true
   validate :name_not_hardcoded
 
-  before_destroy :prevent_hardcoded_or_non_purgeable_destruction
+  before_destroy :prevent_hardcoded_destruction
 
   has_and_belongs_to_many :parents, class_name: "Role", join_table: :roles_parents, foreign_key: :role_id, association_foreign_key: :parent_id
   has_and_belongs_to_many :children, class_name: "Role", join_table: :roles_parents, foreign_key: :parent_id, association_foreign_key: :role_id
@@ -65,9 +62,7 @@ class Role < ApplicationRecord
     # You cannot purge certain roles.
     return false if NON_PURGEABLE_ROLES.include?(name.downcase.strip)
 
-    ActiveRecord::Base.transaction do
-      self.users.clear
-    end
+    users.clear
   end
 
   # Moves all users on this role to a new role with the academic year shorthand as a suffix.
@@ -78,12 +73,8 @@ class Role < ApplicationRecord
       return false
     end
 
-    # Captured BEFORE the clear, and synced only after the transaction commits.
-    # `users.clear` is delete_all, which fires no association callbacks at all,
-    # so nothing downstream can observe this the way it observes add_role — and
-    # archiving `member` is precisely the moment the whole society stops being
-    # members. Enqueuing inside the transaction would tell pretix about a
-    # revocation that a rollback then undid.
+    # Captured BEFORE the clear (`users.clear` is delete_all and fires no callbacks), and
+    # synced only after the commit so a rollback is never announced to pretix.
     archived_user_ids = users.ids
 
     ActiveRecord::Base.transaction do
@@ -111,35 +102,20 @@ class Role < ApplicationRecord
     errors.add(:name, "is hardcoded and cannot be altered") if Role.hardcoded_name?(name_was) && !name.to_s.casecmp?(name_was.to_s)
   end
 
-  def trained_role?
-    name&.include?("Trained")
-  end
-
-  def remove_user(user)
-    ActiveRecord::Base.transaction do
-      self.users.delete(user)
-    end
-  end
-
   private
 
-  # Only the two roles that actually entitle someone to member pricing are worth
-  # a pretix round trip; archiving "DM Trained" would otherwise enqueue a job per
-  # holder to discover each is a no-op.
+  # Only entitling roles are worth a pretix round trip.
   def sync_pretix_memberships(user_ids)
     return unless Pretix::MembershipSync::ENTITLING_ROLES.include?(name.to_s.downcase.strip)
 
     Pretix::SyncMembershipJob.enqueue_for(user_ids)
   end
 
-  def prevent_hardcoded_or_non_purgeable_destruction
-    if NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
-      errors.add(:base, "Cannot delete role '#{name}' as it is protected from deletion")
-      throw(:abort)
-    elsif Role.hardcoded_name?(name)
-      errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
-      throw(:abort)
-    end
+  def prevent_hardcoded_destruction
+    return unless Role.hardcoded_name?(name)
+
+    errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
+    throw(:abort)
   end
 
   def cycle_through_attributes(attributes, collection)

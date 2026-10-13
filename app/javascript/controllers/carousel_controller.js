@@ -11,7 +11,7 @@ export default class extends Controller {
     if (this.intervalValue > 0) {
       this.#timer = setInterval(() => this.next(), this.intervalValue)
     }
-    // Show first item without animation
+    // First item without animation
     this.itemTargets.forEach((el, i) => el.classList.toggle("active", i === 0))
     this.#updateIndicators(0)
   }
@@ -44,8 +44,6 @@ export default class extends Controller {
     }
   }
 
-  // private
-
   #timer = null
   #sliding = false
 
@@ -56,21 +54,20 @@ export default class extends Controller {
     const outEl = this.itemTargets[this.currentValue]
     const inEl = this.itemTargets[nextIndex]
 
-    // Add active first (makes it visible) then jump off-screen without transitioning.
-    // Browsers don't commit style changes on visibility:hidden elements, so we must
-    // make the element visible before setting the from-position.
+    // Visible before the jump to the start position: browsers do not commit
+    // style changes on a visibility:hidden element.
     inEl.style.transition = "none"
     inEl.classList.add("active")
     inEl.style.transform = `translateX(${direction * 100}%)`
 
-    // Force reflow to commit the no-transition jump before re-enabling transitions
+    // Force a reflow so the jump lands before transitions come back on
     inEl.offsetWidth
 
     inEl.style.transition = ""
     inEl.style.transform = "translateX(0)"
     outEl.style.transform = `translateX(${-direction * 100}%)`
 
-    // Use setTimeout rather than transitionend — more reliable across browsers
+    // setTimeout, not transitionend, which is unreliable across browsers
     setTimeout(() => {
       outEl.classList.remove("active")
       outEl.style.transform = ""

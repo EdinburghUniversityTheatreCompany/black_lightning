@@ -1,10 +1,7 @@
 class Admin::RolesController < AdminController
   include GenericController
 
-  load_resource
-  authorize_resource except: [ :add_user, :remove_user ]
-  before_action :authorize_add_user, only: [ :add_user ]
-  before_action :authorize_remove_user, only: [ :remove_user ]
+  load_and_authorize_resource
 
   def show
     @q = @role.users.ransack(params[:q], auth_object: current_ability)
@@ -46,7 +43,7 @@ class Admin::RolesController < AdminController
 
     if user.present?
       if user.has_role? @role.name
-        @role.remove_user(user)
+        @role.users.delete(user)
         helpers.append_to_flash(:success, "#{user.name(current_user)} has been removed from the role of #{@role.name}")
       else
         helpers.append_to_flash(:warning, "#{user.name(current_user)} was not in the role of #{@role.name}")
@@ -81,29 +78,7 @@ class Admin::RolesController < AdminController
     redirect_to admin_role_url(@role)
   end
 
-  def destroy
-    if @role.destroy
-      helpers.append_to_flash(:success, "The role '#{@role.name}' was successfully deleted.")
-      redirect_to admin_roles_path
-    else
-      helpers.append_to_flash(:error, @role.errors.full_messages.join(", "))
-      redirect_to admin_role_path(@role)
-    end
-  end
-
   private
-
-  def authorize_add_user
-    # Load the role manually since load_resource might not work for custom actions
-    @role ||= Role.find(params[:id])
-    authorize! :add_user, @role
-  end
-
-  def authorize_remove_user
-    # Load the role manually since load_resource might not work for custom actions
-    @role ||= Role.find(params[:id])
-    authorize! :remove_user, @role
-  end
 
   def permitted_params
     [ :name, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]

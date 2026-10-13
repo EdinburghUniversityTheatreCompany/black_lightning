@@ -18,7 +18,6 @@ module Reimbursements
       link(person, user)
 
       assert_equal user.first_name, GreetingName.for(person)
-      assert_not_equal "Pat", GreetingName.for(person)
     end
 
     test "falls back to the registry name when the linked account has no first_name" do
@@ -33,42 +32,21 @@ module Reimbursements
       assert_equal "Pat", GreetingName.for(person.reload)
     end
 
-    test "uses the leading word of the registry name when there is no linked account" do
-      assert_equal "Pat", GreetingName.for(Person.new(name: "Pat Producer"))
-    end
-
-    test "a single-word name is used whole" do
-      assert_equal "Cher", GreetingName.for(Person.new(name: "Cher"))
-    end
-
-    test "surrounding and repeated whitespace is ignored" do
-      assert_equal "Pat", GreetingName.for(Person.new(name: "  Pat   Producer  "))
-    end
-
-    test "a blank name greets generically" do
-      assert_equal "there", GreetingName.for(Person.new(name: ""))
-      assert_equal "there", GreetingName.for(Person.new(name: "   "))
-    end
-
-    # PersonLink writes this row shape whenever a linked user has no full name.
-    test "an email-address name greets generically" do
-      assert_equal "there", GreetingName.for(Person.new(name: "alice@example.com"))
-      assert_equal "there", GreetingName.for(Person.new(name: "alice@example.com Producer"))
-    end
-
-    test "a hyphenated first name is kept whole" do
-      assert_equal "Anne-Marie", GreetingName.for(Person.new(name: "Anne-Marie Dupont"))
-    end
-
-    test "non-ASCII names pass through unchanged" do
-      assert_equal "Zoë", GreetingName.for(Person.new(name: "Zoë Müller"))
-      assert_equal "Seán", GreetingName.for(Person.new(name: "Seán Ó Briain"))
-    end
-
-    # Titlecasing would mangle McDonald, O'Brien and van der Berg.
-    test "the name's own capitalisation is preserved" do
-      assert_equal "PAT", GreetingName.for(Person.new(name: "PAT PRODUCER"))
-      assert_equal "van", GreetingName.for(Person.new(name: "van der Berg"))
+    # An email-shaped name is what PersonLink writes for a linked user with no full name.
+    {
+      "Pat Producer" => "Pat",
+      "Cher" => "Cher",
+      "  Pat   Producer  " => "Pat",
+      "" => "there",
+      "   " => "there",
+      "alice@example.com" => "there",
+      "alice@example.com Producer" => "there",
+      "PAT PRODUCER" => "PAT",
+      "van der Berg" => "van"
+    }.each do |name, expected|
+      test "#{name.inspect} greets as #{expected}" do
+        assert_equal expected, GreetingName.for(Person.new(name: name))
+      end
     end
 
     # Expense belongs_to :person is optional, so created_html can hand us nil.

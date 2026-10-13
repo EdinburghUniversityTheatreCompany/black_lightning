@@ -1,17 +1,12 @@
 module Climate
   ##
-  # The outdoor comparison line, from Open-Meteo's free forecast API.
+  # The outdoor comparison line, from Open-Meteo's free forecast API: no key,
+  # 10k calls/day, non-commercial only, and CC BY 4.0 attribution is a licence
+  # condition (hence ATTRIBUTION on the dashboard).
   #
-  # The outdoor-weather SEAM: anything answering #hourly_series with the same row
-  # shape can replace it (Met Office DataHub, NOAA METAR at EGPH), which is why
-  # sensor.source resolves the client. See Climate::OUTDOOR_SOURCES.
-  #
-  # Free tier: no key, 10k calls/day, CC BY 4.0 attribution REQUIRED (a licence
-  # condition, hence ATTRIBUTION rendered on the dashboard), non-commercial only.
-  #
-  # What beat the alternatives is +past_days+: every call re-serves the last N
+  # +past_days+ is what beat the alternatives: every call re-serves the last N
   # days, so the hourly poll upserts a rolling window and an outage gap fills
-  # itself. There is no backfill code in this feature because of that parameter.
+  # itself. That is the entire backfill strategy.
   class OpenMeteoClient
     BASE_URL = "https://api.open-meteo.com/v1/forecast".freeze
     ATTRIBUTION = "Weather data by Open-Meteo.com".freeze
@@ -19,8 +14,8 @@ module Climate
     LICENCE = "CC BY 4.0".freeze
 
     HOURLY_VARIABLES = %w[temperature_2m relative_humidity_2m dew_point_2m].freeze
-    DEFAULT_PAST_DAYS = 2
-    DEFAULT_FORECAST_DAYS = 1
+    PAST_DAYS = 2
+    FORECAST_DAYS = 1
 
     class Error < StandardError; end
 
@@ -29,11 +24,9 @@ module Climate
     end
 
     # -> [{ recorded_at: Time, temperature_c: Float, relative_humidity: Float,
-    #       dew_point_c: Float }]
-    def hourly_series(latitude:, longitude:, past_days: DEFAULT_PAST_DAYS,
-                      forecast_days: DEFAULT_FORECAST_DAYS)
-      body = request(latitude: latitude, longitude: longitude,
-                     past_days: past_days, forecast_days: forecast_days)
+    #       dew_point_c: Float or nil }]
+    def hourly_series(latitude:, longitude:)
+      body = request(latitude: latitude, longitude: longitude)
       hourly = body["hourly"]
       return [] if hourly.blank?
 
@@ -42,12 +35,12 @@ module Climate
 
     private
 
-    def request(latitude:, longitude:, past_days:, forecast_days:)
+    def request(latitude:, longitude:)
       uri = URI.parse(BASE_URL)
       uri.query = URI.encode_www_form(
         latitude: latitude, longitude: longitude,
         hourly: HOURLY_VARIABLES.join(","),
-        past_days: past_days, forecast_days: forecast_days,
+        past_days: PAST_DAYS, forecast_days: FORECAST_DAYS,
         # Our own zone, so timestamps line up with the Govee readings.
         timezone: Time.zone.tzinfo.name
       )
@@ -79,22 +72,14 @@ module Climate
       times.each_with_index.filter_map do |time, index|
         temperature = temperatures[index]
         humidity = humidities[index]
-        # A stored row of nils would draw as a gap anyway, and would block the
-        # self-healing re-upsert from ever filling it in.
+        # A stored row of nils would block the self-healing re-upsert from filling it.
         next if time.blank? || temperature.nil? || humidity.nil?
 
         { recorded_at: Time.zone.parse(time),
           temperature_c: temperature.to_f,
           relative_humidity: humidity.to_f,
-          dew_point_c: dew_point(dew_points[index], temperature, humidity) }
+          dew_point_c: dew_points[index]&.to_f }
       end
-    end
-
-    # Supplied directly; the fallback keeps a row usable if that ever stops.
-    def dew_point(reported, temperature, humidity)
-      return reported.to_f unless reported.nil?
-
-      DewPoint.celsius(temperature_c: temperature, relative_humidity: humidity)
     end
   end
 end

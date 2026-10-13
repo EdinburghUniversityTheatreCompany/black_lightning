@@ -33,7 +33,8 @@
       this cost centre.
     </p>
 
-    <%= f.input :notification_email, label: "Notification email",
+    <%# as: :string: a type="email" field refuses a list of addresses, so Save would do nothing. %>
+    <%= f.input :notification_email, as: :string, label: "Notification email",
           placeholder: "finance@bedlamfringe.co.uk",
           hint: "This cost centre's own finance mailbox, which gets its nightly reminders. " \
                 "Separate several addresses with a semicolon or a comma. Required: a cost centre whose " \
@@ -41,10 +42,9 @@
                 "explain it." %>
 
     <%= render CollapsibleSectionComponent.new(title: "Advanced") do %>
-      <%# required: false because the model derives the key from the name when it
-          is blank. It is presence-validated, so simple_form would mark it
-          required, and a required control inside this collapsed section is one
-          the browser cannot focus — it silently refuses to submit the form. %>
+      <%# required: false: the model derives a blank key, and a required control
+          in this collapsed section cannot be focused, so the browser silently
+          refuses to submit. %>
       <%= f.input :key, label: "URL key (slug)", placeholder: "auto-generated from the name",
             required: false, wrapper_html: { class: "mb-0" },
             hint: "Leave blank to derive it from the name. If you set it, use lowercase letters, " \

@@ -17,12 +17,9 @@
 #
 module Reimbursements
   ##
-  # A payee (registry of names and emails — not a user account).
-  #
-  # Bank details are NOT columns here — they live in the one-to-one
-  # PaymentDetails record. The readers below delegate to it and answer
-  # ""/false rather than nil for a payee with no PaymentDetails row, so a
-  # caller never has to distinguish "no row" from "row with blanks".
+  # A payee (not a user account). Bank details live in the one-to-one
+  # PaymentDetails; the readers below answer ""/false with no row, so callers
+  # never distinguish "no row" from "row with blanks".
   class Person < ApplicationRecord
     include RecordId
     has_many :expenses, class_name: "Reimbursements::Expense",
@@ -36,25 +33,39 @@ module Reimbursements
                    inverse_of: :reimbursements_person, dependent: :nullify
 
     validates :name, presence: true
-    # Case-insensitivity comes free from the MySQL *_ai_ci collation on the
-    # unique index; this validation just gives a friendly error ahead of it.
+    # Case-insensitivity comes from the column's collation (utf8mb4_unicode_ci) on
+    # the unique index; this gives a friendly error ahead of it.
     validates :email, uniqueness: { case_sensitive: false }, allow_nil: true
 
-    # Blank emails are stored as NULL so the unique index permits many of them.
+    # Blank is stored as NULL so the unique index permits many.
     def email=(value)
       super(value.presence)
     end
 
     def sort_code = payment_details&.sort_code.to_s
     def account_number = payment_details&.account_number.to_s
-    def iban = payment_details&.iban.to_s
-    def bic = payment_details&.bic.to_s
     def notes = payment_details&.notes.to_s
     def verified = payment_details.present? && payment_details.verified
-    alias verified? verified
 
     def bank_details?
       sort_code.present? && account_number.present?
+    end
+
+    # What to write when +actor+ saves this pair, or nil if it is the one already
+    # stored. A change resets Verified (it only means something for the details
+    # that were checked) and appends an audit line with BOTH values masked (as in
+    # Exports::People): notes are encrypted at rest, but the visible copy must
+    # stay masked too.
+    def bank_details_change(new_sort_code, new_account_number, actor:)
+      return if BankDetails.normalize_sort_code(new_sort_code) == BankDetails.normalize_sort_code(sort_code) &&
+                BankDetails.normalize_account_number(new_account_number) == BankDetails.normalize_account_number(account_number)
+
+      { sort_code: new_sort_code, account_number: new_account_number, verified: false,
+        notes: PaymentDetails.append_note(
+          notes,
+          "Bank details updated: sort code #{BankDetails.mask(new_sort_code)}, " \
+          "account #{BankDetails.mask(new_account_number)} by #{actor.name_or_email} (##{actor.id})"
+        ) }
     end
   end
 end

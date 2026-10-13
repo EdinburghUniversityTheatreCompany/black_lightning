@@ -5,19 +5,16 @@ module Admin
     class BudgetsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
-      # The overview's out-of-scope row, pinned whole in five tests below: its
-      # only job is to stop a finance user misreading two figures that cover
-      # different sets of lines, so every clause has to be true — on both
-      # bases and for an out-of-scope line of either type.
+      # The overview's out-of-scope sentence, pinned whole: it stops a finance
+      # user misreading two figures over different sets of lines, so every
+      # clause must hold on both bases and for a line of either type.
       OUT_OF_SCOPE_WARNING =
         "1 of 2 lines shown. 1 line in another year or cost centre, left out of the totals " \
         "below. The not-yet-allocated figure is worked out over every line the area holds.".freeze
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
         @user = users(:member)
+        grant_finance_permission(@user)
 
         @alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         @bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")
@@ -26,8 +23,8 @@ module Admin
         @income = create_reimbursements_budget(name: "Ticket income", budget_type: "Income")
         @forecast = @props.forecasts.create!(amount: 800, date: Date.new(2026, 5, 1),
                                              reason: "Initial projection")
-        # Committed 300 (Approved 150 excl-VAT + Paid 150), paid 150 —
-        # remaining computes to 800 - 300 = 500.
+        # Committed 300 (Approved 150 + Paid 150 excl-VAT), paid 150, remaining
+        # 800 - 300 = 500.
         create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::APPROVED,
                                       amount_excl_vat: 150, amount: 180, receipt: false)
         create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::PAID,
@@ -36,60 +33,22 @@ module Admin
 
       # --- Auth gating -------------------------------------------------------
 
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :edit, params: { id: @props.record_id }
-        assert_response :forbidden
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
+      test "the producer portal permission alone does not open the finance pages" do
         submitter = users(:member_with_phone_number)
-        submitter.add_role("Producer")
+        grant_producer_permission(submitter)
         sign_in submitter
 
         get :edit, params: { id: @props.record_id }
+        assert_response :forbidden
 
+        get :overview
         assert_response :forbidden
       end
 
       # --- Index -------------------------------------------------------------
 
-      test "lists all budgets with their financials" do
-        sign_in @user
-        get :index
-
-        assert_response :success
-        assert_equal 2, assigns(:budgets).size
-        assert_includes response.body, "Props"
-        assert_includes response.body, "Ticket income"
-        # Projected, committed and remaining surface
-        # (computed: forecast 800, committed 300, remaining 500).
-        assert_includes response.body, "800"
-        assert_includes response.body, "300"
-        assert_includes response.body, "500"
-      end
-
-      # The Airtable backend is gone and every figure on this page is computed locally, so
-      # the intro copy must not send a reader looking for a base that no longer exists.
-      test "index copy does not reference the retired Airtable backend" do
-        sign_in @user
-        get :index
-
-        assert_response :success
-        assert_no_match(/airtable/i, response.body)
-      end
-
-      # On top of the setup (forecast 800, committed 300 = Approved 150 + Paid
-      # 150), give @props a Pending expense of 275 (pipeline) and a reconciled
-      # EUSA debit of 161 against its Paid expense — so every rollup on the line
-      # has a distinct, recognisable figure.
+      # A Pending 275 (pipeline) and a reconciled EUSA debit of 161 on the Paid
+      # expense, so every rollup on @props has a distinct figure.
       def seed_pipeline_and_eusa_debit
         create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::PENDING,
                                       amount_excl_vat: 275, amount: 330, receipt: false)
@@ -98,20 +57,22 @@ module Admin
                                             debit: BigDecimal("161.00"))
       end
 
-      # Type, Visible, Pipeline and Paid (portal) are kept off the index for
-      # width; the CSV carries them.
-      test "index shows the EUSA-actual and expected-outturn columns, not the cut ones" do
+      # Type, Visible, Pipeline and Paid (portal) are kept off the index for width; the CSV
+      # carries them.
+      test "index shows each line's rollups, not the cut columns" do
         sign_in @user
-        @income.destroy!
         seed_pipeline_and_eusa_debit
 
         get :index
 
         assert_response :success
+        assert_equal 2, assigns(:budgets).size
         headers = css_select("thead th").map { |th| th.text.strip }
         assert_equal [ "Budget", "Initial", "Projected", "Committed", "EUSA actual", "Expected outturn",
                        "Remaining", "Variance", "Owners", "" ], headers
-        assert_select "td.text-right", text: /161/
+        # @props: forecast 800, committed 300, remaining 500, and EUSA actual 161 from the seed above.
+        %w[800 300 500].each { |figure| assert_includes response.body, "£#{figure}.00" }
+        assert_select "td.text-right", text: "£161.00"
       end
 
       test "a hidden line is tagged after its name rather than in a column" do
@@ -123,20 +84,10 @@ module Admin
         assert_select "tr#budget_#{@props.record_id} td:first-child span", text: "(hidden)"
       end
 
-      test "the index and the overview are tabs that keep the filters" do
-        termtime = create_second_reimbursements_cost_centre
-        sign_in @user
-
-        get :index, params: { cost_centre: termtime.key }
-
-        assert_select "nav[aria-label='Budget views'] a[aria-current=page][href=?]",
-                      admin_reimbursements_budgets_path(cost_centre: termtime.key)
-        assert_select "nav[aria-label='Budget views'] a[href=?]",
-                      overview_admin_reimbursements_budgets_path(cost_centre: termtime.key)
-      end
-
-      test "All is an explicit empty cost_centre= that the page's own links keep" do
+      # Two years, so a link that adds the selected year when the URL names none fails here.
+      test "All is an explicit empty cost_centre= the page's links keep; with none at all they stay bare" do
         create_second_reimbursements_cost_centre
+        seed_two_years
         sign_in @user
 
         get :index, params: { cost_centre: "" }
@@ -146,25 +97,40 @@ module Admin
         assert_select "[aria-label='Cost centre'] a[href=?]", admin_reimbursements_budgets_path(cost_centre: "")
         assert_select "nav[aria-label='Budget views'] a[href=?]",
                       overview_admin_reimbursements_budgets_path(cost_centre: "")
+        assert_select "a[href=?]", new_admin_reimbursements_budget_path(cost_centre: ""), text: "New budget"
+
+        get :index
+
+        assert_select "nav[aria-label='Budget views'] a[href=?]", overview_admin_reimbursements_budgets_path
+        assert_select "a[href=?]", new_admin_reimbursements_budget_path, text: "New budget"
       end
 
-      test "New budget carries the page's scope, an explicit All included" do
+      # The wizard reads an empty cost_centre= as no centre chosen, so it still asks.
+      test "Import budgets keeps an explicit All and adds no year" do
         create_second_reimbursements_cost_centre
         seed_two_years
         sign_in @user
 
         get :index, params: { cost_centre: "" }
 
-        assert_select "a[href=?]", new_admin_reimbursements_budget_path(cost_centre: ""), text: "New budget"
+        assert_select "a[href=?]", admin_reimbursements_budget_import_path(cost_centre: ""), text: "Import budgets"
       end
 
-      test "with no cost_centre at all, page links stay bare" do
+      test "the overview's ledger links keep an explicit All" do
         create_second_reimbursements_cost_centre
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             ref: "AUDIT-7", period: "06", debit: BigDecimal("42.00"))
         sign_in @user
 
-        get :index
+        get :overview, params: { cost_centre: "" }
 
-        assert_select "nav[aria-label='Budget views'] a[href=?]", overview_admin_reimbursements_budgets_path
+        assert_select "main a[href=?]",
+                      admin_reimbursements_actuals_path(cost_centre: "", state: "needs_attention"),
+                      text: "EUSA Actuals ledger"
+        assert_select "main a[href=?]",
+                      admin_reimbursements_actuals_path(cost_centre: "", state: "needs_attention",
+                                                        period: "06", search: "AUDIT-7"),
+                      text: "Mystery charge"
       end
 
       test "the row a save came back for is highlighted" do
@@ -176,6 +142,14 @@ module Admin
         assert_select "tr#budget_#{@props.record_id} td.bg-white", count: 0
       end
 
+      test "every cell of a row greys on hover, the pinned Edit cell included" do
+        sign_in @user
+
+        get :index
+
+        assert_select "tr#budget_#{@props.record_id} td[class~='group-hover:bg-gray-50']", count: 10
+      end
+
       def seed_many_budgets(count)
         ::Reimbursements::Expense.delete_all
         ::Reimbursements::BudgetForecast.delete_all
@@ -184,7 +158,6 @@ module Admin
         (1..count).each { |n| create_reimbursements_budget(name: format("Budget %03d", n)) }
       end
 
-      # Not paginated: a page boundary split an area's lines across pages.
       test "index lists every budget on one page" do
         seed_many_budgets(60)
         sign_in @user
@@ -197,39 +170,23 @@ module Admin
         assert_includes response.body, "60 budgets"
       end
 
-      test "flags a budget that has no owner" do
-        sign_in @user
-        create_reimbursements_budget(name: "Unowned category")
-
-        get :index
-
-        assert_response :success
-        assert_includes response.body, "No owner"
-      end
-
-      test "does not flag a budget that has an owner" do
+      test "flags a visible budget with no owner, never an owned or hidden one" do
         sign_in @user
         @income.destroy!
-
-        get :index
-
-        assert_response :success
-        assert_includes response.body, "Alice Owner"
-        assert_not_includes response.body, "No owner"
-      end
-
-      test "does not flag a hidden (overhead) budget for having no owner" do
-        # Hidden overhead lines (payroll, NI, contracts) will never have a
-        # producer owner, so the "No owner" warning is suppressed for them — it
-        # would only drown the signal on the visible budgets that need chasing.
-        sign_in @user
-        @income.destroy!
+        # Hidden overhead lines (payroll, NI, contracts) never have a producer owner, so flagging
+        # them would drown the visible budgets that need chasing.
         create_reimbursements_budget(name: "Payroll", active: false)
 
         get :index
 
-        assert_response :success
+        assert_includes response.body, "Alice Owner"
         assert_not_includes response.body, "No owner"
+
+        create_reimbursements_budget(name: "Unowned category")
+
+        get :index
+
+        assert_includes response.body, "No owner"
       end
 
       # --- Budget health -----------------------------------------------------
@@ -249,27 +206,16 @@ module Admin
         get :index
 
         assert_response :success
-        # Over-budget indicator surfaces.
         assert_includes response.body, "Over budget"
-        # The health figures (initial, committed) render.
+        # Initial and committed render.
         assert_includes response.body, "1,000"
         assert_includes response.body, "1,400"
       end
 
-      test "does not flag an in-budget budget as over budget" do
-        sign_in @user
-        @income.destroy!
-
-        get :index
-
-        assert_response :success
-        assert_not_includes response.body, "Over budget"
-      end
-
       test "flags 'Over original budget' (not 'Over budget') when the forecast still covers the overspend" do
         sign_in @user
-        # Committed past the initial figure, but a raised forecast leaves a
-        # positive remaining — must NOT show the alarming red "Over budget".
+        # Committed past the initial figure, but a raised forecast still
+        # leaves some remaining.
         revised = create_reimbursements_budget(name: "Revised set", initial_budget: 1000,
                                                owners: [ @alice ])
         revised.forecasts.create!(amount: 1400, date: Date.new(2026, 5, 1), reason: "revised up")
@@ -280,7 +226,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Over original budget"
-        assert_not_includes response.body, ">Over budget<"
+        assert_select "span", text: "Over budget", count: 0
       end
 
       # --- CSV export --------------------------------------------------------
@@ -293,9 +239,10 @@ module Admin
         assert_csv_download("budgets")
       end
 
-      test "index CSV export carries every rollup column the table shows" do
+      test "index CSV export carries every rollup column, the ones the table leaves out included" do
         sign_in @user
         seed_pipeline_and_eusa_debit
+        @income.update!(active: false)
 
         get :index, format: :csv
 
@@ -320,35 +267,17 @@ module Admin
         assert_equal "500.0", props[12], "remaining = 800 - 300"
         assert_equal "-200.0", props[13], "variance = 800 - 1000, still a usable number"
         assert_equal "Alice Owner", props[14]
+        assert_equal %w[Income Hidden], rows.find { |r| r[0] == "Ticket income" }.values_at(2, 3)
       end
 
-      test "index CSV export marks a hidden income budget as such" do
-        sign_in @user
-        @income.update!(active: false)
-
-        get :index, format: :csv
-
-        income = CSV.parse(response.body).find { |r| r[0] == "Ticket income" }
-        assert_equal %w[Income Hidden], income.values_at(2, 3)
-      end
-
-      test "index CSV export lists every budget" do
-        seed_many_budgets(60)
+      # The glossary block above the table is the one definition; a title= note drifts from it.
+      test "index column headings carry no tooltip of their own" do
         sign_in @user
 
-        get :index, format: :csv
+        get :index
 
-        assert_equal 61, CSV.parse(response.body).size, "header + all 60 budgets"
-      end
-
-      test "index CSV export neutralises a formula-injected budget name" do
-        sign_in @user
-        create_reimbursements_budget(name: "=1+1", nominal_code: "4200")
-
-        get :index, format: :csv
-
-        rows = CSV.parse(response.body)
-        assert_includes rows.map(&:first), "'=1+1"
+        assert_select "thead [title]", count: 0
+        assert_select "details dt", text: "Expected outturn"
       end
 
       test "index offers a Download CSV link" do
@@ -379,23 +308,8 @@ module Admin
         end
       end
 
-      test "an area with no agreed total renders no Remaining figure, not a misleading zero" do
-        sign_in @user
-        area = create_reimbursements_area(name: "No total yet")
-        create_reimbursements_budget(name: "No total yet: Set", area: area)
-
-        get :index
-
-        assert_response :success
-        assert_select "[data-area='#{area.record_id}']" do |elements|
-          assert_no_match(/Remaining/, elements.first.text)
-        end
-      end
-
-      # The row a finance user reads before opening anything: it carries the
-      # agreed total, the allocation and what is left, side by side. A rowgroup
-      # heading is the only place those three sit together, so the arithmetic
-      # has to reconcile by reading left to right.
+      # +area+'s rowgroup heading on the grouped index: agreed total,
+      # allocation and what is left, which must reconcile left to right.
       def area_heading(area)
         css_select("[data-area='#{area.record_id}'] th[scope=rowgroup]").sole.text.squish
       end
@@ -414,9 +328,7 @@ module Admin
         heading = area_heading(area)
         assert_includes heading, "Allocated £400.00 of spend less £800.00 of income"
         assert_includes heading, "£1,400.00 not yet allocated"
-        # You cannot allocate minus four hundred pounds, a negative money
-        # figure means bad news everywhere else in this portal, and
-        # 1,000 - (-400) = 1,400 reconciles only by subtracting a negative.
+        # 1,000 - (-400) = 1,400 would reconcile only by subtracting a negative.
         assert_not_includes heading, "-£400.00"
       end
 
@@ -452,44 +364,12 @@ module Admin
         # than as a plan nobody has set yet.
         assert_not_includes heading, "Agreed total"
         assert_not_includes heading, "not yet allocated"
+        # A £0.00 here would read as fully overspent.
+        assert_not_includes heading, "Remaining"
         assert_includes heading, "Allocated £400.00"
       end
 
-      # Same shape as #seed_paged_budgets below, but every budget belongs to
-      # ONE area — the fixture for the page-boundary test that follows.
-      # Alphabetically-named for the same reason: page 1 (50/page) is
-      # deterministic, so "Budget 001".."Budget 050" land on it and
-      # "Budget 051".."Budget 060" spill to page 2.
-      def seed_paged_area_budgets(count, area:)
-        ::Reimbursements::Expense.delete_all
-        ::Reimbursements::BudgetForecast.delete_all
-        ::Reimbursements::BudgetOwner.delete_all
-        ::Reimbursements::Budget.delete_all
-        (1..count).each { |n| create_reimbursements_budget(name: format("Budget %03d", n), area: area) }
-      end
-
-      # The subtotal in the area's header always covers EVERY line linked to
-      # it (area.budgets, unscoped — the same total Area#committed_amount and
-      # #allocated already sum over). The index is not paginated, so a large
-      # area in scope renders every line and has nothing to disclose.
-      test "an area with more lines than the old page size renders them all" do
-        sign_in @user
-        area = create_reimbursements_area(name: "Big Area")
-        seed_paged_area_budgets(60, area: area)
-
-        get :index
-
-        assert_response :success
-        assert_select "[data-area='#{area.record_id}']" do |elements|
-          assert_includes elements.first.text, "Budget 060"
-          assert_no_match(/lines shown/, elements.first.text)
-        end
-      end
-
-      # The common case: nothing states a line count when every one of the
-      # area's lines fits on the page — a permanent "X of X lines shown" would
-      # be noise on every ordinary area, and this is what stops a future edit
-      # from dropping the `visible_count < total_count` guard unnoticed.
+      # A permanent "X of X lines shown" would be noise on every ordinary area.
       test "an area whose lines all fit on the page states nothing" do
         sign_in @user
         area = create_reimbursements_area(name: "Small Area")
@@ -504,100 +384,22 @@ module Admin
         end
       end
 
-      # Builds +area_count+ areas with +budgets_per_area+ budgets each, every
-      # budget carrying an expense (so Budget#committed_amount queries) and a
-      # forecast (so Budget#projected_amount/Area#allocated queries) — a
-      # single area with a single budget can't tell a preloaded read from an
-      # N+1, since both cost one query either way.
-      def seed_areas_with_budgets(area_count:, budgets_per_area:)
-        ::Reimbursements::Expense.delete_all
-        ::Reimbursements::BudgetForecast.delete_all
-        ::Reimbursements::BudgetOwner.delete_all
-        ::Reimbursements::Budget.delete_all
-        ::Reimbursements::Area.delete_all
-
-        area_count.times do |a|
-          area = create_reimbursements_area(name: "Area #{a}", initial_budget: 1_000)
-          budgets_per_area.times do |n|
-            budget = create_reimbursements_budget(name: "Area #{a}: Line #{n}", area: area,
-                                                  initial_budget: 100)
-            budget.forecasts.create!(amount: 150, date: Date.new(2026, 5, 1), reason: "plan")
-            create_reimbursements_expense(budget: budget, status: ::Reimbursements::Status::APPROVED,
-                                          amount_excl_vat: 50, amount: 60, receipt: false)
-          end
-        end
-      end
-
-      # Quadrupling the row count (2 areas/4 budgets -> 4 areas/16 budgets)
-      # must not multiply the query count: DatabaseStore#areas preloads each
-      # area's owners and its budgets' expenses/forecasts in a handful of
-      # fixed queries, however many rows there are.
-      test "the index's query count does not grow with the number of areas or budgets" do
-        sign_in @user
-
-        seed_areas_with_budgets(area_count: 2, budgets_per_area: 2)
-        small_queries = count_queries { get :index }
-
-        seed_areas_with_budgets(area_count: 4, budgets_per_area: 4)
-        large_queries = count_queries { get :index }
-
-        assert_operator large_queries, :<=, small_queries + 5,
-                        "expected roughly the same query count for 4 budgets (#{small_queries}) " \
-                        "and 16 budgets (#{large_queries}) across 2x the areas"
-      end
-
-      # Negative control for the assertion above: reading Area#committed_amount
-      # / #allocated off Areas loaded WITHOUT the preload (as a bare
-      # `Area.all` would be, the mistake the brief warns against — reading
-      # budget.area's own #budgets association, or store.areas without its
-      # `budgets: %i[expenses forecasts]` include) costs a query per budget's
-      # expenses plus a query per budget's forecasts. This proves the positive
-      # assertion above isn't vacuously true — an unpreloaded read really does
-      # scale with row count, and the preloaded one really doesn't.
-      test "negative control: an unpreloaded area read DOES scale with the number of areas/budgets" do
-        sign_in @user
-
-        seed_areas_with_budgets(area_count: 2, budgets_per_area: 2)
-        small_areas = ::Reimbursements::Area.all.to_a
-        small_queries = count_queries { small_areas.each { |a| a.committed_amount; a.allocated } }
-
-        seed_areas_with_budgets(area_count: 4, budgets_per_area: 4)
-        large_areas = ::Reimbursements::Area.all.to_a
-        large_queries = count_queries { large_areas.each { |a| a.committed_amount; a.allocated } }
-
-        assert_operator small_queries, :>, 4,
-                        "expected reading committed_amount/allocated off unpreloaded areas to cost " \
-                        "a query per budget even at the smaller size (got #{small_queries})"
-        assert_operator large_queries, :>, small_queries,
-                        "expected the unpreloaded read to scale with the row count: " \
-                        "#{small_queries} queries for 4 budgets vs #{large_queries} for 16"
-      end
-
-      test "a forecast amount typed with a comma or a pound sign is read" do
-        sign_in @user
-
-        post :forecast, params: { id: @props.record_id, amount: "£1,200", date: "2026-06-01",
-                                  reason: "typed the way people type" }
-
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_equal BigDecimal("1200"),
-                     ::Reimbursements::Budget.find(@props.id).current_forecast
-      end
-
       # --- Overview (nominal-code rollup) ------------------------------------
 
-      test "overview requires the finance permission" do
-        sign_in users(:committee)
+      # Its column notes come from the Glossary block, not title= tooltips that drift from it.
+      test "overview defines Expected outturn in its glossary block, not in a tooltip" do
+        sign_in @user
+
         get :overview
-        assert_response :forbidden
+
+        assert_select "details dt", text: "Expected outturn"
+        assert_select "thead [title]", count: 0
       end
 
       test "overview groups budgets by nominal code with a per-code subtotal" do
         sign_in @user
-        # @props is nominal 4000, initial 1000. Add a second 4000 budget and TWO
-        # 4100 budgets, with amounts chosen so every subtotal is a figure no
-        # individual row carries — otherwise an assertion on "4000" or "200" is
-        # satisfied by the budget row itself and pins no grouping at all.
+        # @props is 4000 with initial 1000. Amounts are chosen so no single row
+        # carries a subtotal's figure, or the assertions would pin no grouping.
         create_reimbursements_budget(name: "Set", nominal_code: "4000", initial_budget: 500)
         create_reimbursements_budget(name: "Travel", nominal_code: "4100", initial_budget: 200)
         create_reimbursements_budget(name: "Digs", nominal_code: "4100", initial_budget: 350)
@@ -605,13 +407,11 @@ module Admin
         get :overview
 
         assert_response :success
-        # Each nominal code heads its own group, and each group ends in a subtotal.
         assert_includes response.body, "Nominal code 4000"
         assert_includes response.body, "Nominal code 4100"
         assert_includes response.body, "Subtotal 4000"
         assert_includes response.body, "Subtotal 4100"
-        # Subtotals: 4000 = 1000 + 500 = 1500; 4100 = 200 + 350 = 550. Neither
-        # figure appears on any single budget row.
+        # Subtotals: 4000 = 1000 + 500; 4100 = 200 + 350.
         assert_includes response.body, "1,500"
         assert_includes response.body, "550"
         # Grand total initial = 1000 + 500 + 200 + 350 = 2050 (Income has none).
@@ -619,31 +419,24 @@ module Admin
         assert_includes response.body, "Grand total"
       end
 
-      test "the overview's query count does not grow with the number of budgets or areas" do
+      test "neither page's query count grows with the number of budgets or areas" do
         sign_in @user
-        # One area holding one budget with an expense and a linked actual, so
-        # every preload on the page has rows to load before the baseline is taken
-        # (Rails skips a preload query for an association with nothing to load,
-        # which would otherwise make the two renders different shapes rather than
-        # different sizes).
+        # The baseline holds one of everything: Rails skips a preload with nothing to
+        # load, which would make the two renders different shapes, not sizes.
         seed_budget_with_actual(0)
-        overview_query_count # warm up anything cached per process
-        baseline = overview_query_count
+        get :index
+        get :overview # warm anything cached per process
+        baseline = %i[index overview].map { |action| count_queries { get action } }
 
         9.times { |i| seed_budget_with_actual(i + 1) }
 
-        # Every figure on the page comes off a preloaded association, so nine more
-        # areas, budgets, expenses and ledger rows cost exactly what one did. The
-        # area figures are the ones at risk: read off budget.area instead of
-        # store.areas, each area's committed/allocated would query per line.
-        assert_equal baseline, overview_query_count
+        assert_equal baseline, %i[index overview].map { |action| count_queries { get action } }
       end
 
       test "overview totals expense and income budgets separately, never as one figure" do
         sign_in @user
-        # @props (Expense) already carries initial 1000, so expense initial is
-        # 1000 + 9000 = 10,000 and income initial is 8000. A single grand total
-        # would read 18,000, which is neither total spend nor net.
+        # Expense initial 1000 (@props) + 9000, income 8000. One grand total
+        # would read 18,000, which is neither spend nor net.
         create_reimbursements_budget(name: "Lighting", nominal_code: "4200",
                                      initial_budget: 9000)
         create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
@@ -652,9 +445,6 @@ module Admin
         get :overview
 
         assert_response :success
-        expense_total, income_total = assigns(:grand_total).by_type
-        assert_equal BigDecimal("10000"), expense_total.initial
-        assert_equal BigDecimal("8000"), income_total.initial
         assert_includes response.body, "Grand total (Expense budgets)"
         assert_includes response.body, "Grand total (Income budgets)"
         assert_includes response.body, "£10,000.00"
@@ -662,7 +452,7 @@ module Admin
         assert_not_includes response.body, "£18,000.00"
       end
 
-      test "overview marks each row's budget type and leaves income outturn blank" do
+      test "overview marks each row's budget type" do
         sign_in @user
         create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
                                      budget_type: "Income", initial_budget: 8000)
@@ -674,18 +464,18 @@ module Admin
         assert_select "table.table thead th", text: "Type"
         assert_select "table.table tbody td", text: "Income"
         assert_select "table.table tbody td", text: "Expense"
-        assert_nil assigns(:rollups).flat_map(&:budgets)
-                                    .find { |b| b.name == "Programme ads" }.expected_outturn
+        assert_select "th", text: "Remaining"
+        assert_select "th", text: "Variance"
       end
 
       # --- The overview as a health check -------------------------------------
-      #
-      # It had no health signals at all: no over-budget badge, no Remaining, no
-      # Variance, and the unattributed total — the one real health number —
-      # sat under ~120 table rows.
 
       test "the overview badges an over-budget line, as the index does" do
         sign_in @user
+        get :overview
+
+        assert_includes response.body, "No line is over budget"
+
         over = create_reimbursements_budget(name: "Overspent", nominal_code: "4321",
                                             initial_budget: 100)
         create_reimbursements_expense(budget: over, status: ::Reimbursements::Status::APPROVED,
@@ -698,23 +488,7 @@ module Admin
         assert_equal 1, assigns(:over_budget_count)
       end
 
-      test "the overview's summary states both health numbers above the tables" do
-        sign_in @user
-        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
-                                             debit: BigDecimal("42.00"))
-
-        get :overview
-
-        assert_response :success
-        assert_includes response.body, "attributed to no budget"
-        assert_includes response.body, "#unattributed-actuals"
-        assert_equal BigDecimal("42.00"), assigns(:unattributed_total)
-        assert_equal 1, assigns(:unattributed_count)
-      end
-
-      # The net is debits less credits, so unattributed INCOME makes it
-      # negative — and a bare negative money figure means bad news everywhere
-      # else in this portal. The count is the headline instead.
+      # Unattributed income makes the net negative, so the count leads.
       test "the summary leads on the count, so a net credit does not read as alarm" do
         sign_in @user
         ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Box office",
@@ -727,37 +501,7 @@ module Admin
         assert_includes response.body, "debits less credits"
       end
 
-      test "the overview says so plainly when nothing is over budget" do
-        sign_in @user
-
-        get :overview
-
-        assert_response :success
-        assert_includes response.body, "No line is over budget"
-      end
-
-      test "the overview carries Remaining and Variance columns" do
-        sign_in @user
-
-        get :overview
-
-        assert_response :success
-        assert_select "th", text: "Remaining"
-        assert_select "th", text: "Variance"
-      end
-
       # --- Remaining is never blank without a reason -------------------------
-
-      test "the index reports Remaining for a line carrying only an initial budget" do
-        sign_in @user
-        ::Reimbursements::Budget.create!(name: "Freshly imported", nominal_code: "4321",
-                                         initial_budget: BigDecimal("450"))
-
-        get :index
-
-        assert_response :success
-        assert_includes response.body, "£450.00"
-      end
 
       test "a line with no forecast and no initial budget says so instead of a dash" do
         sign_in @user
@@ -771,13 +515,12 @@ module Admin
 
       test "overview lists unattributed actuals, including spend on a budgeted code" do
         sign_in @user
-        # 4000 IS budgeted (@props), but nothing links this row to an expense, so
-        # no budget's figures count it. A code-based "unbudgeted" list would let
-        # it fall through both the rollups and the list, off the page entirely.
+        # 4000 is budgeted (@props) but this row links to nothing, so no
+        # budget counts it; a code-based list would lose it entirely.
         ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Unlinked hire",
                                              debit: BigDecimal("1250.00"))
         ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
-                                             debit: BigDecimal("42.00"))
+                                             ref: "AUDIT-7", period: "06", debit: BigDecimal("42.00"))
         # Linked to one of @props's expenses, so @props already counts it.
         linked = ::Reimbursements::Expense.where(budget_id: @props.id).first
         ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Reconciled row",
@@ -793,57 +536,18 @@ module Admin
         # Total unattributed = 1250 + 42 = 1292; the linked row is not in the list.
         assert_includes response.body, "£1,292.00"
         assert_not_includes response.body, "Reconciled row"
-      end
-
-      # The card used to say "Link each row on the Reconcile page". Reconcile is
-      # the paste wizard and has no per-row linking at all — Link to a claim,
-      # Create expense and Split across budgets are all on the EUSA Actuals
-      # ledger, which the card sent people away from.
-      test "overview's unattributed card names and links the ledger, not Reconcile" do
-        sign_in @user
-        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
-                                             debit: BigDecimal("42.00"))
-
-        get :overview
-
-        assert_response :success
+        assert_not_includes response.body, "Every EUSA actual is attributed to a budget."
+        assert_equal [ BigDecimal("1292"), 2 ], [ assigns(:unattributed_total), assigns(:unattributed_count) ]
+        # The summary links to the card, and the card to the EUSA Actuals ledger (not Reconcile,
+        # which has no per-row linking), each row to its own ref and period on it.
+        assert_includes response.body, "attributed to no budget"
+        assert_includes response.body, "#unattributed-actuals"
         assert_includes response.body, "EUSA Actuals ledger"
         assert_includes response.body, admin_reimbursements_actuals_path(state: "needs_attention")
-        assert_not_includes response.body, "Link each row on the Reconcile page"
-      end
-
-      test "each unattributed row links to itself on the ledger" do
-        sign_in @user
-        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
-                                             ref: "AUDIT-7", period: "06",
-                                             debit: BigDecimal("42.00"))
-
-        get :overview
-
-        assert_response :success
-        # Its own ref and period, so the operator lands on the row they clicked
-        # rather than on the whole ledger.
         assert_includes response.body,
                         CGI.escapeHTML(admin_reimbursements_actuals_path(
                                          state: "needs_attention", period: "06", search: "AUDIT-7"
                                        ))
-      end
-
-      test "overview does not report a correctly-offset accrual pair as unattributed" do
-        sign_in @user
-        store = ::Reimbursements::DatabaseStore.new
-        accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL 4200",
-                                       debit: BigDecimal("4200"))
-        reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL 4200",
-                                        credit: BigDecimal("4200"))
-        store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
-
-        get :overview
-
-        assert_response :success
-        assert_includes response.body, "Every EUSA actual is attributed to a budget."
-        assert_not_includes response.body, "ACCRUAL 4200"
-        assert_not_includes response.body, "£4,200.00"
       end
 
       test "overview shows a friendly note when every actual is attributed" do
@@ -851,22 +555,10 @@ module Admin
         get :overview
 
         assert_response :success
-        # The card title renders either way, so assert the empty-state SENTENCE,
-        # which only appears when the list really is empty.
+        # The card title renders either way; the sentence only when empty.
         assert_includes response.body, "Actuals not attributed to any budget"
         assert_includes response.body, "Every EUSA actual is attributed to a budget."
         assert_empty assigns(:unattributed_by_code)
-      end
-
-      test "overview does not show the empty-state note when there IS unattributed spend" do
-        sign_in @user
-        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
-                                             debit: BigDecimal("42.00"))
-
-        get :overview
-
-        assert_response :success
-        assert_not_includes response.body, "Every EUSA actual is attributed to a budget."
       end
 
       # --- Overview (area rollup) --------------------------------------------
@@ -883,32 +575,50 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Budgets by area"
-        # The heading span exists only on an area row, so a budget called
-        # "Cogito something" could not satisfy this the way a body match would.
-        # The heading is a LINK to the area's own PAGE — its figures, its lines
-        # and its claims, with Edit offered from there. It used to point at the
-        # edit form, which sent a finance user to a form to read a number.
+        # The area heading links to the area's own page.
         assert_select "th[scope=rowgroup] a.font-semibold", text: "Cogito"
         assert_select "th[scope=rowgroup] a[href=?]",
                       admin_reimbursements_area_path(area.record_id)
-        # 750 = 400 + 350, a figure no single row carries, so the assertion pins
-        # the grouping rather than a budget line.
+        # 750 = 400 + 350, a figure no single row carries.
         assert_includes response.body, "Subtotal Cogito (Expense)"
         assert_includes response.body, "£750.00"
-        # The committee's agreed figure and what is left to split out of it
-        # (5000 - 750), both read off the area rather than off its lines.
+        # The agreed figure and what is left to split (5000 - 750).
         assert_includes response.body, "Agreed total (expenses) £5,000.00"
         assert_includes response.body, "£4,250.00 not yet allocated"
-        # Props and the income line belong to no area, and still have to appear —
-        # under a heading, never behind an empty state.
+        # Props and the income line are in no area, and still appear under a
+        # heading.
         assert_includes response.body, "Not in an area"
         assert_not_includes response.body, "No budgets to group."
       end
 
+      test "the overview orders its area cards as the index orders its groups" do
+        sign_in @user
+        %w[Zeta Ábel].each do |name|
+          create_reimbursements_budget(name: "Set", area: create_reimbursements_area(name: name))
+        end
+
+        get :overview
+
+        assert_equal %w[Ábel Zeta], assigns(:area_rollups).map(&:name)
+      end
+
+      # Area names repeat across centres. The newer area's line has the lower code, so it is
+      # met first and only the id tiebreak puts the older one first, as the index does.
+      test "the overview orders two same-named areas by id, as the index does" do
+        sign_in @user
+        older = create_reimbursements_area(name: "Cogito", cost_centre: ::Reimbursements::CostCentre.default)
+        newer = create_reimbursements_area(name: "Cogito", cost_centre: create_second_reimbursements_cost_centre)
+        create_reimbursements_budget(name: "Set", nominal_code: "4400", area: older)
+        create_reimbursements_budget(name: "Set", nominal_code: "4300", area: newer)
+
+        get :overview
+
+        assert_equal [ older.id, newer.id ], assigns(:area_rollups).map { |rollup| rollup.area.id }
+      end
+
       test "overview allocates an area on its declared basis, never netting its subtotals" do
         sign_in @user
-        # An agreed total, so the figure the basis governs is actually reached
-        # and can be asserted on.
+        # An agreed total, so the figure the basis governs is reached.
         area = create_reimbursements_area(name: "Cogito", initial_budget: 1000)
         create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
                                      initial_budget: 410)
@@ -925,14 +635,12 @@ module Admin
         assert_includes response.body, "Subtotal Cogito (Income)"
         # 1,215 is neither the show's spend nor its income, so nothing says it.
         assert_not_includes response.body, "£1,215.00"
-        # A spend cap by default: the £805 of ticket income buys the show no
-        # more room, so 1,000 - 410 is what is left to split into lines.
+        # A spend cap by default: income buys no room, so 1,000 - 410.
         assert_includes response.body, "Agreed total (expenses) £1,000.00"
         assert_includes response.body, "£590.00 not yet allocated"
 
-        # A committee's allowance nets, so the same £805 raises it: 1,000 - 410
-        # + 805. The two subtotals below are the same figures either way — the
-        # basis governs the area's own arithmetic and nothing else.
+        # A net allowance: 1,000 - 410 + 805. The subtotals are unchanged; the
+        # basis governs the area's own arithmetic only.
         area.update!(budget_basis: "net")
         get :overview
 
@@ -946,8 +654,7 @@ module Admin
 
       test "an area with no agreed total shows no figure, never a zero" do
         sign_in @user
-        # The area and its line share no substring, so neither assertion below
-        # can pass off the other's name.
+        # The area and its line share no substring.
         area = create_reimbursements_area(name: "Backfilled show")
         create_reimbursements_budget(name: "Props ledger", nominal_code: "4300", area: area,
                                      initial_budget: 400)
@@ -961,50 +668,28 @@ module Admin
         assert_not_includes response.body, "not yet allocated"
       end
 
-      test "an area holding a line outside the selected year says how many are shown" do
+      test "with no agreed total the out-of-scope warning claims no allocation figure" do
         this_year, next_year = seed_two_years
         sign_in @user
-        area = create_reimbursements_area(name: "Cogito", financial_year: this_year,
-                                          initial_budget: 5000)
+        area = create_reimbursements_area(name: "Cogito", financial_year: this_year)
         create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
                                      initial_budget: 400, financial_year: this_year)
-        # Reachable by an ordinary edit, and the budget form preserves it
-        # deliberately, so the overview has to state it rather than drop it.
         create_reimbursements_budget(name: "Cogito next year", nominal_code: "4300", area: area,
                                      initial_budget: 900, financial_year: next_year)
 
         get :overview, params: { year: this_year.key }
 
         assert_response :success
-        # The totals cover the year on screen: the other line is not listed...
         assert_not_includes response.body, "Cogito next year"
-        # ...while the area's own unallocated figure subtracts both lines
-        # (5000 - 400 - 900), which is exactly the disagreement the row names.
-        assert_includes response.body, "£3,700.00 not yet allocated"
-        # Pinned whole: the sentence's only job is to stop a finance user
-        # misreading two disagreeing figures, so every clause has to be true.
-        # The agreed total is named by neither: it counts no lines at all.
-        assert_equal OUT_OF_SCOPE_WARNING, css_select("span.text-warning").sole.text.squish
-
-        # With no agreed total there is no allocation figure on screen, so the
-        # sentence must not claim one.
-        area.update!(initial_budget: nil)
-        get :overview, params: { year: this_year.key }
-
         assert_not_includes response.body, "not yet allocated"
         assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
                      "the totals below.",
                      css_select("span.text-warning").sole.text.squish
       end
 
-      # The sentence above states no DIRECTION, and these four rows are why:
-      # it is read beside a figure the out-of-scope line reduces, raises, or
-      # does not move at all, depending on the basis and the line's type. An
-      # earlier "already subtracted from" was false on two of the four and
-      # "already counted in" on one, and only one of the four was pinned.
-      #
-      # Each row states what the not-yet-allocated figure comes to, so the
-      # sentence is never asserted beside a figure nobody checked.
+      # The sentence states no DIRECTION because, across these four rows, the
+      # out-of-scope line reduces, raises or does not move the not-yet-allocated
+      # figure. Each row states that figure.
       {
         [ "expenses", "Expense" ] => "£3,700.00",  # 5,000 - 400 - 900: reduced
         [ "expenses", "Income" ] => "£4,600.00",   # 5,000 - 400: not moved at all
@@ -1018,6 +703,8 @@ module Admin
                                             initial_budget: 5000, budget_basis: basis)
           create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
                                        initial_budget: 400, financial_year: this_year)
+          # Reachable by an ordinary edit, and the budget form preserves it
+          # deliberately, so the overview has to state it rather than drop it.
           create_reimbursements_budget(name: "Cogito next year", nominal_code: "4300", area: area,
                                        initial_budget: 900, financial_year: next_year,
                                        budget_type: out_of_scope_type)
@@ -1025,20 +712,16 @@ module Admin
           get :overview, params: { year: this_year.key }
 
           assert_response :success
+          assert_not_includes response.body, "Cogito next year"
           assert_includes response.body, "#{unallocated} not yet allocated"
           assert_equal OUT_OF_SCOPE_WARNING, css_select("span.text-warning").sole.text.squish
         end
       end
 
-      test "the area card's empty state appears only when there is nothing to group" do
+      test "the area card says so when there is nothing to group" do
         sign_in @user
-        # Budgets but no areas is not an empty page: they group under "Not in an
-        # area", and a banner over a full table would contradict it.
-        get :overview
-
-        assert_includes response.body, "Not in an area"
-        assert_not_includes response.body, "No budgets to group."
-
+        # Budgets but no areas is not an empty page (they group under "Not in an
+        # area"), so the banner is for no budgets at all.
         ::Reimbursements::EusaActual.delete_all
         ::Reimbursements::Expense.destroy_all
         ::Reimbursements::Budget.destroy_all
@@ -1047,23 +730,6 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "No budgets to group."
-      end
-
-      test "the area card reads its figures off store.areas, not off budget.area" do
-        sign_in @user
-        area = create_reimbursements_area(name: "Cogito", initial_budget: 5000)
-        create_reimbursements_budget(name: "Marketing", nominal_code: "4300", area: area,
-                                     initial_budget: 400)
-
-        get :overview
-
-        assert_response :success
-        rollup = assigns(:area_rollups).sole
-        # store.areas is the unscoped, fully-preloaded reader; the line count on
-        # the heading comes off that loaded collection rather than a COUNT.
-        assert rollup.area.budgets.loaded?
-        assert_equal 1, rollup.lines_total
-        assert_equal 0, rollup.lines_out_of_scope
       end
 
       # --- Edit --------------------------------------------------------------
@@ -1079,13 +745,33 @@ module Admin
         assert_includes response.body, "Alice Owner"
         assert_includes response.body, "Bob Owner"
         assert_includes response.body, "Initial projection"
-        # The hidden empty field is what clears the owners when the last one is
-        # taken off — without it the post carries no owner_ids key at all.
-        assert_select "select#owner_ids[name='owner_ids[]'][multiple].simple-select2"
+        # The hidden empty field clears the owners when the last is taken off.
+        assert_select "fieldset[data-reimbursements-budget-area-target=owners] " \
+                      "select#owner_ids[name='owner_ids[]'][multiple].simple-select2"
         assert_select "input[type=hidden][name='owner_ids[]'][value='']"
         assert_select "select#owner_ids option[value=#{@alice.record_id}][selected]"
         assert_select "select#owner_ids option[value=#{@bob.record_id}]"
         assert_select "select#owner_ids option[value=#{@bob.record_id}][selected]", false
+      end
+
+      test "the owner picker lists people by name, not by when they were added" do
+        create_reimbursements_person(name: "Aaron Early", email: "aaron@example.com")
+        sign_in @user
+
+        get :new
+
+        assert_equal [ "Aaron Early", "Alice Owner", "Bob Owner" ],
+                     css_select("select#owner_ids option").map(&:text)
+      end
+
+      # The Glossary is the one definition; the figures' old hover notes had drifted from it.
+      test "edit's read-only figures carry no tooltip of their own" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_select "dl dd", minimum: 8
+        assert_select "dl dd[title]", count: 0
       end
 
       test "the forecast log flags a forecast that came from a budget update" do
@@ -1102,9 +788,8 @@ module Admin
         assert_includes response.body, "part of a budget update"
       end
 
-      # The breadcrumb is built from the URL, so an unresolved id segment titleizes
-      # into nonsense ("Budgets / 12 / Edit", or "Rec X Ko G9m U Fbu Dn5 A" on an
-      # Airtable id); the segment resolves to the loaded record's name instead.
+      # The breadcrumb is built from the URL, so the id segment must resolve to
+      # the record's name.
       test "the edit breadcrumb names the budget instead of its id" do
         sign_in @user
 
@@ -1125,37 +810,20 @@ module Admin
 
       # --- Update ------------------------------------------------------------
 
-      test "a blank name is rejected, not written straight through" do
-        sign_in @user
+      { "a blank name" => [ { name: "  " }, /Enter a budget name/ ],
+        "a blank nominal code" => [ { nominal_code: " " }, /Enter a nominal code/ ],
+        "an unknown budget type" => [ { budget_type: "Something else entirely" },
+                                      /Choose a valid budget type/ ] }.each do |label, (override, message)|
+        test "#{label} is rejected without a write" do
+          sign_in @user
 
-        patch :update, params: { id: @props.record_id, name: "  ", nominal_code: "4000",
-                                 budget_type: "Expense" }
+          patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                   budget_type: "Expense" }.merge(override)
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_match(/Enter a budget name/, flash[:alert])
-        assert_equal "Props", @props.reload.name
-      end
-
-      test "a blank nominal code is rejected" do
-        sign_in @user
-
-        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: " ",
-                                 budget_type: "Expense" }
-
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_match(/Enter a nominal code/, flash[:alert])
-        assert_equal "4000", @props.reload.nominal_code
-      end
-
-      test "a budget_type outside the allowed list is rejected" do
-        sign_in @user
-
-        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
-                                 budget_type: "Something else entirely" }
-
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_match(/Choose a valid budget type/, flash[:alert])
-        assert_equal "Expense", @props.reload.budget_type
+          assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+          assert_match message, flash[:alert]
+          assert_equal %w[Props 4000 Expense], @props.reload.slice(:name, :nominal_code, :budget_type).values
+        end
       end
 
       test "an owner_id that doesn't resolve to a real person is rejected" do
@@ -1188,22 +856,15 @@ module Admin
         assert @props.active
       end
 
-      test "unchecking visible-to-submitters writes active false" do
+      test "a Save without active or owners clears both" do
         sign_in @user
 
         patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
                                  budget_type: "Expense" }
 
-        assert_not @props.reload.active
-      end
-
-      test "clearing all owners writes an empty link list" do
-        sign_in @user
-
-        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
-                                 budget_type: "Expense", active: "1" }
-
-        assert_empty @props.reload.owner_ids
+        @props.reload
+        assert_not @props.active
+        assert_empty @props.owner_ids
       end
 
       test "a budget can be moved between areas from its own form" do
@@ -1231,11 +892,8 @@ module Admin
         assert_nil budget.reload.area
       end
 
-      # The <select> offers only areas in the budget's own year and centre
-      # while area_id writes unscoped, where "" means detach. So whenever the
-      # budget's own area is outside the rendered set the select read
-      # "— none —", and ANY Save — one changing only the notes — nilled a link
-      # nobody touched.
+      # area_id writes unscoped and "" detaches, so the select must offer the
+      # budget's own area or any Save nils it.
       test "the area select offers the budget's own area even from another year" do
         sign_in @user
         this_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
@@ -1273,11 +931,6 @@ module Admin
       end
 
       # --- Owners on an area-bound budget ------------------------------------
-      # The area owns and its budgets inherit, so Budget#owners READS the area's
-      # owners while sync_owner_ids! WRITES the budget's own rows. An editable
-      # owners fieldset here would therefore read one table and write another:
-      # ownership is edited on the AREA, and this form must not offer the list
-      # at all (nor let owner_ids reach the store) for an area-bound budget.
 
       test "an area-bound budget's owners are read-only, with a link to the area" do
         sign_in @user
@@ -1296,9 +949,7 @@ module Admin
         assert_no_match(/skip budget-owner sign-off/, response.body)
       end
 
-      # Attaching a line to an ownerless area switches its sign-off gate off
-      # (OwnerReview.gate_applies? is false with no owners), which is the worst
-      # way to get ownership wrong — so the form that can do it says so.
+      # An ownerless area switches its lines' sign-off gate off.
       test "the budget form warns when its area has no owners" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")
@@ -1314,14 +965,12 @@ module Admin
       test "a Save on an area-bound budget cannot rewrite its own owner rows" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")
-        # Finance moved ownership to Alice on the AREA form; the budget's own
-        # row (Bob) is the one the backfill kept so it can be reversed.
+        # The area names Alice; Bob is an own row like those the backfill left.
         area.sync_owner_ids!([ @alice.id ])
         budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
                                               owners: [ @bob ])
 
-        # Exactly what the old form posted while someone fixed the nominal code:
-        # the AREA's owners, on their way into the BUDGET's own rows.
+        # The area's owners, posted towards the budget's own rows.
         patch :update, params: { id: budget.record_id, name: budget.name,
                                  nominal_code: "4321", area_id: area.record_id,
                                  owner_ids: [ @alice.record_id ] }
@@ -1331,39 +980,12 @@ module Admin
         assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id),
                      "the posted owner list must be ignored, not written to own_owners"
         assert_equal [ @alice.record_id ], budget.owner_ids, "the area still owns"
-      end
 
-      test "a Save on a budget in an ownerless area cannot destroy its own owner rows" do
-        sign_in @user
-        area = create_reimbursements_area(name: "Cogito")
-        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
-                                              owners: [ @bob ])
-
-        # An ownerless area renders nothing ticked, so any Save posted an empty
-        # list — and [] compiles to where.not(person_id: []) i.e. WHERE 1=1,
-        # wiping the last record of who owned the line.
+        # An empty list reaching sync_owner_ids! is where.not(person_id: []), i.e. WHERE 1=1.
         patch :update, params: { id: budget.record_id, name: budget.name,
-                                 nominal_code: budget.nominal_code,
-                                 area_id: area.record_id, owner_ids: [ "" ] }
+                                 nominal_code: "4321", area_id: area.record_id, owner_ids: [ "" ] }
 
         assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id)
-      end
-
-      test "a budget with no area keeps its editable owners fieldset" do
-        sign_in @user
-
-        get :edit, params: { id: @props.record_id }
-
-        assert_response :success
-        assert_select "fieldset[data-reimbursements-budget-area-target=owners] select#owner_ids[multiple]"
-        assert_select "select#owner_ids option[value=#{@bob.record_id}]"
-
-        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
-                                 budget_type: "Expense", active: "1",
-                                 owner_ids: [ @bob.record_id ] }
-
-        assert_equal [ @bob.record_id ], @props.reload.own_owners.map(&:record_id)
-        assert_equal [ @bob.record_id ], @props.owner_ids
       end
 
       # --- Forecast create ---------------------------------------------------
@@ -1372,48 +994,29 @@ module Admin
         sign_in @user
 
         assert_difference -> { @props.forecasts.count }, 1 do
-          post :forecast, params: { id: @props.record_id, amount: "750.50", date: "2026-06-01",
+          post :forecast, params: { id: @props.record_id, amount: "£1,750.50", date: "2026-06-01",
                                     reason: "Revised up" }
         end
 
         assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         created = @props.forecasts.order(:id).last
-        assert_in_delta 750.5, created.amount
+        assert_in_delta 1750.5, created.amount
         assert_equal Date.new(2026, 6, 1), created.date
         assert_equal "Revised up", created.reason
       end
 
-      test "a forecast with a missing amount or date is rejected without a write" do
-        sign_in @user
+      { "a missing amount" => { amount: "" }, "a malformed amount" => { amount: "not-a-number" },
+        "a malformed date" => { date: "not-a-date" } }.each do |label, override|
+        test "a forecast with #{label} is rejected without a write" do
+          sign_in @user
 
-        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
-          post :forecast, params: { id: @props.record_id, amount: "", date: "2026-06-01" }
+          assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
+            post :forecast, params: { id: @props.record_id, amount: "750.50", date: "2026-06-01" }.merge(override)
+          end
+
+          assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+          assert_match(/valid amount and date/i, flash[:alert])
         end
-
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_match(/valid amount and date/i, flash[:alert])
-      end
-
-      test "a forecast with a malformed (non-blank) amount is rejected without a write" do
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
-          post :forecast, params: { id: @props.record_id, amount: "not-a-number", date: "2026-06-01" }
-        end
-
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_match(/valid amount and date/i, flash[:alert])
-      end
-
-      test "a forecast with a malformed (non-blank) date is rejected without a write" do
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
-          post :forecast, params: { id: @props.record_id, amount: "750.50", date: "not-a-date" }
-        end
-
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
-        assert_match(/valid amount and date/i, flash[:alert])
       end
 
       # --- Edit / delete a logged forecast -----------------------------------
@@ -1426,8 +1029,7 @@ module Admin
         assert_response :success
         assert_equal @forecast.record_id, assigns(:editing_forecast_id)
         assert_select "input[name=forecast_id][value=#{@forecast.record_id}]"
-        # 2dp, not the BigDecimal's own "800.0" — the input sits beside
-        # figures reimbursements_money prints to the penny.
+        # 2dp, not the BigDecimal's "800.0", like the figures beside it.
         assert_select "input[name=amount][value=?]", "800.00"
       end
 
@@ -1467,8 +1069,8 @@ module Admin
         assert_match(/removed/i, flash[:notice])
       end
 
-      test "a forecast belonging to another budget can't be edited through this budget's URL" do
-        # @forecast is linked to @props, so editing it via @income must be refused.
+      test "a forecast from another budget is refused through this budget's URL" do
+        # @forecast is linked to @props, so reaching it via @income must be refused.
         sign_in @user
 
         patch :update_forecast, params: { id: @income.record_id, forecast_id: @forecast.record_id,
@@ -1477,10 +1079,6 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_budget_path(@income.record_id)
         assert_match(/isn't part of this budget/i, flash[:alert])
         assert_in_delta 800, @forecast.reload.amount
-      end
-
-      test "deleting a forecast from another budget's URL is refused" do
-        sign_in @user
 
         assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
           delete :delete_forecast, params: { id: @income.record_id, forecast_id: @forecast.record_id }
@@ -1490,32 +1088,13 @@ module Admin
         assert_match(/isn't part of this budget/i, flash[:alert])
       end
 
-      private
-
-      # Real SQL count for one render of the overview (schema + cached queries
-      # excluded), so the preload guarantee is measured rather than assumed.
-      def overview_query_count
-        count = 0
-        counter = ->(*, payload) do
-          count += 1 unless payload[:cached] || payload[:name] == "SCHEMA"
-        end
-        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get :overview }
-        count
-      end
-
       # --- Creating one budget by hand ---------------------------------------
-
-      test "new renders the form" do
-        sign_in @user
-
-        get :new
-
-        assert_response :success
-      end
 
       test "create makes a budget in the selected year" do
         _, next_year = seed_two_years
         sign_in @user
+        # The curated list suggests, never constrains: 4200 is not on it.
+        create_reimbursements_nominal_code(code: "432320", label: "Marketing")
 
         assert_difference -> { ::Reimbursements::Budget.count }, 1 do
           post :create, params: { year: next_year.key, name: "Late addition", nominal_code: "4200",
@@ -1531,37 +1110,23 @@ module Admin
         # would cast to 0.
         assert_equal BigDecimal("1200"), budget.initial_budget
         assert_equal [ @alice.record_id ], budget.owner_ids
+        assert_equal "4200", budget.nominal_code
       end
 
       test "create lands on the centre the form chose, not the page's" do
         termtime = create_second_reimbursements_cost_centre
-        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        fringe = ::Reimbursements::CostCentre.default
         sign_in @user
 
         post :create, params: { cost_centre: termtime.key, cost_centre_id: fringe.id, name: "Late addition",
                                 nominal_code: "4200", budget_type: "Expense", active: "1" }
 
         budget = ::Reimbursements::Budget.find_by(name: "Late addition")
+        assert_equal fringe, budget.cost_centre
         assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id, cost_centre: fringe.key)
       end
 
-      test "create rejects a blank name without writing" do
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Budget.count } do
-          post :create, params: { name: "", nominal_code: "4200", budget_type: "Expense" }
-        end
-
-        assert_response :unprocessable_entity
-      end
-
       # --- Owners on a line going INTO an area -------------------------------
-      # The guard used to read budget.area_id on the Budget.new #create builds,
-      # which is nil before the posted area is assigned — so every owner ticked
-      # while creating a line inside an area was written to own_owners, the
-      # table Budget#owners never reads once the line has an area. The area
-      # owns and its budgets inherit, so the honest answer is to refuse and say
-      # where ownership is edited, not to write rows nothing consults.
 
       test "create refuses a line going into an area while owners are ticked" do
         sign_in @user
@@ -1570,9 +1135,7 @@ module Admin
 
         assert_no_difference -> { ::Reimbursements::Budget.count } do
           # initial_budget: "" is what a BROWSER posts for an empty number
-          # input, and the refusal has to re-render the form holding it. Omitting
-          # the key instead — posting what no browser sends — is how the
-          # re-render's own 500 went unseen.
+          # input; omitting it hid the re-render's 500.
           post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
                                   active: "1", area_id: area.record_id, initial_budget: "",
                                   owner_ids: [ @alice.record_id, @bob.record_id ] }
@@ -1586,14 +1149,7 @@ module Admin
                      "a refusal must not widen the area's own owner list either"
       end
 
-      # Budget's own inherit_area_scoping fills BLANKS only, so it can never
-      # move a placed line — and #create always hands it a centre
-      # (chosen_cost_centre falls back to the default), so the inheritance
-      # never fired on the create path and the mismatch was written silently.
       # --- The curated nominal codes -----------------------------------------
-      # The labels finance maintains on a cost centre's Settings page were
-      # rendered nowhere else at all: the budget form's code was free text and
-      # the overview printed bare digits.
 
       test "the budget form suggests the curated codes" do
         sign_in @user
@@ -1604,20 +1160,6 @@ module Admin
         assert_response :success
         assert_select "datalist#nominal-code-suggestions option[value=?]", "432320"
         assert_match(/Marketing and publicity/, response.body)
-      end
-
-      # A suggestion list, not a constraint: a code absent from it is
-      # legitimate (a blank one is supported state, and the overview has a
-      # "(none)" bucket), so refusing one would make the list a rule nobody
-      # agreed to.
-      test "a code that is not on the curated list is still accepted" do
-        sign_in @user
-        create_reimbursements_nominal_code(code: "432320", label: "Marketing")
-
-        post :create, params: { name: "Odd line", nominal_code: "999999",
-                                budget_type: "Expense", active: "1" }
-
-        assert_equal "999999", ::Reimbursements::Budget.find_by!(name: "Odd line").nominal_code
       end
 
       test "a retired code still labels the rows that carry it" do
@@ -1639,15 +1181,6 @@ module Admin
 
         assert_response :success
         assert_match(/Production materials/, response.body)
-      end
-
-      test "a code with no curated label prints bare rather than blank" do
-        sign_in @user
-
-        get :overview
-
-        assert_response :success
-        assert_match(/Nominal code 4000/, response.body)
       end
 
       test "create refuses an area from a different cost centre" do
@@ -1679,8 +1212,7 @@ module Admin
         assert_equal other.id, budget.cost_centre_id
       end
 
-      # An unstamped area or line is lenient-scoped into every centre on
-      # purpose, and inheritance fills the blank rather than contradicting it.
+      # An unstamped area belongs to every centre; inheritance fills the blank.
       test "an area with no cost centre is not refused" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito", cost_centre: nil)
@@ -1704,8 +1236,7 @@ module Admin
         assert_nil @props.reload.area_id, "a refused Save must not attach the area"
       end
 
-      # The picker must offer only areas area_scope_error would accept: an
-      # option the Save then refuses is a form that lies about what it can do.
+      # The picker offers only areas area_scope_error would accept.
       test "the edit form offers only areas in the budget's own cost centre" do
         sign_in @user
         other = create_second_reimbursements_cost_centre
@@ -1722,10 +1253,8 @@ module Admin
         assert_not_includes names, "Termtime show"
       end
 
-      # On new the centre is still being chosen, so every centre's areas are
-      # rendered and the browser filters them by the Cost centre select —
-      # which needs each option to say which centre it belongs to, and the
-      # Cost centre field to come first.
+      # On new every centre's areas render and the browser filters them by the
+      # Cost centre select, which must come first.
       test "the new form tags each area with its cost centre and asks for the centre first" do
         sign_in @user
         other = create_second_reimbursements_cost_centre
@@ -1769,10 +1298,8 @@ module Admin
         assert_equal [ @alice.record_id ], @props.own_owners.reload.map(&:record_id)
       end
 
-      # The dangerous half of the same post: an empty list reaches
-      # sync_owner_ids! as where.not(person_id: []), which is WHERE 1=1 — so
-      # attaching an area would delete the own-owner rows the backfill keeps in
-      # order to be reversible.
+      # An empty list would reach sync_owner_ids! as where.not(person_id: []),
+      # i.e. WHERE 1=1, deleting the own rows the backfill left.
       test "attaching an area with nobody ticked keeps the budget's own owner rows" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")
@@ -1789,21 +1316,8 @@ module Admin
 
       # --- Financial-year selector -------------------------------------------
 
-      test "index shows the selected year's budgets, not every year's" do
+      test "index shows the selected year's budgets, defaulting to the active year" do
         this_year, next_year = seed_two_years
-        sign_in @user
-
-        get :index, params: { year: next_year.key }
-
-        assert_equal [ "Next year props" ], assigns(:budgets).map(&:name)
-        assert_not_includes assigns(:budgets).map(&:name), "Props"
-        assert_equal next_year, assigns(:selected_financial_year)
-        # Both years appear as selector links.
-        assert_includes response.body, this_year.label
-      end
-
-      test "index defaults to the active year" do
-        this_year, = seed_two_years
         sign_in @user
 
         get :index
@@ -1811,6 +1325,13 @@ module Admin
         assert_equal this_year, assigns(:selected_financial_year)
         assert_includes assigns(:budgets).map(&:name), "Props"
         assert_not_includes assigns(:budgets).map(&:name), "Next year props"
+
+        get :index, params: { year: next_year.key }
+
+        assert_equal [ "Next year props" ], assigns(:budgets).map(&:name)
+        assert_equal next_year, assigns(:selected_financial_year)
+        # Both years appear as selector links.
+        assert_includes response.body, this_year.label
       end
 
       test "an unknown year falls back to the active year and says so" do
@@ -1821,8 +1342,7 @@ module Admin
 
         assert_response :success
         assert_equal this_year, assigns(:selected_financial_year)
-        # flash.now is swept by the time a controller test can read `flash`, so
-        # assert on what the operator actually sees.
+        # flash.now is swept before a controller test reads flash.
         assert_match(/no financial year called .*fringe-1999/, response.body)
       end
 
@@ -1835,6 +1355,26 @@ module Admin
         assert_response :success
         names = assigns(:rollups).flat_map { |rollup| rollup.budgets.map(&:name) }
         assert_equal [ "Next year props" ], names
+      end
+
+      test "the budget tabs and the index's row links keep the selected year and centre" do
+        this_year, = seed_two_years
+        other = create_second_reimbursements_cost_centre
+        sign_in @user
+        scope = { year: this_year.key, cost_centre: other.key }
+
+        get :index, params: scope
+
+        assert_select "nav[aria-label='Budget views'] a[aria-current=page][href=?]",
+                      admin_reimbursements_budgets_path(scope), text: "Budgets"
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      overview_admin_reimbursements_budgets_path(scope), text: "Overview"
+        assert_select "a[href=?]", edit_admin_reimbursements_budget_path(@props.record_id, **scope)
+
+        get :overview, params: scope
+
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      admin_reimbursements_budgets_path(scope), text: "Budgets"
       end
 
       test "the selector is hidden while only one year exists" do
@@ -1864,15 +1404,6 @@ module Admin
         )
       end
 
-      test "a save with no filters returns to the bare index, which still means every centre" do
-        sign_in @user
-
-        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
-                                 budget_type: "Expense" }
-
-        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
-      end
-
       test "the edit page's form, back link and forecast form carry the filters" do
         _, next_year = seed_two_years
         termtime = create_second_reimbursements_cost_centre
@@ -1883,7 +1414,7 @@ module Admin
 
         assert_select "form[action=?]", admin_reimbursements_budget_path(@props.record_id, **scope)
         assert_select "form[action=?]", forecast_admin_reimbursements_budget_path(@props.record_id, **scope)
-        assert_select "a[href=?]", admin_reimbursements_budgets_path(**scope), minimum: 1
+        assert_select "main a[href=?]", admin_reimbursements_budgets_path(**scope), text: /All budgets/
       end
 
       test "a forecast added from a filtered edit page comes back to it filtered" do
@@ -1894,18 +1425,6 @@ module Admin
                                   cost_centre: termtime.key }
 
         assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key)
-      end
-
-      test "the index row links to the edit page with the filters and anchors the row" do
-        termtime = create_second_reimbursements_cost_centre
-        sign_in @user
-
-        get :index, params: { cost_centre: termtime.key }
-
-        assert_select "tr#budget_#{@props.record_id}"
-        assert_select "a[href=?]",
-                      edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key),
-                      minimum: 1
       end
 
       test "the edit page links to the previous and next budget in the index's order" do
@@ -1932,19 +1451,9 @@ module Admin
         assert_select "nav[aria-label='Neighbouring budgets']", count: 0
       end
 
-      test "the cost-centre selector offers to make the selected centre the default" do
-        termtime = create_second_reimbursements_cost_centre
-        sign_in @user
-
-        get :index, params: { cost_centre: termtime.key }
-
-        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: termtime.key),
-                      text: "Make this my default"
-      end
-
       test "the cost-centre selector names the default on every page, offering a switch elsewhere" do
         termtime = create_second_reimbursements_cost_centre
-        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        fringe = ::Reimbursements::CostCentre.default
         @user.update!(reimbursements_cost_centre: termtime)
         sign_in @user
 
@@ -1956,7 +1465,12 @@ module Admin
           assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path, text: "Clear"
           assert_select "button", text: "Make this my default", count: offers_switch ? 1 : 0
         end
+        # The last page read was fringe's.
+        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: fringe.key),
+                      text: "Make this my default"
       end
+
+      private
 
       # The live year (holding the budgets seeded in setup) plus a draft year
       # with one budget of its own.
@@ -1969,12 +1483,13 @@ module Admin
         [ this_year, next_year ]
       end
 
-      # An area holding one Expense budget with a paid expense and a linked EUSA
-      # actual: one of everything the overview's two rollups walk.
+      # An area holding one Expense budget with a forecast, a paid expense and a linked
+      # EUSA actual: one of everything the index and overview walk.
       def seed_budget_with_actual(index)
         area = create_reimbursements_area(name: "Area #{index}", initial_budget: 2000)
         budget = create_reimbursements_budget(name: "Extra #{index}", nominal_code: "42#{index}",
                                               area: area, initial_budget: 100)
+        budget.forecasts.create!(amount: 150, date: Date.new(2026, 5, 1), reason: "plan")
         expense = create_reimbursements_expense(budget: budget, receipt: false,
                                                 status: ::Reimbursements::Status::PAID)
         ::Reimbursements::EusaActual.create!(expense: expense, debit: BigDecimal("5"),

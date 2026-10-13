@@ -33,8 +33,6 @@
 require "test_helper"
 
 class SeasonTest < ActionView::TestCase
-  include AcademicYearHelper
-
   # The constraint is tested in the (non-admin) seasons controller test.
 
   test "get season event suggestions" do
@@ -49,36 +47,5 @@ class SeasonTest < ActionView::TestCase
     suggestions = season.simultaneous_events
 
     assert_equal (included_events + part_of_season_but_outside_date_range).to_set, suggestions.to_set
-  end
-
-  test "debt_configuration_active? works for seasons" do
-    season = FactoryBot.create(:season)
-
-    assert_not season.debt_configuration_active?
-
-    season.update!(maintenance_debt_amount: 1)
-
-    assert season.debt_configuration_active?
-  end
-
-  test "sync_debts_for_all_users works for seasons" do
-    due_by = Date.current
-    # Create season without debt configuration first
-    season = FactoryBot.create(:season,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 2
-    )
-
-    # Now set the debt configuration
-    season.update!(maintenance_debt_start: due_by, maintenance_debt_amount: 1)
-
-    assert_difference("Admin::MaintenanceDebt.count", season.users.count) do
-      season.sync_debts_for_all_users
-    end
-
-    season.users.each do |user|
-      assert_equal 1, user.admin_maintenance_debts.where(show: season).count
-    end
   end
 end

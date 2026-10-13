@@ -1,9 +1,4 @@
-##
-# Admin controller for Department management.
-#
-# Departments group opportunity roles; their +match_terms+ drive the auto-suggestion of a
-# department from a role's position text.
-##
+# Admin CRUD for departments, whose +match_terms+ suggest a department from a role's position.
 class Admin::DepartmentsController < AdminController
   include GenericController
 

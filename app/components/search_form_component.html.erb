@@ -2,7 +2,6 @@
      data-action="input->live-search#scheduleSearch change->live-search#scheduleSearch submit->live-search#scheduleSearch">
   <%= render CardComponent.new(title: "Search", flush: true, html_class: "mb-0") do |c| %>
     <% c.with_tools do %>
-      <%# Mobile toggle — hidden by default; controller shows it on mobile %>
       <button type="button"
               hidden
               class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> ml-auto"

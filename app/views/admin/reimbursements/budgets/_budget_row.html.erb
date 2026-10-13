@@ -1,15 +1,9 @@
-<%# locals: (budget:, people_by_id:) %>
+<%# locals: (budget:) %>
 <%
-  # The line's name IS its link to the edit form. At 1366x768 the Edit button
-  # in the last column sits off the right-hand edge of the table, and the name
-  # is the first thing on the row — so the one click this table exists for is
-  # reachable without scrolling sideways.
   name = safe_join([
-    # The accessible name is the QUALIFIED one, because the rowgroup heading
-    # above is not announced with the link and three links reading "Marketing"
-    # are ambiguous. It deliberately does NOT start with "Edit": that is the
-    # button at the end of the row, and two controls on one row both
-    # announcing "Edit Cogito: Marketing" is worse than one.
+    # The accessible name is the QUALIFIED one (the rowgroup heading is not
+    # announced with the link), and deliberately does not start with "Edit",
+    # which is the row's button.
     link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
             class: "font-medium text-primary underline",
             "aria-label": budget.display_name),
@@ -17,25 +11,20 @@
     reimbursements_budget_health_badge(budget),
     (content_tag(:span, "(hidden)", class: "text-gray-400 text-xs") unless budget.active)
   ].compact, " ")
-  # "No owner" is a warning only for a live (Visible) budget — Hidden
-  # overhead lines (payroll, NI, contracts) will never have a producer
-  # owner, so flagging them all just drowns the signal on the show
-  # budgets that genuinely need chasing.
-  owners = budget_owner_names(budget, people_by_id).presence ||
+  # "No owner" warns only on a Visible line: hidden overheads (payroll, NI)
+  # never have one.
+  owners = budget_owner_names(budget).presence ||
            (if budget.active
               render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
             else
               content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
             end)
-  # Server-side as well as :target, because a Turbo redirect drops the fragment.
   # Every cell, since the pinned first and last cells paint their own background.
-  highlighted = params[:budget] == budget.record_id
-  highlight = class_names("group-target:bg-yellow-50", "bg-yellow-50" => highlighted)
-  money = class_names("text-right whitespace-nowrap", highlight)
+  cell_bg = params[:budget] == budget.record_id ? "bg-yellow-50" : "bg-white group-hover:bg-gray-50"
+  money = "text-right whitespace-nowrap #{cell_bg}"
 %>
 <tr id="budget_<%= budget.record_id %>" class="group scroll-mt-28">
-  <td class="<%= class_names("sticky left-0 z-10", highlight,
-                             "bg-white group-hover:bg-gray-50" => !highlighted) %>"><%= name %></td>
+  <td class="sticky left-0 z-10 <%= cell_bg %>"><%= name %></td>
   <td class="<%= money %>"><%= reimbursements_money(budget.initial_budget) %></td>
   <td class="<%= money %>"><%= reimbursements_budget_projected(budget) %></td>
   <td class="<%= money %>"><%= reimbursements_money(budget.committed_amount) %></td>
@@ -43,8 +32,8 @@
   <td class="<%= money %>"><%= reimbursements_money(budget.expected_outturn) %></td>
   <td class="<%= money %>"><%= reimbursements_budget_remaining(budget) %></td>
   <td class="<%= money %>"><%= reimbursements_budget_variance(budget) %></td>
-  <td class="<%= highlight %>"><%= owners %></td>
-  <td class="<%= highlight %>">
+  <td class="<%= cell_bg %>"><%= owners %></td>
+  <td class="<%= cell_bg %>">
     <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
           "aria-label": "Edit #{budget.display_name}", class: btn_classes(:secondary, :sm)) %>
   </td>

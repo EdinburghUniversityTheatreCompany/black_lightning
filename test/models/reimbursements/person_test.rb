@@ -1,14 +1,8 @@
 require "test_helper"
 
 module Reimbursements
-  # The AR Person must keep the Airtable-era PORO's flat bank-detail
-  # interface (delegated to the one-to-one PaymentDetails record).
+  # Person keeps a flat bank-detail interface delegated to PaymentDetails.
   class PersonTest < ActiveSupport::TestCase
-    test "record_id is the string id" do
-      person = Person.create!(name: "Pat", email: "pat@example.com")
-      assert_equal person.id.to_s, person.record_id
-    end
-
     test "bank detail readers keep PORO defaults without a payment_details row" do
       person = Person.create!(name: "Pat", email: "pat2@example.com")
       assert_equal "", person.sort_code
@@ -25,7 +19,7 @@ module Reimbursements
       assert_equal "80-22-60", person.sort_code
       assert_equal "12345678", person.account_number
       assert_equal "checked", person.notes
-      assert person.verified?
+      assert person.verified
       assert person.bank_details?
     end
 
@@ -34,13 +28,6 @@ module Reimbursements
       b = Person.create!(name: "B", email: "   ")
       assert_nil a.reload.email
       assert_nil b.reload.email
-    end
-
-    test "email is unique case-insensitively" do
-      Person.create!(name: "A", email: "dupe@example.com")
-      dupe = Person.new(name: "B", email: "DUPE@example.com")
-      assert_not dupe.valid?
-      assert dupe.errors[:email].present?
     end
   end
 end

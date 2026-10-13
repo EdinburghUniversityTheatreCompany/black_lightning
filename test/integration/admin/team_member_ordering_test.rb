@@ -1,10 +1,9 @@
 require "test_helper"
 
 ##
-# See TeamMemberOrdering. An integration test rather than a functional one: a row
-# added with "Add" posts under a timestamp key, and ActionController::TestCase
-# encodes params with Hash#to_query, which SORTS keys. rack-test keeps the
-# insertion order, as a browser serialises a form.
+# An integration test, not a functional one: an added row posts under a
+# timestamp key, and ActionController::TestCase's Hash#to_query SORTS keys.
+# rack-test keeps insertion order, as a browser does.
 class Admin::TeamMemberOrderingTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
 

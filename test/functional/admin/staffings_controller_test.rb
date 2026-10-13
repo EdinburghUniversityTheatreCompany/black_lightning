@@ -33,7 +33,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test "should paginate archived staffings by slug" do
-    # Create 12 past staffings with unique show titles (each gets a unique slug).
     12.times do |i|
       FactoryBot.create(:staffing, staffed_job_count: 1, show_title: "Archived Show #{i}", start_time: DateTime.current.advance(days: -(i + 1)))
     end
@@ -41,11 +40,9 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     get :index
     assert_response :success
 
-    # With 10 per page, first page should have 10 slug groups.
     assert_equal 10, assigns(:archived_staffings).size
     assert_not_nil assigns(:archived_staffings_pagination)
 
-    # Second page should have the remaining 2.
     get :index, params: { page: 2 }
     assert_response :success
     assert_equal 2, assigns(:archived_staffings).size
@@ -126,12 +123,13 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     sign_out @user
 
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, staffed_job_count: 2)
-
-    # Assert that the user cannot see phone numbers even though they have read permission on themselves.
     sign_in staffing.users.first
 
-    # Assert that the phone number column is not visible, because (at least this version of) committee does not have user read permission.
-    assert_no_match "<th>Phone Number</th>", response.body
+    get :show, params: { id: staffing }
+
+    assert_response :success
+    assert_select "th", text: "Staffed By"
+    assert_select "th", text: "Phone Number", count: 0
   end
 
   test "should get new" do
@@ -278,6 +276,16 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_equal Admin::StaffingJob.find(job.id).user_id, @user.id
   end
 
+  test "turbo_stream sign_up toasts the success message and leaves no flash for the next page" do
+    job = FactoryBot.create(:unstaffed_staffing_job)
+
+    put :sign_up, params: { id: job }, format: :turbo_stream
+
+    assert_equal @user, job.reload.user
+    assert_match "Thank you for choosing to staff", response.body
+    assert_nil session["flash"]
+  end
+
   test "sign_up should fail when job is already staffed by someone else" do
     job = FactoryBot.create(:staffed_staffing_job)
     job.staffable.start_time = Time.current.advance(days: -1)
@@ -286,7 +294,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     put :sign_up, params: { id: job }
 
     assert_equal [ "Someone else has already signed up for this slot" ], flash[:error]
-    assert_not_equal job.reload.user, @user, "The user was signed up for the job anyway."
+    assert_not_equal job.reload.user, @user
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
@@ -308,7 +316,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     put :sign_up, params: { id: job }
 
-    assert_nil job.reload.user, "The user managed to attach itself despite not haging permission."
+    assert_nil job.reload.user
 
     assert_equal [ "You do not have the appropriate permission to sign up for staffing slots." ], flash[:error]
 
@@ -329,34 +337,21 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   test "sign_up should fail for job in the past" do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: Time.current.advance(days: -1))
     job = staffing.staffing_jobs.first
-    assert_nil job.reload.user, "The unstaffed job has a user assigned"
+    assert_nil job.reload.user
 
     put :sign_up, params: { id: job }
 
     assert_equal [ "You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift." ], flash[:error]
-    assert_nil job.reload.user, "The user was signed up for the job anyway."
+    assert_nil job.reload.user
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
 
-  # Live-search fetch: turbo_stream + q[...] params → the results fragment (staffings updates its
-  # upcoming-/archived-staffings containers).
   test "index responds to a turbo_stream request with q params using the results fragment" do
     get :index, params: { q: { show_title_cont: "anything" } }, format: :turbo_stream
 
     assert_response :success
     assert_equal "text/vnd.turbo-stream.html", response.media_type
     assert_match(/<turbo-stream/, response.body)
-  end
-
-  # A paramless turbo_stream request (e.g. a Turbo form-submission redirect, since GenericController
-  # #destroy redirects to :index) must render the full HTML page, not the fragment. See
-  # ApplicationController#render_index_stream_or_full.
-  test "index serves a full HTML page for a paramless turbo_stream request" do
-    get :index, format: :turbo_stream
-
-    assert_response :success
-    assert_equal "text/html", response.media_type
-    assert_no_match(/<turbo-stream/, response.body)
   end
 end

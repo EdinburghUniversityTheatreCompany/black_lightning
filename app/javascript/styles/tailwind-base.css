@@ -11,7 +11,7 @@
 
 @import "./theme.css";
 
-/* Icon fonts — in base to avoid FOUC across all layouts */
+/* Icon fonts, in base to avoid FOUC on every layout */
 @import "@fortawesome/fontawesome-free/css/fontawesome.css";
 @import "@fortawesome/fontawesome-free/css/solid.css";
 @import "@fortawesome/fontawesome-free/css/brands.css";

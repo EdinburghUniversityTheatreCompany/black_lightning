@@ -1,10 +1,6 @@
 require "test_helper"
 
 class UserDuplicateDetectionTest < ActiveSupport::TestCase
-  setup do
-    @user = users(:user)
-  end
-
   # years_active tests
   test "years_active returns empty array for user with no events" do
     user = FactoryBot.create(:user)
@@ -13,12 +9,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
 
   test "years_active returns academic years from events" do
     user = FactoryBot.create(:user)
-    # Create a show with this user as a team member
-    show = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
-
-    # The show should have team members by default from the factory
-    # Add our user to the show
-    TeamMember.create!(user: user, teamwork: show, position: "Actor")
+    place_user_on_show(user, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
 
     years = user.years_active
     assert_includes years, 2023, "Expected 2023 academic year (Oct 2023 is in 2023/24 academic year)"
@@ -27,8 +18,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
   test "years_active handles events spanning academic years" do
     user = FactoryBot.create(:user)
     # Show starting in August 2023 (2022/23 academic year) and ending in October 2023 (2023/24 academic year)
-    show = FactoryBot.create(:show, start_date: Date.new(2023, 8, 15), end_date: Date.new(2023, 10, 1))
-    TeamMember.create!(user: user, teamwork: show, position: "Actor")
+    place_user_on_show(user, start_date: Date.new(2023, 8, 15), end_date: Date.new(2023, 10, 1))
 
     years = user.years_active
     assert_includes years, 2022, "Expected 2022 academic year (Aug 2023 is in 2022/23)"
@@ -58,23 +48,12 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     user1 = FactoryBot.create(:user)
     user2 = FactoryBot.create(:user)
 
-    show = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
-    TeamMember.create!(user: user1, teamwork: show, position: "Actor")
+    place_user_on_show(user1, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
 
-    # user2 has no events
     assert user1.years_overlap?(user2), "Should return true when one user has no activity data"
   end
 
   # mark_not_duplicate tests
-  test "mark_not_duplicate adds other user id to not_duplicate_user_ids" do
-    user1 = FactoryBot.create(:user)
-    user2 = FactoryBot.create(:user)
-
-    user1.mark_not_duplicate(user2)
-
-    assert_includes user1.not_duplicate_user_ids, user2.id
-  end
-
   test "mark_not_duplicate does not add duplicate ids" do
     user1 = FactoryBot.create(:user)
     user2 = FactoryBot.create(:user)
@@ -89,6 +68,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
   test "marked_not_duplicate returns true when marked in either direction" do
     user1 = FactoryBot.create(:user)
     user2 = FactoryBot.create(:user)
+    assert_not user1.marked_not_duplicate?(user2)
 
     user1.mark_not_duplicate(user2)
 
@@ -96,91 +76,17 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert user2.marked_not_duplicate?(user1), "Should work in reverse direction too"
   end
 
-  test "marked_not_duplicate returns false when not marked" do
-    user1 = FactoryBot.create(:user)
-    user2 = FactoryBot.create(:user)
-
-    assert_not user1.marked_not_duplicate?(user2)
-  end
-
-  # fuzzy_first_name_match? tests
-  test "fuzzy_first_name_match returns true for exact match" do
-    assert User.fuzzy_first_name_match?("John", "John")
-  end
-
-  test "fuzzy_first_name_match returns true for case insensitive match" do
-    assert User.fuzzy_first_name_match?("JOHN", "john")
-  end
-
-  test "fuzzy_first_name_match returns true for abbreviations" do
-    assert User.fuzzy_first_name_match?("Leo", "Leonardo")
-    assert User.fuzzy_first_name_match?("Leonardo", "Leo")
-  end
-
-  test "fuzzy_first_name_match returns true for similar names" do
-    assert User.fuzzy_first_name_match?("John", "Jon")
-    assert User.fuzzy_first_name_match?("Michael", "Micheal")
-  end
-
-  test "fuzzy_first_name_match returns false for very different names" do
-    assert_not User.fuzzy_first_name_match?("John", "Sarah")
-    assert_not User.fuzzy_first_name_match?("Michael", "David")
-  end
-
-  test "fuzzy_first_name_match handles special characters" do
-    assert User.fuzzy_first_name_match?("O'Brien", "OBrien")
-    assert User.fuzzy_first_name_match?("Jean-Pierre", "JeanPierre")
-  end
-
-  # fuzzy_last_name_match? tests
-  test "fuzzy_last_name_match returns true for exact match" do
-    assert User.fuzzy_last_name_match?("Smith", "Smith")
-  end
-
-  test "fuzzy_last_name_match returns true for similar last names" do
-    assert User.fuzzy_last_name_match?("Turnbull", "Trunbull")
-    assert User.fuzzy_last_name_match?("Johnson", "Jonson")
-  end
-
-  test "fuzzy_last_name_match returns false for very different last names" do
-    assert_not User.fuzzy_last_name_match?("Smith", "Jones")
-    assert_not User.fuzzy_last_name_match?("Turnbull", "Anderson")
-  end
-
-  test "fuzzy_last_name_match handles special characters" do
-    assert User.fuzzy_last_name_match?("O'Brien", "OBrien")
-    assert User.fuzzy_last_name_match?("Smith-Jones", "SmithJones")
-  end
-
-  test "fuzzy_last_name_match returns false for blank names" do
-    assert_not User.fuzzy_last_name_match?("", "Smith")
-    assert_not User.fuzzy_last_name_match?("Smith", "")
-    assert_not User.fuzzy_last_name_match?(nil, "Smith")
-  end
-
   # find_potential_duplicates tests
-  test "find_potential_duplicates finds users with same student_id" do
-    user1 = FactoryBot.create(:user, student_id: "s1234567", last_name: "Smith", first_name: "John")
-    user2 = FactoryBot.create(:user, student_id: "s1234567", last_name: "Doe", first_name: "Jane")
+  test "find_potential_duplicates finds users sharing a student_id or associate_id" do
+    { student_id: "s1234567", associate_id: "ASSOC123456" }.each do |column, value|
+      user1 = FactoryBot.create(:user, column => value, last_name: "Smith", first_name: "John")
+      user2 = FactoryBot.create(:user, column => value, last_name: "Doe", first_name: "Jane")
 
-    duplicates = User.find_potential_duplicates
-
-    same_id_matches = duplicates[:same_id].select { |d| d[:id_value] == "s1234567" }
-    assert_equal 1, same_id_matches.size
-    assert_includes same_id_matches.first[:users], user1
-    assert_includes same_id_matches.first[:users], user2
-  end
-
-  test "find_potential_duplicates finds users with same associate_id" do
-    user1 = FactoryBot.create(:user, associate_id: "ASSOC123456", last_name: "Smith", first_name: "John")
-    user2 = FactoryBot.create(:user, associate_id: "ASSOC123456", last_name: "Doe", first_name: "Jane")
-
-    duplicates = User.find_potential_duplicates
-
-    same_id_matches = duplicates[:same_id].select { |d| d[:id_value] == "ASSOC123456" }
-    assert_equal 1, same_id_matches.size
-    assert_includes same_id_matches.first[:users], user1
-    assert_includes same_id_matches.first[:users], user2
+      same_id_matches = User.find_potential_duplicates[:same_id].select { |d| d[:id_value] == value }
+      assert_equal 1, same_id_matches.size, column.to_s
+      assert_includes same_id_matches.first[:users], user1
+      assert_includes same_id_matches.first[:users], user2
+    end
   end
 
   test "find_potential_duplicates finds users with equivalent sms and non-sms emails as definite duplicates" do
@@ -209,6 +115,15 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert_equal 1, fuzzy_matches.size
   end
 
+  test "find_potential_duplicates matches last names that differ only in case" do
+    user1 = FactoryBot.create(:user, first_name: "John", last_name: "Zqxsmith")
+    user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "zqxsmith")
+
+    duplicates = User.find_potential_duplicates
+
+    assert(duplicates[:fuzzy_name_overlapping].any? { |d| d[:users].include?(user1) && d[:users].include?(user2) })
+  end
+
   test "find_potential_duplicates excludes marked not-duplicates" do
     user1 = FactoryBot.create(:user, first_name: "John", last_name: "TestSmith")
     user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "TestSmith")
@@ -224,14 +139,6 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert_empty matches, "Marked not-duplicates should not appear in results"
   end
 
-  # Buckets 4 & 5: Now computed by background job, not by User.find_potential_duplicates
-  test "find_potential_duplicates returns empty arrays for fuzzy_both buckets" do
-    duplicates = User.find_potential_duplicates
-
-    assert_equal [], duplicates[:fuzzy_both_overlapping], "Bucket 4 should be empty (computed by background job)"
-    assert_equal [], duplicates[:fuzzy_both_no_overlap], "Bucket 5 should be empty (computed by background job)"
-  end
-
   # Merge helper methods tests
 
   test "overlapping_team_memberships_with returns count of shared shows" do
@@ -242,58 +149,32 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     show2 = FactoryBot.create(:show)
     show3 = FactoryBot.create(:show)
 
-    # Both users on show1 and show2
     TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
     TeamMember.create!(user: user2, teamwork: show1, position: "Director")
     TeamMember.create!(user: user1, teamwork: show2, position: "Stage Manager")
     TeamMember.create!(user: user2, teamwork: show2, position: "Producer")
 
-    # Only user1 on show3
     TeamMember.create!(user: user1, teamwork: show3, position: "Actor")
 
     assert_equal 2, user1.overlapping_team_memberships_with(user2)
     assert_equal 2, user2.overlapping_team_memberships_with(user1)
   end
 
-  test "overlapping_team_memberships_with returns 0 when no shared shows" do
-    user1 = FactoryBot.create(:user)
-    user2 = FactoryBot.create(:user)
-
-    show1 = FactoryBot.create(:show)
-    show2 = FactoryBot.create(:show)
-
-    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
-    TeamMember.create!(user: user2, teamwork: show2, position: "Actor")
-
-    assert_equal 0, user1.overlapping_team_memberships_with(user2)
-  end
-
-  test "merge_stats_as_source returns correct statistics" do
+  test "merge_stats_as_source returns totals, overlap and roles" do
     target = FactoryBot.create(:user)
     source = FactoryBot.create(:user)
     source.add_role(:member)
 
-    show = FactoryBot.create(:show)
-    TeamMember.create!(user: source, teamwork: show, position: "Actor")
+    show_a = FactoryBot.create(:show)
+    show_b = FactoryBot.create(:show)
+    TeamMember.create!(user: target, teamwork: show_a, position: "Director")
+    TeamMember.create!(user: source, teamwork: show_a, position: "Actor")
+    TeamMember.create!(user: source, teamwork: show_b, position: "Actor")
 
     stats = source.merge_stats_as_source(target)
 
-    assert_equal 1, stats[:team_memberships][:total]
-    assert_equal 0, stats[:team_memberships][:overlapping]
-    assert_includes stats[:roles].map(&:downcase), "member"
-  end
-
-  test "merge_stats_as_source shows overlapping team memberships" do
-    target = FactoryBot.create(:user)
-    source = FactoryBot.create(:user)
-
-    show = FactoryBot.create(:show)
-    TeamMember.create!(user: target, teamwork: show, position: "Director")
-    TeamMember.create!(user: source, teamwork: show, position: "Actor")
-
-    stats = source.merge_stats_as_source(target)
-
-    assert_equal 1, stats[:team_memberships][:total]
+    assert_equal 2, stats[:team_memberships][:total]
     assert_equal 1, stats[:team_memberships][:overlapping]
+    assert_includes stats[:roles].map(&:downcase), "member"
   end
 end

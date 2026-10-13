@@ -5,11 +5,8 @@ class Display::SetupController < ApplicationController
 
   before_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
 
-  # Durations in seconds. A poster wants dwelling on; a headline is read once.
-  #
-  # Each entry names a route helper rather than a path string: a volunteer types
-  # these URLs into a Pi, so a renamed route must not leave this page silently
-  # listing dead ones.
+  # Durations in seconds. Each entry names a route helper, not a path string, so a
+  # renamed route fails here instead of leaving a Pi typed with dead URLs.
   PLAYLIST = [
     { route: [ :display_next_event_path, 1 ], seconds: 20, note: "Tonight's show when one is running, else the next one" },
     { route: [ :display_next_event_path, 2 ], seconds: 20, note: "Second event in the pool" },
@@ -17,8 +14,7 @@ class Display::SetupController < ApplicationController
     { route: [ :display_next_event_path, 4 ], seconds: 20, note: "Fourth" },
     { route: [ :display_next_event_path, 5 ], seconds: 20, note: "Fifth (repeats an earlier one if the pool is short)" },
     { route: [ :display_next_event_path, 6 ], seconds: 20, note: "Sixth (likewise)" },
-    # 18s even though the board scrolls: a pass is paced to finish inside its
-    # slot whatever is on the board. Must stay >= the duration in display.css.
+    # Must stay >= the marquee duration in display.css: a pass is paced to finish inside its slot.
     { route: [ :display_whats_on_path ], seconds: 18,
       note: "The upcoming schedule board (scrolls when there are more events than fit)" },
     { route: [ :display_credits_path ], seconds: 18, note: "Cast and company for tonight's show when one is running, else the next one" },
@@ -27,8 +23,7 @@ class Display::SetupController < ApplicationController
     { route: [ :display_on_this_day_path ], seconds: 15, note: "Something from the archive -- a different show each time it comes round" }
   ].freeze
 
-  # Resolved lazily, not at class-load: route helpers are not guaranteed to be
-  # callable while the controller is being loaded.
+  # Lazy: route helpers are not callable while the controller is loading.
   def self.playlist
     helpers = Rails.application.routes.url_helpers
 

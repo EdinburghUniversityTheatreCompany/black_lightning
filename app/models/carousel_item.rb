@@ -18,15 +18,13 @@
 #  index_carousel_items_on_is_active_and_ordering  (is_active,ordering)
 #
 class CarouselItem < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :title, length: { maximum: 255 }
   validates :tagline, length: { maximum: 16777215 }
-  validates :carousel_name, length: { maximum: 255 }
-  validates :url, length: { maximum: 255 }
+  validates :carousel_name, :url, length: { maximum: 255 }
   CAROUSEL_NAMES = [ "Home" ].freeze
 
   CAROUSEL_CONFIG = {
-    "Home" => { aspect_ratio: [ 960, 500 ], fit_mode: "cover" }
+    "Home" => { aspect_ratio: [ 960, 500 ] }
   }.freeze
 
   validates :title, :tagline, :carousel_name, :ordering, presence: true

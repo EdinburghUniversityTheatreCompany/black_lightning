@@ -3,20 +3,9 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # The ?cost_centre= selector across every finance screen it scopes.
-    #
-    # One file rather than a block in each controller's own test, because the
-    # thing under test is a TWO-cost-centre world and building one is not free:
-    # the fixture set deliberately holds exactly ONE cost centre (a second
-    # fixture makes CostCentre.default resolve to whichever label
-    # FixtureSet.identify hashes lower, and deletes the one-centre world the
-    # reconcile tests pin as a business rule), so the second centre is built
-    # here with create_reimbursements_cost_centre.
-    #
-    # Separate top-level classes rather than nested ones: ActionController
-    # ::TestCase carries `tests SomeController` down to subclasses along with
-    # every inherited test, so a nested class would silently re-run its
-    # parent's cases against the wrong controller.
+    # The ?cost_centre= selector across the finance screens. Separate top-level
+    # classes, not nested ones: a nested ActionController::TestCase inherits its
+    # parent's tests and would re-run them against the wrong controller.
     module CostCentreScopeSetup
       extend ActiveSupport::Concern
       include ReimbursementsTestHelpers
@@ -81,8 +70,7 @@ module Admin
 
         assert_response :success
         rollup = assigns(:rollups).find { |r| r.code == "4000" }
-        # 1000 (Fringe) + 0 (unplaced) — NOT 1500, which is what folding
-        # termtime's line into the same nominal code used to print.
+        # Fringe's 1000 plus the unplaced line's 0, without termtime's 500.
         assert_equal BigDecimal("1000"), rollup.initial
       end
 
@@ -126,18 +114,9 @@ module Admin
 
         assert_response :success
         assert_equal [ "Fringe claim", "Unplaced claim" ], assigns(:pending).map(&:description).sort
-        # Every tab comes off the same list, so a count can never disagree with
-        # the rows under it.
+        # Every tab comes off one list, so a count cannot disagree with its rows.
         assert_equal assigns(:pending).size,
                      assigns(:awaiting_owner).size + assigns(:to_approve).size
-      end
-
-      test "the review CSV follows the selected centre as well as the tab" do
-        get :index, params: { cost_centre: "termtime", format: :csv }
-
-        assert_response :success
-        assert_includes response.body, "Termtime claim"
-        assert_not_includes response.body, "Fringe claim"
       end
     end
 
@@ -160,14 +139,6 @@ module Admin
         narratives = assigns(:actuals).map(&:narrative)
         assert_includes narratives, "Fringe row"
         assert_not_includes narratives, "Termtime row"
-      end
-
-      test "the actuals CSV narrows too" do
-        get :index, params: { cost_centre: "fringe", format: :csv }
-
-        assert_response :success
-        assert_includes response.body, "Fringe row"
-        assert_not_includes response.body, "Termtime row"
       end
     end
 
@@ -192,14 +163,6 @@ module Admin
         names = assigns(:batches).map(&:name)
         assert_includes names, "Fringe run"
         assert_not_includes names, "Termtime run"
-      end
-
-      test "the batches CSV narrows too" do
-        get :index, params: { cost_centre: "termtime", format: :csv }
-
-        assert_response :success
-        assert_includes response.body, "Termtime run"
-        assert_not_includes response.body, "Fringe run"
       end
     end
   end

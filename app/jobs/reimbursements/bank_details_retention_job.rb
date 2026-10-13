@@ -1,13 +1,11 @@
 module Reimbursements
   ##
-  # Nightly storage-limitation sweep: clears bank details for payees who have
-  # not filed a claim in BankDetailsRetention::RETENTION_PERIOD.
+  # Nightly sweep clearing bank details of payees with no claim in
+  # BankDetailsRetention::RETENTION_PERIOD.
   #
-  # Deliberately silent when it clears nothing, which is most nights. It sends
-  # no notification even when it does: a payee whose details have aged out is
-  # asked for them again by the submission form the next time they claim, so
-  # there is nothing for anyone to act on, and a "we deleted your bank details"
-  # email would read as an incident rather than as housekeeping.
+  # Silent by design, no notification email: the submission form asks for the
+  # details again on the next claim, so there is nothing to act on, and an email
+  # would read as an incident.
   class BankDetailsRetentionJob < ApplicationJob
     queue_as :default
 

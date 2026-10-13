@@ -1,5 +1,4 @@
 class Admin::StaffingIndexRowComponentPreview < Admin::ApplicationComponentPreview
-  # Upcoming staffings grouped by show slug
   def default
     staffings_hash = Admin::Staffing.future
                                     .includes(:staffing_jobs, staffing_jobs: :user)
@@ -8,7 +7,7 @@ class Admin::StaffingIndexRowComponentPreview < Admin::ApplicationComponentPrevi
     render Admin::StaffingIndexRowComponent.new(staffings_hash: staffings_hash)
   end
 
-  # Archived staffings (shows warning colour when less than 70% filled)
+  # A show under 70% filled gets the warning colour.
   def archived
     staffings_hash = Admin::Staffing.past
                                     .includes(:staffing_jobs, staffing_jobs: :user)

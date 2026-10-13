@@ -1,17 +1,11 @@
 <%# locals: (f:, dynamic: nil) %>
 
-<%# Not shared/form/inline_fields_for_template: it lays every field out on one
-    bottom-aligned line, which turns the seven-item access collection into a
-    700px column of empty space beside the inputs. The inputs still take the
-    :inline_form wrapper (sr-only labels), as every other repeated row in this
-    admin does; the collection needs a line of its own. %>
+<%# Not inline_fields_for_template: the seven access flags need a line of their own. %>
 <div class="event-occurrence mb-3 rounded border border-gray-200 p-3">
   <%= f.hidden_field :id %>
 
   <div class="flex flex-wrap items-end gap-3">
-    <%# A synced row's times belong to pretix: the next sync overwrites whatever
-        is typed here, so offering an input would promise an edit that silently
-        reverts within fifteen minutes. Change the date in the shop instead. %>
+    <%# A synced row's times are pretix's: the next sync would overwrite an edit. %>
     <% if f.object.pretix_synced? %>
       <div class="text-sm">
         <span class="font-medium text-gray-700">Starts</span>
@@ -51,11 +45,8 @@
   <%= f.input :access_flags, as: :check_boxes, label: 'Access', wrapper: :vertical_collection_inline,
         collection: EventOccurrence::ACCESS_FLAG_LABELS.map { |flag, label| [label, flag] } %>
 
-  <%# pretix has no cancellation concept for a date, so this is a person's to
-      set and the sync never touches it. It is also what keeps a synced row
-      alive after the date is pulled from the shop. %>
-  <%# vertical_boolean, not the admin default: that lays the label out in its own
-      column and leaves ~370px between it and its own checkbox. %>
+  <%# pretix has no cancellation, so this is a person's to set and the sync never
+      touches it. vertical_boolean keeps the label beside its checkbox. %>
   <%= f.input :cancelled, as: :boolean, label: 'Cancelled', wrapper: :vertical_boolean,
         hint: 'pretix cannot tell us a date is off, so set it here.' %>
 </div>

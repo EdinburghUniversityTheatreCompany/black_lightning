@@ -62,18 +62,6 @@ class Admin::MarketingCreatives::CategoriesControllerTest < ActionController::Te
     assert_response :unprocessable_entity
   end
 
-  test "should not create category info for the same category/profile combination twice" do
-    profile = FactoryBot.create(:marketing_creatives_profile)
-
-    existing_category_info = FactoryBot.attributes_for(:marketing_creatives_category_info, profile: profile)
-
-    attributes = FactoryBot.attributes_for(:marketing_creatives_category_info, profile: profile)
-
-    assert_no_difference("MarketingCreatives::Category.count") do
-      post :create, params: { marketing_creatives_category: attributes }
-    end
-  end
-
   test "should get edit" do
     get :edit, params: { id: @category }
 
@@ -85,7 +73,7 @@ class Admin::MarketingCreatives::CategoriesControllerTest < ActionController::Te
 
     put :update, params: { id: @category, marketing_creatives_category: attributes }
 
-    assert attributes[:name], assigns(:category).name
+    assert_equal attributes[:name], @category.reload.name
     assert_redirected_to admin_marketing_creatives_category_path(@category)
   end
 
@@ -94,8 +82,6 @@ class Admin::MarketingCreatives::CategoriesControllerTest < ActionController::Te
     attributes[:name] = nil
 
     put :update, params: { id: @category, marketing_creatives_category: attributes }
-
-    assert_not_equal @category.name_on_profile, attributes[:name_on_profile]
 
     assert_response :unprocessable_entity
   end

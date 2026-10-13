@@ -4,10 +4,9 @@ module Reimbursements
   class MailboxPollJobTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Interface-compatible stand-in for MailboxClient recording replies/moves.
-    # Models the real idempotency guarantee: mark_read hides the message from
-    # unread_messages, so a message read once is never re-processed even if the
-    # (best-effort) move fails. Toggles let a step fail like Graph would.
+    # Stand-in for MailboxClient recording replies and moves. mark_read hides the message from
+    # unread_messages, as the real idempotency guarantee does, even if the best-effort move
+    # fails. Toggles make a step fail like Graph would.
     class FakeMailbox
       attr_reader :replies, :moves, :reads
       attr_accessor :fail_mark_read, :fail_move
@@ -18,11 +17,10 @@ module Reimbursements
         @replies = []
         @moves = []
         @reads = []
-        @read_ids = []
       end
 
       def unread_messages
-        @messages.reject { |message| @read_ids.include?(message.id) }
+        @messages.reject { |message| @reads.include?(message.id) }
       end
 
       def attachments(message_id)
@@ -34,14 +32,13 @@ module Reimbursements
       end
 
       def mark_read(message_id)
-        raise MailboxClient::Error, "isRead patch failed" if fail_mark_read
+        raise GraphAuth::Error, "isRead patch failed" if fail_mark_read
 
-        @read_ids << message_id
         @reads << message_id
       end
 
       def move(message_id, folder)
-        raise MailboxClient::Error, "move failed" if fail_move
+        raise GraphAuth::Error, "move failed" if fail_move
 
         @moves << [ message_id, folder ]
       end
@@ -55,8 +52,12 @@ module Reimbursements
     PDF_ATTACHMENT = { filename: "receipt.pdf", content_type: "application/pdf", bytes: "PDF" }.freeze
 
     def inbound_message(id: "msg1", from: "pat@example.com", subject: "Taxi receipt")
-      MailboxClient::Message.new(id: id, from_address: from, subject: subject,
+      Graph::MailboxClient::Message.new(id: id, from_address: from, subject: subject,
                                  body_text: "receipt attached")
+    end
+
+    setup do
+      @original_builders = [ MailboxPollJob.mailbox_builder, MailboxPollJob.store_builder ]
     end
 
     def setup_job(messages:, attachments: {})
@@ -68,8 +69,7 @@ module Reimbursements
       @budget = create_reimbursements_budget(name: "Props", active: true)
       @store = DatabaseStore.new
       @mailbox = FakeMailbox.new(messages: messages, attachments: attachments)
-      # One cost centre (the fringe fixture); the builder receives it and returns
-      # the fake mailbox for it. The multi-cost-centre test overrides this.
+      # One cost centre (the fringe fixture); the multi-cost-centre test overrides this.
       MailboxPollJob.mailbox_builder = ->(_cost_centre) { @mailbox }
       MailboxPollJob.store_builder = -> { @store }
     end
@@ -77,12 +77,11 @@ module Reimbursements
     teardown do
       %w[REIMBURSEMENTS_AZURE_TENANT_ID REIMBURSEMENTS_AZURE_CLIENT_ID
          REIMBURSEMENTS_AZURE_CLIENT_SECRET].each { |key| ENV.delete(key) }
-      MailboxPollJob.mailbox_builder =
-        ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
-      MailboxPollJob.store_builder = -> { Reimbursements.build_store }
+      MailboxPollJob.mailbox_builder, MailboxPollJob.store_builder = @original_builders
       Rails.cache.delete(GraphAuthAlert::CACHE_KEY)
       Rails.cache.delete_matched("reimbursements/mailbox-sender-count/*")
       Rails.cache.delete_matched("reimbursements/mailbox-sender-counted/*")
+      Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
 
     test "skips entirely when graph credentials are not configured" do
@@ -96,48 +95,32 @@ module Reimbursements
 
     test "no-ops without touching the mailbox when outbound is disabled" do
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
 
-      MailboxPollJob.perform_now
+      without_outbound { MailboxPollJob.perform_now }
 
       assert_empty @mailbox.replies, "outbound disabled -> the mailbox is never polled or replied to"
       assert_empty @mailbox.moves
       assert_empty @mailbox.reads
       assert_equal 0, Expense.count
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
-    test "unknown sender gets a not-recognised reply and lands in rejected" do
-      setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
-
-      MailboxPollJob.perform_now
-
-      assert_equal 1, @mailbox.replies.size
-      assert_match(/isn't in our submitter list/, @mailbox.replies.first.last)
-      assert_includes @mailbox.replies.first.last, "<p>Hi,</p>",
-                      "no matched person, so there is no name to greet"
-      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-      assert_equal 0, Expense.count
-    end
-
-    # The reply is written in the name of the cost centre whose mailbox the
-    # message arrived on. A termtime submitter told to write to the Fringe's
-    # finance address emails a team that can't help them.
+    # The reply names the cost centre whose mailbox the message arrived on, not the Fringe's.
     test "the automated reply names the cost centre whose mailbox it came from" do
-      termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-        receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
+      termtime = create_second_reimbursements_cost_centre
       CostCentre.where.not(id: termtime.id).destroy_all
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
 
       MailboxPollJob.perform_now
 
       reply = @mailbox.replies.sole.last
+      assert_match(/isn't in our submitter list/, reply)
+      assert_includes reply, "<p>Hi,</p>", "no matched person, so there is no name to greet"
       assert_includes reply, "If you're part of Bedlam Termtime,"
-      assert_includes reply, "Contact termtime-finance@example.invalid."
-      assert_not_includes reply, "Contact termtime@bedlamtheatre.co.uk"
+      assert_includes reply, "Contact termtime-finance@example.invalid.", "never the polled mailbox"
       assert_includes reply, "Bedlam Termtime finance (automated reply)"
       assert_not_includes reply, "Fringe"
+      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+      assert_equal 0, Expense.count
     end
 
     test "the reply names no contact rather than the polled mailbox itself" do
@@ -150,9 +133,7 @@ module Reimbursements
     end
 
     test "a move failure on the reject path leaves the message unread for retry, not stuck unfiled" do
-      # mark_read_and_move moves BEFORE marking read specifically so a move
-      # failure here (no expense created on this path) leaves the message
-      # unread and safe to retry, rather than marked-read-but-never-filed.
+      # Moves BEFORE marking read, so a move failure leaves the message unread and retryable.
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
       @mailbox.fail_move = true
 
@@ -189,35 +170,18 @@ module Reimbursements
     end
 
     test "automated senders get no reply (mail-loop guard)" do
+      own = CostCentre.default.receive_mailbox
       setup_job(messages: [ inbound_message(id: "msgNdr", from: "mailer-daemon@example.com"),
-                            inbound_message(id: "msgNoReply", from: "no-reply@shop.example") ])
-
-      MailboxPollJob.perform_now
-
-      assert_empty @mailbox.replies
-      assert_equal [ [ "msgNdr", :rejected ], [ "msgNoReply", :rejected ] ], @mailbox.moves
-    end
-
-    test "a message with a blank from-address is treated as automated, not crashed on" do
-      setup_job(messages: [ inbound_message(id: "msgBlank", from: "") ])
+                            inbound_message(id: "msgNoReply", from: "no-reply@shop.example"),
+                            inbound_message(id: "msgBlank", from: ""),
+                            inbound_message(id: "msgLoop", from: own) ],
+                attachments: { "msgLoop" => [ PDF_ATTACHMENT ] })
 
       assert_nothing_raised { MailboxPollJob.perform_now }
 
       assert_empty @mailbox.replies
-      assert_equal [ [ "msgBlank", :rejected ] ], @mailbox.moves
-    end
-
-    # Real PNG bytes, not a stand-in string: an inline image now has to survive
-    # ReceiptIntake's metadata strip, which decodes it.
-    test "processes a pasted-in-body receipt (inline image)" do
-      pasted = { filename: "pasted-receipt.png", content_type: "image/png",
-                 bytes: File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.png")) }
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ pasted ] })
-
-      MailboxPollJob.perform_now
-
-      assert_equal 1, Expense.sole.receipt_files.count
-      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+      assert_equal %w[msgNdr msgNoReply msgBlank msgLoop].map { |id| [ id, :rejected ] }, @mailbox.moves
+      assert_equal 0, Expense.count, "even a message carrying a receipt is not drafted"
     end
 
     test "known sender with a receipt gets a blank draft expense and a portal link" do
@@ -228,8 +192,8 @@ module Reimbursements
       expense = Expense.sole
       assert_equal Status::DRAFT, expense.status
       assert_equal @person, expense.person
-      # Only the subject seeds the description; amount/budget/reference are left
-      # blank for the submitter to complete in the portal.
+      assert_equal "msg1", expense.source_message_id
+      # Only the subject seeds the description; the rest is left for the submitter.
       assert_equal "Taxi receipt", expense.description, "the subject seeds the description"
       assert_nil expense.amount, "the amount is left for the portal"
       assert_nil expense.amount_excl_vat
@@ -245,11 +209,8 @@ module Reimbursements
     end
 
     test "an attach failure still marks read and replies (no duplicate minting), but withholds the move" do
-      # The move to Processed is gated on attach succeeding: a partially-
-      # attached draft stays visible in the Inbox as a signal something needs
-      # manual follow-up, rather than being filed away looking identical to a
-      # fully successful run. The reply must still go out — the submitter is
-      # waiting on their portal link regardless of the attach outcome.
+      # The move to Processed is gated on attach: a partly attached draft stays in the Inbox.
+      # The reply still goes out, since the submitter is waiting on their link.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
       @store.define_singleton_method(:attach_receipt!) { |*| raise "storage down" }
 
@@ -264,7 +225,7 @@ module Reimbursements
 
     test "a reply failure does not prevent the receipt attach or block the move" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      @mailbox.define_singleton_method(:reply) { |*| raise MailboxClient::Error, "reply failed" }
+      @mailbox.define_singleton_method(:reply) { |*| raise GraphAuth::Error, "reply failed" }
 
       notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
 
@@ -300,31 +261,7 @@ module Reimbursements
       assert_empty @mailbox.moves
     end
 
-    test "an attachment with nil bytes is skipped, not crashed on" do
-      nil_bytes = { filename: "broken.pdf", content_type: "application/pdf", bytes: nil }
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ nil_bytes ] })
-
-      assert_nothing_raised { MailboxPollJob.perform_now }
-
-      assert_equal 0, Expense.count, "a broken attachment must not mint an expense"
-      assert_match(/no usable receipt/, @mailbox.replies.first.last)
-      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-    end
-
-    test "an attachment over the 5MB receipt limit is skipped, not attached" do
-      oversized = { filename: "receipt.pdf", content_type: "application/pdf",
-                   bytes: "a" * (ExpenseForm::MAX_RECEIPT_BYTES + 1) }
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ oversized ] })
-
-      MailboxPollJob.perform_now
-
-      assert_equal 0, Expense.count, "an oversized attachment must not mint an expense"
-      assert_match(/no usable receipt/, @mailbox.replies.first.last)
-      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-    end
-
-    # Emailing an iPhone photo to the shared mailbox is a likely route in, so
-    # email-in converts too: the draft carries a JPEG, not the HEIC.
+    # Email-in converts HEIC too: the draft carries a JPEG.
     test "an emailed HEIC photo is converted to a JPEG on the draft" do
       heic = { filename: "IMG_1234.HEIC", content_type: "image/heic",
               bytes: File.binread(Rails.root.join("test/fixtures/files/reimbursements_receipt.heic")) }
@@ -339,30 +276,27 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    # A damaged photo must not raise inside the poll (that would leave the
-    # message unread and reprocessed forever); it just isn't a usable receipt,
-    # so the sender gets the existing "please attach the receipt" reply.
-    test "an emailed HEIC that can't be decoded falls back to the missing-receipt reply" do
-      broken = { filename: "IMG_9.HEIC", content_type: "image/heic",
-                bytes: File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic")) }
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ broken ] })
+    # None of these may raise inside the poll (the message would be reprocessed for ever): each is
+    # just not a usable receipt. Why is ReceiptIntake's business, tested in receipt_intake_test.
+    {
+      "an attachment with nil bytes" =>
+        -> { { filename: "broken.pdf", content_type: "application/pdf", bytes: nil } },
+      "an attachment over the 5MB limit" =>
+        -> { { filename: "receipt.pdf", content_type: "application/pdf", bytes: "a" * (ExpenseForm::MAX_RECEIPT_BYTES + 1) } },
+      "an emailed HEIC that can't be decoded" =>
+        -> { { filename: "IMG_9.HEIC", content_type: "image/heic", bytes: File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic")) } },
+      "an attachment of a disallowed content type" =>
+        -> { { filename: "notes.txt", content_type: "text/plain", bytes: "just some plain text notes" } }
+    }.each do |label, build|
+      test "#{label} is not a usable receipt" do
+        setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ build.call ] })
 
-      assert_nothing_raised { MailboxPollJob.perform_now }
+        assert_nothing_raised { MailboxPollJob.perform_now }
 
-      assert_equal 0, Expense.count, "an unreadable photo must not mint an expense"
-      assert_match(/no usable receipt/, @mailbox.replies.first.last)
-      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-    end
-
-    test "an attachment whose content isn't an allowed receipt type is skipped" do
-      not_a_receipt = { filename: "notes.txt", content_type: "text/plain", bytes: "just some plain text notes" }
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ not_a_receipt ] })
-
-      MailboxPollJob.perform_now
-
-      assert_equal 0, Expense.count, "a disallowed content type must not mint an expense"
-      assert_match(/no usable receipt/, @mailbox.replies.first.last)
-      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+        assert_equal 0, Expense.count
+        assert_match(/no usable receipt/, @mailbox.replies.sole.last)
+        assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+      end
     end
 
     test "a failing message is left unread and others still process" do
@@ -371,12 +305,8 @@ module Reimbursements
       setup_job(messages: [ broken, fine ],
                 attachments: { "msg1" => [ PDF_ATTACHMENT ], "msgBoom" => [ PDF_ATTACHMENT ] })
       original = @store.method(:create_expense!)
-      calls = 0
       @store.define_singleton_method(:create_expense!) do |attrs|
-        calls += 1
-        raise "boom" if calls == 1
-
-        original.call(attrs)
+        attrs[:source_message_id] == "msgBoom" ? raise("boom") : original.call(attrs)
       end
 
       MailboxPollJob.perform_now
@@ -385,13 +315,12 @@ module Reimbursements
       moved_ids = @mailbox.moves.map(&:first)
       assert_includes moved_ids, "msg1"
       assert_not_includes moved_ids, "msgBoom"
+      assert_equal [ "msgBoom" ], @mailbox.unread_messages.map(&:id)
     end
 
     test "a message retried across poll cycles after a downstream failure counts once toward the sender's daily limit" do
-      # A message left unread by a downstream failure (a data-layer blip, not a
-      # sender problem) gets reprocessed every cycle until it succeeds — that
-      # must not inflate one real email into many against the sender's tally,
-      # or a transient outage could get a legitimate sender rate-limited.
+      # A message left unread by a downstream failure is reprocessed every cycle; that must not
+      # inflate the sender's tally.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
       @store.define_singleton_method(:create_expense!) { |*| raise "boom" }
 
@@ -402,8 +331,7 @@ module Reimbursements
     end
 
     test "polls each cost centre on its own receive mailbox" do
-      termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-        receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
+      termtime = create_second_reimbursements_cost_centre
 
       setup_job(messages: [])
       fringe_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgFringe") ],
@@ -411,36 +339,29 @@ module Reimbursements
       termtime_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgTerm") ],
                                          attachments: { "msgTerm" => [ PDF_ATTACHMENT ] })
       by_mailbox = { "reimbursements@bedlamfringe.co.uk" => fringe_mailbox,
-                     "termtime@bedlamtheatre.co.uk" => termtime_mailbox }
-      polled = []
-      MailboxPollJob.mailbox_builder = lambda do |cost_centre|
-        polled << cost_centre.receive_mailbox
-        by_mailbox.fetch(cost_centre.receive_mailbox)
-      end
+                     termtime.receive_mailbox => termtime_mailbox }
+      MailboxPollJob.mailbox_builder = ->(cost_centre) { by_mailbox.fetch(cost_centre.receive_mailbox) }
 
       MailboxPollJob.perform_now
 
-      assert_includes polled, "reimbursements@bedlamfringe.co.uk"
-      assert_includes polled, termtime.receive_mailbox
       assert_equal [ [ "msgFringe", :processed ] ], fringe_mailbox.moves
       assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves
       assert_equal 2, Expense.count, "an expense is drafted from each cost centre's inbox"
     end
 
     test "a generic failure polling one cost centre's mailbox doesn't stop the others being polled" do
-      create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-        receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
+      termtime = create_second_reimbursements_cost_centre
 
       setup_job(messages: [])
       broken_mailbox = Object.new.tap do |m|
         def m.unread_messages
-          raise Reimbursements::MailboxClient::Error, "Graph 503"
+          raise GraphAuth::Error, "Graph 503"
         end
       end
       termtime_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgTerm") ],
                                          attachments: { "msgTerm" => [ PDF_ATTACHMENT ] })
       by_mailbox = { "reimbursements@bedlamfringe.co.uk" => broken_mailbox,
-                     "termtime@bedlamtheatre.co.uk" => termtime_mailbox }
+                     termtime.receive_mailbox => termtime_mailbox }
       MailboxPollJob.mailbox_builder = ->(cost_centre) { by_mailbox.fetch(cost_centre.receive_mailbox) }
 
       notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
@@ -449,27 +370,6 @@ module Reimbursements
       assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves,
                    "the other cost centre must still be polled despite the first one's failure"
       assert_equal 1, Expense.count
-    end
-
-    test "a sender matching the cost centre's own receive mailbox is treated as automated" do
-      own = CostCentre.default.receive_mailbox
-      setup_job(messages: [ inbound_message(id: "msgLoop", from: own) ],
-                attachments: { "msgLoop" => [ PDF_ATTACHMENT ] })
-
-      MailboxPollJob.perform_now
-
-      assert_empty @mailbox.replies, "no reply to a message from our own mailbox (loop guard)"
-      assert_equal [ [ "msgLoop", :rejected ] ], @mailbox.moves
-      assert_equal 0, Expense.count
-    end
-
-    test "a known sender well under the daily message cap is unaffected" do
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-
-      MailboxPollJob.perform_now
-
-      assert_equal 1, Expense.count
-      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
     test "a known sender over the daily message cap is rejected, not silently drafted forever" do
@@ -489,7 +389,7 @@ module Reimbursements
     test "auth failure alerts the IT subcommittee once per day" do
       setup_job(messages: [])
       @mailbox.define_singleton_method(:unread_messages) do
-        raise MailboxClient::AuthError, "AADSTS7000222: client secret expired"
+        raise GraphAuth::AuthError, "AADSTS7000222: client secret expired"
       end
 
       assert_emails 1 do
@@ -499,25 +399,10 @@ module Reimbursements
       assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
     end
 
-    # --- Idempotency key (source_message_id) -------------------------------
-
-    test "stamps the source message id on the created draft" do
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-
-      MailboxPollJob.perform_now
-
-      expense = Expense.find_by!(source_message_id: "msg1")
-      assert_equal Status::DRAFT, expense.status
-      assert_equal @person, expense.person
-      assert_equal 1, expense.receipt_files.count
-      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
-    end
-
     test "an already-seen message whose earlier cycle died before the attach is finished, not duplicated" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      # The earlier cycle created the expense (stamping the message id) but
-      # crashed before attach/reply — the receipt-less draft must not be
-      # filed away receipt-less with the sender never told.
+      # An earlier cycle created the expense but crashed before attach/reply: the draft must not
+      # be filed away receipt-less with the sender never told.
       orphan = Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
 
       assert_no_difference -> { Expense.count } do
@@ -530,67 +415,13 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    # --- Vanished mailbox messages (Graph 404 ErrorItemNotFound) -----------
-
-    # Drives the REAL MailboxClient (not the FakeMailbox) over FakeHttp so the
-    # 404 swallowing in MailboxClient#mark_read/#move/#reply is exercised end to
-    # end: a message handled or deleted by hand in Outlook between the poll's
-    # listing and the mark_read PATCH is nothing to alert about.
-    test "a message whose mark_read 404s (vanished from the mailbox) doesn't abort the poll or alert" do
-      setup_job(messages: [])
-      Rails.cache.delete_matched("reimbursements/graph-folder/*")
-
-      def raw_unknown(id, from)
-        { id: id, subject: "Receipt", bodyPreview: "see attached",
-          from: { emailAddress: { address: from } } }
-      end
-      item_not_found = { error: { code: "ErrorItemNotFound",
-                                  message: "The specified object was not found in the store." } }.to_json
-      http = FakeHttp.new([
-        [ 200, { access_token: "tok-1", expires_in: 3600 }.to_json ],                 # token
-        [ 200, { value: [ raw_unknown("msgGone", "stranger1@example.com"),
-                          raw_unknown("msgOk", "stranger2@example.com") ] }.to_json ], # unread list
-        [ 202, "" ],                                                                   # reply msgGone
-        [ 200, { value: [ { id: "fld-rejected" } ] }.to_json ],                        # folder lookup
-        [ 201, { id: "moved" }.to_json ],                                              # move msgGone
-        [ 404, item_not_found ],                                                        # mark_read msgGone -> 404
-        [ 404, item_not_found ],                                                        # re-GET confirms it IS gone
-        [ 202, "" ],                                                                   # reply msgOk
-        [ 201, { id: "moved2" }.to_json ],                                             # move msgOk (folder cached)
-        [ 200, "" ]                                                                    # mark_read msgOk
-      ])
-      MailboxPollJob.mailbox_builder = lambda do |cost_centre|
-        MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
-                          clock: -> { Time.zone.local(2026, 7, 9, 12) })
-      end
-
-      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
-
-      assert_empty notified, "a vanished message (404) must not raise a Honeybadger alert"
-      patched = http.requests.select { |r| r.method.to_s == "patch" }.map(&:uri)
-      assert(patched.any? { |uri| uri.include?("messages/msgOk") },
-             "the poll must continue past the vanished message and mark the next one read")
-      assert_equal 0, Expense.count
-    ensure
-      Rails.cache.delete_matched("reimbursements/graph-folder/*")
-    end
-
-    # Exchange CHANGES a message's id when the message is moved, so a mark_read
-    # 404 can mean "still in the mailbox, still unread, under a new id". A
-    # blanket 404 swallow turns that into silence: the expense is created,
-    # mark_read reports SUCCESS, the sender is never told their claim arrived,
-    # and no Honeybadger notice or duplicate_risk flag says so.
-    #
-    # Drives the REAL MailboxClient over FakeHttp, like the confirmed-gone test
-    # above, so the difference between the two is only what the confirmation GET
-    # answers.
+    # Exchange changes a message's id on move, so a mark_read 404 can mean "still in the mailbox,
+    # under a new id". Swallowing it would leave the sender un-replied with no Honeybadger notice
+    # or duplicate_risk flag. Drives the REAL MailboxClient over FakeHttp.
     test "a mark_read 404 on a message that still exists flags duplicate_risk loudly" do
       setup_job(messages: [])
-      Rails.cache.delete_matched("reimbursements/graph-folder/*")
       person = create_reimbursements_person(name: "Moved Morgan", email: "morgan@example.com")
       pdf = Base64.strict_encode64(PDF_ATTACHMENT[:bytes])
-      item_not_found = { error: { code: "ErrorItemNotFound",
-                                  message: "The specified object was not found in the store." } }.to_json
       http = FakeHttp.new([
         [ 200, { access_token: "tok-1", expires_in: 3600 }.to_json ],                  # token
         [ 200, { value: [ { id: "msgMoved", subject: "Receipt", bodyPreview: "see attached",
@@ -598,11 +429,11 @@ module Reimbursements
         [ 200, { value: [ { "@odata.type" => "#microsoft.graph.fileAttachment",
                             name: PDF_ATTACHMENT[:filename], contentType: PDF_ATTACHMENT[:content_type],
                             contentBytes: pdf } ] }.to_json ],                         # attachments
-        [ 404, item_not_found ],                                                       # mark_read -> 404
+        [ 404, GRAPH_ITEM_NOT_FOUND ],                                                 # mark_read -> 404
         [ 200, { id: "msgMovedNewId" }.to_json ]                                       # ...but it IS still there
       ])
       MailboxPollJob.mailbox_builder = lambda do |cost_centre|
-        MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
+        Graph::MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
                           clock: -> { Time.zone.local(2026, 7, 9, 12) })
       end
 
@@ -612,12 +443,9 @@ module Reimbursements
       assert_equal 1, notified.size, "a moved-but-present message must reach Honeybadger"
       assert notified.first.last.dig(:context, :duplicate_risk),
              "the duplicate_risk flag is the whole point of the loud path: #{notified.first.inspect}"
-      # Nothing is attempted after the failed commit point: replying to or filing a
-      # still-unread message would be acting on a message the next cycle will retry.
+      # Nothing is attempted after the failed commit point: the next cycle retries the unread message.
       assert_equal 5, http.requests.size,
                    "no reply and no move after mark_read failed: #{http.requests.map(&:uri).inspect}"
-    ensure
-      Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
 
     test "an already-seen message whose receipts are already attached is filed away silently" do

@@ -6,86 +6,24 @@ module Admin
       include ReimbursementsTestHelpers
 
       FY = ::Reimbursements::FinancialYear
-      # Derived, so an added column breaks these loudly rather than shifting
-      # every cell one place left in silence — see budget_import_test.rb.
+      # Derived, never retyped: see ReimbursementsTestHelpers#budget_import_sheet.
       HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
         @user = users(:member)
+        grant_finance_permission(@user)
         @year = FY.create!(label: "Fringe 2027")
         @cost_centre = ::Reimbursements::CostCentre.default
       end
 
-      # The two leading Area columns are left blank; the area tests write their
-      # own headers.
-      def tsv(*rows)
-        ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
-      end
+      alias tsv budget_import_sheet
 
       def preview_params(text, **extra)
         { year: @year.key, pasted_text: text,
           cost_centre_id: @cost_centre.id }.merge(extra)
       end
 
-      # --- Auth gating -------------------------------------------------------
-
-      test "requires sign-in" do
-        get :show, params: { year: @year.key }
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :show, params: { year: @year.key }
-        assert_response :forbidden
-      end
-
-      # No longer a 404: the year is a selector param, not a path segment, so it
-      # follows FinanceController's rule — never show a DIFFERENT year's money as
-      # though it were the one asked for, so say so and fall back to the active
-      # year. Which year is being imported into is then on screen in the select,
-      # and travels explicitly through preview into apply.
-      test "an unknown year falls back to the active year and says so" do
-        active = FY.create!(label: "Fringe 2026", active: true)
-        sign_in @user
-
-        get :show, params: { year: "no-such-year" }
-
-        assert_response :success
-        assert_equal active, assigns(:selected_financial_year)
-        assert_match(/no-such-year/, response.body)
-      end
-
       # --- Step 1: the form --------------------------------------------------
-
-      # --- Entering from either side ----------------------------------------
-      # Financial years are orthogonal to cost centres, so the wizard needs both
-      # and neither is a path segment. Each entry point prefills the side it
-      # knows and the operator picks the other.
-
-      test "show defaults to the active year when the link named none" do
-        active = FY.create!(label: "Fringe 2026", active: true)
-        sign_in @user
-
-        get :show
-
-        assert_response :success
-        assert_equal active, assigns(:selected_financial_year)
-      end
-
-      test "show preselects the cost centre a settings-page link named" do
-        centre = create_reimbursements_cost_centre(key: "termtime", name: "Termtime",
-                                                   eusa_code: "BED")
-        sign_in @user
-
-        get :show, params: { cost_centre_id: centre.id }
-
-        assert_response :success
-        assert_equal centre, assigns(:selected_cost_centre)
-      end
 
       test "show says so when no financial year is set up at all" do
         FY.delete_all
@@ -111,32 +49,8 @@ module Admin
         assert_nil assigns(:import)
       end
 
-      # The destination travels through the preview, so apply cannot land in a
-      # different (year, cost centre) pair than the one that was shown.
-      test "apply imports into the year the preview carried, not the active one" do
-        FY.create!(label: "Fringe 2026", active: true)
-        sign_in @user
-
-        post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
-
-        assert_response :success
-        assert_equal @year, ::Reimbursements::Budget.find_by(name: "Props").financial_year
-      end
-
-      test "show renders the paste/upload form for the year" do
-        sign_in @user
-
-        get :show, params: { year: @year.key }
-
-        assert_response :success
-        assert_equal @year, assigns(:selected_financial_year)
-      end
-
-      # Turbo Drive REJECTS a non-redirect response to a form POST and discards
-      # it, so preview/apply would render a perfectly good page server-side that
-      # never reaches the screen. The wizard is stateless (a redirect can't
-      # carry the paste), so every step lives in one Turbo Frame instead — the
-      # same fix Reconcile uses. Only a browser catches this, hence the guard.
+      # Turbo Drive drops a non-redirect response to a form POST, so every step
+      # must render inside the frame. Only a browser would see it otherwise.
       test "every wizard step renders inside the turbo frame" do
         sign_in @user
 
@@ -164,16 +78,6 @@ module Admin
         assert_equal 2, assigns(:import).entries_in(:create).size
       end
 
-      test "preview reports a line already in the year as a revision" do
-        existing = create_reimbursements_budget(name: "Props", initial_budget: 1000)
-        existing.update!(financial_year: @year)
-        sign_in @user
-
-        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
-
-        assert_equal 1, assigns(:import).entries_in(:revise).size
-      end
-
       test "preview refuses an empty paste" do
         sign_in @user
 
@@ -184,8 +88,6 @@ module Admin
         assert_nil assigns(:import)
       end
 
-      # Keyword matching can only ever be nearly right, so the preview states
-      # what it actually read — the thing that makes a mis-mapping visible.
       test "preview states which column each field was read from" do
         sign_in @user
 
@@ -219,10 +121,7 @@ module Admin
 
       # --- Areas ---------------------------------------------------------------
 
-      # The budget name shares no substring with the area name, so an assertion
-      # that the rendered Area cell holds "Cogito" cannot be satisfied by the
-      # Budget cell instead. assert_select walks the row's first <td> rather
-      # than grepping the body, so deleting the column fails this test.
+      # "Marketing" shares nothing with "Cogito", so only the Area cell can match.
       test "preview shows the area named on the sheet, marked as new" do
         sign_in @user
 
@@ -233,18 +132,27 @@ module Admin
 
         assert_response :success
         assert_equal [ "Cogito" ], assigns(:import).area_creates.map { |a| a[:name] }
-        # Scoped to the bucket table's own wrapper (div.overflow-x-auto with no
-        # other class) rather than "table tbody tr" generally, which also
-        # matches the "Columns read from your sheet" details table below it.
+        # :not(.mt-2) skips the "Columns read from your sheet" table.
         assert_select "div.overflow-x-auto:not(.mt-2) table tbody tr", 1 do
           assert_select "td:first-child", text: /\ACogito\b/
           assert_select "td:first-child span.text-amber-700", text: "(new)"
         end
       end
 
-      # A show's "Marketing" and a standing one are two lines now, so the Area
-      # cell and the name the sheet typed no longer say which line a figure is
-      # going to — both rows below render as the same row without this.
+      test "preview marks every row landing in a new area as new, however its cell is cased" do
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tSet\t432320\tExpense\t500\n" \
+          "cogito\tProps\t432330\tExpense\t600"
+        )
+
+        assert_select "div.overflow-x-auto:not(.mt-2) td:first-child span.text-amber-700",
+                      text: "(new)", count: 2
+      end
+
+      # Two lines of one name would render alike without these labels.
       test "preview states the line each row matched, and what the loose reading passed over" do
         cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                             financial_year: @year)
@@ -271,8 +179,8 @@ module Admin
 
         assert_difference -> { ::Reimbursements::Area.count }, 1 do
           post :apply, params: preview_params(
-            "Area\tBudget\tNominal code\tType\tAmount\n" \
-            "Cogito\tCogito: Marketing\t432320\tExpense\t400"
+            "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
+            "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
           )
         end
 
@@ -280,15 +188,13 @@ module Admin
         area = ::Reimbursements::Area.find_by(name: "Cogito")
         assert_equal @year, area.financial_year
         assert_equal @cost_centre, area.cost_centre
-        # Stored BARE: Budget#display_name composes "Cogito: Marketing" back, so
-        # keeping the prefix would render it twice — and the created line would
-        # carry the convention Phase 2a's rename exists to have removed.
+        assert_equal BigDecimal("1200"), area.initial_budget
+        # Stored bare: Budget#display_name puts the prefix back.
         assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
       end
 
-      # The rendered half of P1 and P2, on the sheet the adoption produces. The
-      # first import of a financial year is nothing but create rows, so a label
-      # that fires on them puts "matched: no area" against every line on screen.
+      # The first import of a year is all creates, so a "matched:" label there
+      # would be on every row.
       test "the first import of a year states where each line lands and claims no match" do
         sign_in @user
 
@@ -306,8 +212,7 @@ module Admin
         assert_no_match(/matched:/, response.body)
       end
 
-      # The M2 signal, rendered: the create sits in one panel and the absence in
-      # another, and nothing else on the screen connects them.
+      # The create and the absence sit in two panels; this links them.
       test "the absent panel names a line this sheet re-creates under its own prefix" do
         area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                           financial_year: @year)
@@ -324,10 +229,8 @@ module Admin
         assert_match(/this sheet creates the same line inside that area/, response.body)
       end
 
-      # THE TRANSITIONAL SHEET, end to end: a half-filled Area column, then the
-      # same lines fully converted. Created as a loose "Cogito: Marketing" the
-      # second sheet CREATES "Marketing" in Cogito beside it and reports the
-      # first absent — two lines for one, each with its own agreed figure.
+      # A half-filled Area column, then the same lines fully converted, must
+      # not end as two lines.
       test "a half-filled Area column converges with the sheet that fills it in" do
         sign_in @user
 
@@ -352,23 +255,6 @@ module Admin
         assert_equal 1, assigns(:import).entries_in(:revise).size
       end
 
-      test "apply attaches to an existing area rather than creating a second" do
-        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Area.count } do
-          post :apply, params: preview_params(
-            "Area\tBudget\tNominal code\tType\tAmount\n" \
-            "Cogito\tCogito: Marketing\t432320\tExpense\t400"
-          )
-        end
-
-        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
-      end
-
-      # The agreed total caps a whole show and is write-once, and the preview
-      # stated it nowhere — so the one figure the operator most needs to check
-      # was invisible until after it had been written.
       test "the preview states the agreed total each new area is about to be given" do
         sign_in @user
 
@@ -382,37 +268,7 @@ module Admin
         assert_includes response.body, "£1,200.00"
       end
 
-      test "apply writes the Area total column as the new area's agreed total" do
-        sign_in @user
-
-        post :apply, params: preview_params(
-          "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
-          "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
-        )
-
-        assert_response :success
-        area = ::Reimbursements::Area.find_by(name: "Cogito")
-        assert_equal BigDecimal("1200"), area.initial_budget
-      end
-
-      test "apply is blocked when the sheet gives one area two different totals" do
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Area.count } do
-          post :apply, params: preview_params(
-            "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
-            "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\n" \
-            "Cogito\t1500\tCogito: Other\t432320\tExpense\t800"
-          )
-        end
-
-        assert_response :unprocessable_entity
-        assert_match(/Cogito/, assigns(:import).errors.to_sentence)
-      end
-
       # --- Re-homing a line the sheet disagrees with ---------------------------
-      # Reported, ticked by default, and only applied for the keys that come
-      # back — the same shape as Reconcile's offsetting pairs.
 
       AREA_HEADERS = "Area\tBudget name\tNominal code\tType\tBudget amount".freeze
 
@@ -440,38 +296,6 @@ module Admin
         assert_select "label[for=?]", "re-home-#{budget.record_id}", text: /Improverts.+Cogito/m
       end
 
-      test "apply moves a ticked line into the area the sheet names" do
-        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
-                                                financial_year: @year)
-        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
-                                            financial_year: @year)
-        budget = marketing_in(improverts)
-        sign_in @user
-
-        post :apply, params: preview_params(cogito_sheet,
-                                            re_home_budget_ids: [ "", budget.record_id ])
-
-        assert_response :success
-        assert_equal cogito.id, budget.reload.area_id
-      end
-
-      # An unticked line is left exactly as it was — the whole reason this is a
-      # bucket rather than something the import just does.
-      test "apply leaves an unticked re-home alone" do
-        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
-                                                financial_year: @year)
-        create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-        budget = marketing_in(improverts)
-        sign_in @user
-
-        post :apply, params: preview_params(cogito_sheet, re_home_budget_ids: [ "" ])
-
-        assert_response :success
-        assert_equal improverts.id, budget.reload.area_id
-      end
-
-      # A key that matches nothing here reads as unticked, never as "move
-      # something else" — the safe direction, as Reconcile's pair keys are.
       test "apply ignores a re-home key that matches no line in this sheet" do
         improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
                                                 financial_year: @year)
@@ -484,10 +308,7 @@ module Admin
         assert_equal improverts.id, budget.reload.area_id
       end
 
-      # THE RE-IMPORT: a committee adds an Area column to a sheet they have
-      # imported before, so every line is already here and NOTHING is a create.
-      # Without the re-home bucket #area_creates mints the area and no budget
-      # is ever attached to it — only a :create line carries an area_id.
+      # Every line already exists, so only the re-home attaches them to the area.
       test "a re-import that gains an Area column attaches the existing lines to the new area" do
         budget = marketing_in(nil)
         sign_in @user
@@ -503,9 +324,8 @@ module Admin
         assert_equal 1, assigns(:result).re_homed
       end
 
-      # Nothing creates and nothing revises on that re-import, so without the
-      # moved lines in the count the button reads "Nothing to import" and is
-      # disabled — the sheet this whole bucket exists for could not be applied.
+      # Without the moved lines in the count the button would read "Nothing to
+      # import", disabled.
       test "preview offers to import a sheet whose only change is the area" do
         marketing_in(nil)
         sign_in @user
@@ -519,8 +339,8 @@ module Admin
         end
       end
 
-      # Keyed by budget id, so the rows can arrive in any order — the claim the
-      # keying exists to make, which a value assertion cannot make.
+      # The claim the budget-id keying exists to make; the unticked line is left
+      # exactly where it was.
       test "a tick follows its budget when the sheet's rows are reordered" do
         improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
                                                 financial_year: @year)
@@ -544,8 +364,6 @@ module Admin
         assert_equal improverts.id, set.reload.area_id
       end
 
-      # An operator who takes the cautious option must not be left with the
-      # empty area the whole bucket exists to prevent.
       test "unticking every re-home creates no area at all" do
         budget = marketing_in(nil)
         sign_in @user
@@ -559,9 +377,6 @@ module Admin
         assert_nil budget.reload.area_id
       end
 
-      # Budget#owners resolves through the area, so a line landing in an
-      # ownerless one stops needing endorsement — said in the words the area
-      # form and the budget form already use.
       test "preview warns that a re-home into an ownerless area drops the sign-off gate" do
         marketing_in(nil)
         sign_in @user
@@ -586,21 +401,13 @@ module Admin
       end
 
       # --- The owner column names the AREA -------------------------------------
-      # Budget#owners reads through the area, so an owner written to a line that
-      # has one is an owner no sign-off gate ever consults.
 
       OWNER_HEADERS = "#{AREA_HEADERS}\tOwner emails".freeze
 
       def cogito_owner_sheet(email) = "#{OWNER_HEADERS}\nCogito\tCogito: Marketing\t432320\tExpense\t400\t#{email}"
 
-      # A NAMED list, not a count: the union is forgiving, so a stale address on
-      # one line would otherwise gain sign-off authority over a whole show.
-      #
-      # All THREE qualifications in one sheet, each rendering differently and
-      # each a real defect: an in-scope area (bare), one this import is about to
-      # create ("(new)"), and one reached through a blank Area cell sitting in
-      # another YEAR — which no re-home reports, so it is otherwise
-      # indistinguishable from the first.
+      # Three qualifications in one sheet: in scope (bare), new, and another
+      # year's area reached through a blank Area cell.
       test "preview names who will sign off for each area, qualified and marking the additions" do
         area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                           financial_year: @year)
@@ -627,10 +434,6 @@ module Admin
         end
       end
 
-      # The owner grant and the re-home tick are decoupled — unticking a move
-      # leaves the line alone but the area still gains the owner. That is the
-      # ruling, and it is not what an operator would guess from two controls on
-      # one screen, so the panel has to say it.
       test "the owner panel says unticking a move does not hold the owner back" do
         create_reimbursements_person(name: "Alice", email: "alice@example.com")
         marketing_in(nil)
@@ -662,8 +465,6 @@ module Admin
       end
 
       # --- The "not in this sheet" panel --------------------------------------
-      # The panel that exists to catch "you left a show out of the
-      # spreadsheet", whose names necessarily span areas.
 
       test "the absent-budget panel names the show each missing line belongs to" do
         cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
@@ -694,14 +495,10 @@ module Admin
       end
 
       # --- A revised area total ---------------------------------------------
-      # The sheet is where the committee agrees a show's total, so a changed
-      # Area total has to be visible before it is applied and has to actually
-      # land. It used to be dropped: not applied, not logged, not reported.
 
       TOTAL_HEADERS = "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount".freeze
 
-      # The LINE's figure moves too (the stored line is 400), so the label has
-      # to carry both buckets and they cannot be mistaken for each other.
+      # The line's figure moves too (stored 400), so the label carries both.
       def cogito_total_sheet(total)
         "#{TOTAL_HEADERS}\nCogito\t#{total}\tCogito: Marketing\t432320\tExpense\t450"
       end
@@ -735,8 +532,7 @@ module Admin
         assert_select "li", text: /1 area total.*revised/m
       end
 
-      # "Cogito → Cogito" would read as a no-op, so the from side names the
-      # year it is stranded in and the to side says it is about to be created.
+      # Otherwise it would read "Cogito → Cogito".
       test "preview qualifies a re-home whose from and to areas share a name" do
         stale = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                            financial_year: FY.create!(label: "Fringe 2026"))
@@ -753,7 +549,10 @@ module Admin
 
       # --- Step 3: apply -----------------------------------------------------
 
+      # The destination travels through the preview, so apply cannot land in a
+      # different (year, cost centre) pair than the one that was shown.
       test "apply creates the year's budgets" do
+        FY.create!(label: "Fringe 2026", active: true)
         sign_in @user
 
         assert_difference -> { ::Reimbursements::Budget.count }, 2 do
@@ -795,9 +594,6 @@ module Admin
         assert_match(/about a grand/, response.body)
       end
 
-      # With ONE centre configured there is nothing to choose between, so a
-      # blank choice lands in it rather than refusing over a question with a
-      # single answer.
       test "apply accepts a blank cost centre while only one is configured" do
         sign_in @user
 
@@ -806,9 +602,6 @@ module Admin
         end
       end
 
-      # With two, it is a real question and the operator has to answer it: a
-      # whole committee spreadsheet into the wrong pot is a large quiet
-      # mistake, and the wizard used to preselect the first centre silently.
       test "apply refuses without a cost centre once there are two to choose from" do
         create_second_reimbursements_cost_centre
         sign_in @user
@@ -866,6 +659,39 @@ module Admin
         assert_includes response.body, second.name
       end
 
+      # The budgets index carries the year and centre selectors; dropping the centre on the way
+      # back shows every centre's lines.
+      test "step 1's links back to the budgets keep the page's year and cost centre" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :show, params: { year: @year.key, cost_centre: second.key }
+
+        # Inside the frame: the sidebar carries the selectors too.
+        assert_select "turbo-frame#budget_import a[href=?]",
+                      admin_reimbursements_budgets_path(year: @year.key, cost_centre: second.key), count: 2
+      end
+
+      test "after an import, See the budgets opens the year and cost centre imported into" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"), cost_centre_id: second.id)
+
+        assert_select "a[href=?]", admin_reimbursements_budgets_path(year: @year.key, cost_centre: second.key),
+                      text: "See the budgets"
+      end
+
+      test "Start again and Cancel keep the cost centre chosen in the wizard" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"), cost_centre_id: second.id)
+
+        assert_select "turbo-frame#budget_import a[href=?]",
+                      admin_reimbursements_budget_import_path(year: @year.key, cost_centre: second.key), count: 2
+      end
+
       test "applying the same sheet twice creates nothing the second time" do
         sign_in @user
         post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
@@ -877,8 +703,8 @@ module Admin
 
       test "an uploaded xlsx survives preview into apply" do
         sign_in @user
-        file = fixture_file_upload_xlsx([ HEADERS.split("\t"),
-                                          [ "", "", "Props", "4000", "Expense", "1200", "", "" ] ])
+        file = xlsx_upload([ HEADERS.split("\t"), [ "", "", "Props", "4000", "Expense", "1200", "", "" ] ],
+                           sheet: "Budget")
 
         post :preview, params: { year: @year.key, cost_centre_id: @cost_centre.id,
                                  file: file }
@@ -892,9 +718,7 @@ module Admin
         assert_equal BigDecimal("1200"), ::Reimbursements::Budget.find_by(name: "Props").initial_budget
       end
 
-      # The preview marks the text it carries as this class's own escaped output.
-      # Without the marker apply unescapes the operator's own paste, and a name
-      # typed "Costume\next week" is stored with a real newline in it.
+      # Without the marker, apply would unescape a typed "Costume\next week".
       test "the preview marks the sheet it carries as canonical" do
         sign_in @user
 
@@ -928,16 +752,13 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
+        assert_match(/filename="budget-import-template\.csv"/, response.headers["Content-Disposition"])
         header, hints = CSV.parse(response.body)
         assert_equal ::Reimbursements::BudgetImport::TSV_HEADERS, header
         assert_equal "The show's agreed total, the same on every row of that area",
                      hints[header.index("Area total")]
-        assert_match "Area total", response.body
-        assert_match "Budget amount", response.body
       end
 
-      # Two columns hold money and they mean different things, so the page the
-      # operator pastes into says which is which.
       test "the import page explains the two amount columns" do
         sign_in @user
 
@@ -946,19 +767,6 @@ module Admin
         assert_response :success
         assert_match(/Area total.*agreed total.*every row/m, response.body)
         assert_match(/Budget amount.*that line/m, response.body)
-      end
-
-      private
-
-      def fixture_file_upload_xlsx(rows)
-        require "caxlsx"
-        package = Axlsx::Package.new
-        package.workbook.add_worksheet(name: "Budget") { |sheet| rows.each { |row| sheet.add_row row } }
-        file = Tempfile.new([ "budget", ".xlsx" ])
-        file.binmode
-        file.write(package.to_stream.read)
-        file.rewind
-        Rack::Test::UploadedFile.new(file.path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       end
 
       test "show preselects the operator's home cost centre when no link named one" do

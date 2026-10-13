@@ -2,12 +2,8 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # Browser tests for the split-an-EUSA-credit screen. Two things only a real
-    # browser sees: the running total that tells the operator whether the parts
-    # add up, and that the submit button is INSIDE the form — the card footer is
-    # a component slot, so a form opened inside the card renders its submit
-    # outside the <form> and the button silently does nothing. A request-level
-    # test POSTs straight to the action and cannot catch that.
+    # Only a browser sees the running total and that the submit button is inside the form (the card
+    # footer is a component slot; a request test POSTs straight to the action).
     class ActualsApportionJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -21,45 +17,29 @@ module Admin
         visit apportion_admin_reimbursements_actual_path(@payout.record_id)
       end
 
-      # Tom Select hides the original <select>, so Capybara's own #select can't
-      # touch it. Drive the widget the way an operator does.
-      def tom_select(option_text, select_id:)
-        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
-        wrapper.find(".ts-control").click
-        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
-      end
-
       def type_share(row, budget_name, amount)
-        tom_select(budget_name, select_id: "share_#{row}_budget_id")
+        tom_select_click(budget_name, select_id: "share_#{row}_budget_id")
         fill_in "share_#{row}_amount", with: amount
       end
 
-      test "the running total updates as amounts are typed and gates the submit" do
+      # Clicking the REAL button is what proves it sits inside the <form>.
+      test "the running total gates the submit, and the real button writes the shares" do
         assert_button "Save the split", disabled: true
 
         type_share(0, "Show A", "2500")
-
         assert_text "£1,500.00 left to allocate"
         assert_button "Save the split", disabled: true
 
         type_share(1, "Show B", "1500")
-
         assert_text "The parts add up"
         assert_button "Save the split", disabled: false
-      end
 
-      test "over-allocating disables the submit again" do
-        type_share(0, "Show A", "2500")
-        type_share(1, "Show B", "2500")
-
+        # Over again after balancing must take the button away again.
+        fill_in "share_1_amount", with: "2500"
         assert_text "£1,000.00 over"
         assert_button "Save the split", disabled: true
-      end
 
-      # Clicking the REAL button is what proves it sits inside the <form>.
-      test "clicking the real submit writes the shares" do
-        type_share(0, "Show A", "2500")
-        type_share(1, "Show B", "1500")
+        fill_in "share_1_amount", with: "1500"
         click_on "Save the split"
 
         assert_text "Split across 2 budgets"

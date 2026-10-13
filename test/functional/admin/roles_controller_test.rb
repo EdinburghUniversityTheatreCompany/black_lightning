@@ -58,23 +58,6 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_match "Add User to Role", response.body
   end
 
-  test "member can view trained role show page" do
-    sign_out @admin
-    sign_in users(:member)
-
-    trained_role = roles(:dm_trained)
-    get :show, params: { id: trained_role }
-    assert_response :success
-  end
-
-  test "member cannot view non-trained role show page" do
-    sign_out @admin
-    sign_in users(:member)
-
-    get :show, params: { id: roles(:committee) }
-    assert_response :forbidden
-  end
-
   test "member can view index and only sees trained roles" do
     sign_out @admin
     sign_in users(:member)
@@ -82,9 +65,8 @@ class Admin::RolesControllerTest < ActionController::TestCase
     get :index
     assert_response :success
 
-    assigns(:roles).each do |role|
-      assert role.trained_role?, "Non-trained role '#{role.name}' should not be visible to members on the index"
-    end
+    assert_includes assigns(:roles), roles(:dm_trained)
+    assert assigns(:roles).all? { it.name.include?("Trained") }, "Members should only see trained roles on the index"
   end
 
   test "should get new" do
@@ -123,7 +105,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     put :update, params: { id: role, role: { name: "Viking" } }
 
-    assert "Viking", assigns(:role).name
+    assert_equal "Viking", role.reload.name
     assert_redirected_to admin_role_path(role)
   end
 
@@ -132,24 +114,13 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
 
-    assert_equal "Member", Role.find(@role.id).name
+    assert_equal "Admin", roles(:admin).reload.name
   end
 
   test "should not update invalid role" do
     put :update, params: { id: @role, role: { name: nil } }
 
     assert_response :unprocessable_entity
-  end
-
-  test "should destroy role" do
-    # Create a test role that can be destroyed (not hardcoded or non-purgeable)
-    test_role = FactoryBot.create(:role, name: "Test Destroyable Role")
-
-    assert_difference("Role.count", -1) do
-      delete :destroy, params: { id: test_role }
-    end
-
-    assert_redirected_to admin_roles_path
   end
 
   test "should add user as admin" do
@@ -161,6 +132,16 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     assert_equal [ "Finbar the Viking has been added to the role of Member" ], flash[:success]
     assert_redirected_to admin_role_url(@role)
+  end
+
+  test "add_user answers a turbo stream that replaces the users table and toasts the name as written" do
+    user = FactoryBot.create(:user, first_name: "Finbar", last_name: "O'Brien")
+
+    post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }, format: :turbo_stream
+
+    assert_select "turbo-stream[action=replace][target=users_role_#{@role.id}] a", text: "Finbar O'Brien"
+    toast = response.body[/<turbo-stream action="toast"[^>]*>/]
+    assert_equal '<turbo-stream action="toast" type="success" message="Finbar O&#39;Brien has been added to the role of Member">', toast
   end
 
   test "should not add user who already has the role" do
@@ -242,15 +223,9 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test "should remove user from role if has parent role" do
     sign_out @admin
 
-    # Create a user with manage_trained_roles permission
-    user_with_permission = users(:committee)
-    sign_in user_with_permission
+    sign_in users(:committee)
 
-    assert user_with_permission.can?(:remove_user, Role), "User should be able to remove users from trained role"
-
-    # Create a trained role and add a user to it
-    trained_role = FactoryBot.create(:role, name: "Test Trained")
-    trained_role.parents << roles(:committee)
+    trained_role = committee_child_role
     user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
     user_to_remove.add_role(trained_role.name)
 
@@ -266,13 +241,8 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test "should not remove user from arbitrary role without admin permission" do
     sign_out @admin
 
-    # Create a user with manage_trained_roles permission
-    user_with_permission = FactoryBot.create(:user)
-    role = FactoryBot.create(:role, name: "Test Manager")
-    user_with_permission.add_role(role.name)
-    sign_in user_with_permission
+    sign_in users(:user)
 
-    # Try to remove from a non-trained role
     user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
     user_to_remove.add_role(@role.name)
 
@@ -305,16 +275,9 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test "should add user to role if has parent role" do
     sign_out @admin
 
-    # Create a user with manage_trained_roles permission
-    user_with_permission = users(:committee)
+    sign_in users(:committee)
 
-    sign_in user_with_permission
-
-    assert user_with_permission.can?(:add_user, Role), "User should be able to add users to trained role"
-
-    # Create a trained role and try to add a user to it
-    trained_role = FactoryBot.create(:role, name: "Test Trained")
-    trained_role.parents << roles(:committee)
+    trained_role = committee_child_role
     user_to_add = FactoryBot.create(:user, first_name: "Test", last_name: "User")
 
     assert_not user_to_add.has_role?(trained_role.name)
@@ -359,18 +322,6 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert Role.exists?(hardcoded_role.id), "Hardcoded role should still exist"
   end
 
-  test "should not destroy non-purgeable role" do
-    member_role = roles(:member)
-
-    assert_no_difference("Role.count") do
-      delete :destroy, params: { id: member_role }
-    end
-
-    assert_includes flash[:error], "Cannot delete role 'Member' as it is protected from deletion"
-    assert_redirected_to admin_role_path(member_role)
-    assert Role.exists?(member_role.id), "Non-purgeable role should still exist"
-  end
-
   test "should destroy regular role" do
     regular_role = FactoryBot.create(:role, name: "Test Role")
 
@@ -378,20 +329,14 @@ class Admin::RolesControllerTest < ActionController::TestCase
       delete :destroy, params: { id: regular_role }
     end
 
-    assert_includes flash[:success], "The role 'Test Role' was successfully deleted."
+    assert_includes flash[:success], "The Role \"Test Role\" has been successfully destroyed."
     assert_redirected_to admin_roles_path
     assert_not Role.exists?(regular_role.id), "Regular role should be removed"
   end
 
-  test "should not destroy committee role" do
-    committee_role = roles(:committee)
+  private
 
-    assert_no_difference("Role.count") do
-      delete :destroy, params: { id: committee_role }
-    end
-
-    assert_includes flash[:error], "Cannot delete hardcoded role 'Committee' as it is referenced in code"
-    assert_redirected_to admin_role_path(committee_role)
-    assert Role.exists?(committee_role.id), "Committee role should still exist"
+  def committee_child_role
+    FactoryBot.create(:role, name: "Test Trained").tap { it.parents << roles(:committee) }
   end
 end

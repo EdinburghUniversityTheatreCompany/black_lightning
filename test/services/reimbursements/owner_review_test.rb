@@ -2,9 +2,7 @@ require "test_helper"
 
 module Reimbursements
   class OwnerReviewTest < ActiveSupport::TestCase
-    # The pure OwnerReview predicates operate on the AR models' public
-    # interface; built unpersisted with the computed record_id/owner_ids pinned
-    # per-instance to isolate the gate logic (endorsements are real AR rows).
+    # Unpersisted models with record_id and owner_ids pinned; endorsements are real rows.
     Person = Reimbursements::Person
     Budget = Reimbursements::Budget
     Expense = Reimbursements::Expense
@@ -52,6 +50,7 @@ module Reimbursements
       exp = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: alice)
       assert_not OwnerReview.gate_applies?(exp)
       assert OwnerReview.submitter_owns_budget?(exp)
+      assert OwnerReview.gate_satisfied?(exp)
     end
 
     test "gate does not apply to an ownerless budget" do
@@ -70,8 +69,6 @@ module Reimbursements
     end
 
     test "an endorsement no longer covers the claim once its amount is edited" do
-      # Alice endorses a £10 claim; it's then bumped to £2000. The stale sign-off
-      # must NOT keep clearing the gate for the new, higher amount.
       OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
                                endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
                                endorsed_at: Time.current)
@@ -89,15 +86,30 @@ module Reimbursements
       assert_not OwnerReview.gate_satisfied?(moved)
     end
 
-    test "gate_satisfied? is true for a bypassed expense with no endorsement row" do
-      exp = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: person(id: "recPer1"))
-      assert OwnerReview.gate_satisfied?(exp)
-    end
-
     test "owned_by? checks the expense's budget owners" do
       exp = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: person(id: "recPerOther"))
       assert OwnerReview.owned_by?(exp, person(id: "recPer1"))
       assert_not OwnerReview.owned_by?(exp, person(id: "recPer2"))
+    end
+
+    test "split_queue puts an unendorsed gated claim awaiting its owner and lists Approved apart" do
+      other = person(id: "recPerOther")
+      gated = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: other, id: "recGated")
+      ownerless = expense(budget: budget(owner_ids: []), submitter: other, id: "recOwnerless")
+      endorsed = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: other, id: "recEndorsed")
+      OwnerEndorsement.create!(expense_record_id: "recEndorsed", budget_record_id: "recBud1",
+                               endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
+                               endorsed_at: Time.current)
+      approved = expense(budget: budget, submitter: other, id: "recApproved")
+      approved.status = Status::APPROVED
+
+      queue = OwnerReview.split_queue([ gated, ownerless, endorsed, approved ])
+
+      assert_equal %w[recGated recOwnerless recEndorsed], queue[:pending].map(&:record_id)
+      assert_equal [ "recGated" ], queue[:awaiting_owner].map(&:record_id)
+      assert_equal %w[recOwnerless recEndorsed], queue[:to_approve].map(&:record_id)
+      assert_equal [ "recApproved" ], queue[:approved].map(&:record_id)
+      assert_equal Set.new([ "recGated" ]), queue[:unmet_ids]
     end
   end
 end

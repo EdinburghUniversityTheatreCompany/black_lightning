@@ -5,22 +5,21 @@ class Admin::SharedDebtHelperTest < ActionView::TestCase
     @current_user.ability
   end
 
-  test "shared_debt_load" do
-    skip "Would be very nice to also test at some point, but the code is complicated and depends on a lot of variables."
-  end
-
   test "shared_debt_search_params" do
     key = "chocolate"
+    query = { "user_full_name_cont" => "Finbar" }
 
-    assert shared_debt_show_fulfilled_param({ show_fulfilled: "1" }, key)
+    assert_equal query, shared_debt_search_params({ q: query }, key)
+    assert_equal query, cookies["#{key}_query"]
 
-    assert_equal "true", cookies["#{key}_show_fulfilled"]
+    # The next request sends the stored query back as a string.
+    cookies["#{key}_query"] = query.to_s
+    assert_equal query, shared_debt_search_params({}, key)
 
-    # Should have stored in a cookie and read that now.
-    assert shared_debt_show_fulfilled_param({}, key)
-
-    # Should be able to override it by specifying a param again.
-    assert_not shared_debt_show_fulfilled_param({ show_fulfilled: "0" }, key)
+    # A new query replaces the stored one.
+    new_query = { "show_name_cont" => "Hamlet" }
+    assert_equal new_query, shared_debt_search_params({ q: new_query }, key)
+    assert_equal new_query, cookies["#{key}_query"]
   end
 
   test "shared_debt_show_fulfilled_param" do

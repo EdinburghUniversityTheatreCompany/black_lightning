@@ -25,26 +25,28 @@
 #
 module Reimbursements
   ##
-  # A budget owner's blocking sign-off that an expense charged to their budget
-  # is legitimate. The finance team can't approve a gated expense until one
-  # exists (any one owner suffices) — or until finance overrides the gate
-  # (recorded here as +overridden_by+ with no endorsing person). A submitter who
-  # owns the budget is auto-bypassed by the gate and needs no row here.
-  #
-  # The expense and budget are referenced by string record id, NOT by foreign
-  # key (unlike +overridden_by+), so nothing here is cascaded or nullified when
-  # either record goes: the uniqueness rule and every lookup below key on
-  # expense_record_id.
+  # A budget owner's sign-off on an expense charged to their budget, or a
+  # finance override of that gate (+overridden_by+, no endorsing person).
+  # Expense and budget are referenced by string record id, not foreign key,
+  # so nothing cascades when either goes.
   class OwnerEndorsement < ApplicationRecord
-    # The finance user who overrode the gate (nil for a genuine owner sign-off).
     belongs_to :overridden_by, class_name: "User", optional: true
 
     validates :expense_record_id, :budget_record_id, :endorsed_at, presence: true
-    # One satisfaction per expense — a friendly error ahead of the unique index.
+    # A friendly error ahead of the unique index.
     validates :expense_record_id, uniqueness: true
     validate :either_an_owner_or_an_override
 
     scope :for_expense, ->(expense_record_id) { where(expense_record_id: expense_record_id) }
+
+    # Upserted, so a stale row from a since-edited claim is refreshed to the CURRENT terms.
+    # +who+ is the endorsing person or the overriding user (and a note).
+    def self.record!(expense, **who)
+      for_expense(expense.record_id).first_or_initialize.tap do |endorsement|
+        endorsement.update!(budget_record_id: expense.budget.record_id, endorsed_amount: expense.amount,
+                            endorsed_at: Time.current, **who)
+      end
+    end
 
     def owner_endorsement?
       endorsed_by_person_id.present?
@@ -56,7 +58,6 @@ module Reimbursements
 
     private
 
-    # Exactly one satisfaction path: an owner endorsed, or finance overrode.
     def either_an_owner_or_an_override
       if endorsed_by_person_id.blank? && overridden_by_id.blank?
         errors.add(:base, "must record an endorsing owner or a finance override.")

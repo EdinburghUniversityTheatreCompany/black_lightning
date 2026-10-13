@@ -4,7 +4,7 @@
   <% modal.with_footer do %>
     <%= get_link(template_model, :index, link_text: "Edit Templates", variant: :secondary) %>
     <div class="flex gap-2">
-      <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->template-loader#close">Close</button>
+      <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->modal#close">Close</button>
       <button type="button"
               id="template_load"
               class="<%= btn_classes(:primary) %> disabled:opacity-50 disabled:cursor-not-allowed"

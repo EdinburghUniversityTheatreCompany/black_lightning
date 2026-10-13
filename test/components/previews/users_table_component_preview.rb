@@ -14,8 +14,7 @@ class UsersTableComponentPreview < Admin::ApplicationComponentPreview
   # A role's membership list, where each row can be removed.
   def with_remove_buttons
     render UsersTableComponent.new(users: sample_users, url: "/admin/roles/1",
-                                   show_remove_buttons: true,
-                                   remove_url_helper: ->(id) { "/admin/roles/1/remove_user/#{id}" })
+                                   remove_url: ->(id) { "/admin/roles/1/remove_user/#{id}" })
   end
 
   private

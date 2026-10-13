@@ -23,7 +23,7 @@
 module Reimbursements
   ##
   # Budget <-> People ownership (many-to-many).
-  # Owners are payees, not user accounts — a budget owner may never log in.
+  # Owners are payees, not user accounts: a budget owner may never log in.
   class BudgetOwner < ApplicationRecord
     belongs_to :budget, class_name: "Reimbursements::Budget", inverse_of: :budget_ownerships
     belongs_to :person, class_name: "Reimbursements::Person", inverse_of: :budget_ownerships

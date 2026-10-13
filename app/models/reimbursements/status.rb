@@ -1,8 +1,6 @@
 module Reimbursements
   ##
   # Expense status labels, stored as the strings finance reads.
-  # The portal writes Draft and Pending (submitting a draft promotes it);
-  # bedlam-bacs owns the rest of the state machine and ignores Drafts.
   module Status
     DRAFT = "Draft".freeze
     PENDING = "Pending".freeze

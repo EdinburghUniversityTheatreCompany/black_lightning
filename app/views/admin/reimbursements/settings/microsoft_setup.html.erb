@@ -1,10 +1,4 @@
-<%# The manual Microsoft 365 steps the app cannot do itself, on their own page.
-
-    They lived inside the cost centre's Settings form as a collapsed section, where a
-    wall of PowerShell and Graph JSON sat between the routine controls an operator
-    edits weekly — the mailboxes, the notification address, the nominal codes. These
-    steps are needed ONCE per cost centre, by somebody with Exchange Online or
-    SharePoint admin rights, who is usually not the person editing the settings. %>
+<%# The manual Microsoft 365 steps, needed once per cost centre by someone with Exchange or SharePoint admin rights; kept off the Settings form. %>
 <%= render "shared/back_link", text: "Back to #{@cost_centre.name}",
            path: edit_admin_reimbursements_setting_path(@cost_centre.key) %>
 
@@ -141,7 +135,6 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
     <%= link_to "#{@cost_centre.name}'s settings",
                 edit_admin_reimbursements_setting_path(@cost_centre.key), class: "underline" %>,
     <strong>Run access check</strong> probes this cost centre's mailboxes and site with the app's
-    own credentials. Allow 30 minutes to 2 hours after the mailbox grant before it goes green:
-    a red row inside that window is not a second problem.
+    own credentials.
   </p>
 <% end %>

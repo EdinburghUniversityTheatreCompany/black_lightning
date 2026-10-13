@@ -5,8 +5,7 @@ class MdEditorComponentTest < ViewComponent::TestCase
     render_inline(TestFormWrapper.new(record: User.new, **args))
   end
 
-  # Renders the component inside a real simple_form builder, which is the only
-  # way to get an `f` to hand it.
+  # A real simple_form builder is the only way to get an `f` to hand the component.
   class TestFormWrapper < ViewComponent::Base
     def initialize(record:, **editor_args)
       @record = record
@@ -33,19 +32,26 @@ class MdEditorComponentTest < ViewComponent::TestCase
     assert_selector "div.md\\:w-9\\/12 [data-controller='markdown-editor']"
   end
 
-  # Stacked, with the label carrying the same rules its siblings pick up from
-  # col-form-label, so the editor does not read as a different kind of field.
+  test "offers image upload by default" do
+    render_editor
+
+    assert_selector "[data-controller='markdown-editor'][data-markdown-editor-upload-url-value='/markdown/upload']"
+  end
+
+  test "uploads: false gives the editor no upload URL, so it offers no image upload" do
+    render_editor(uploads: false)
+
+    assert_selector "[data-controller='markdown-editor']"
+    assert_no_selector "[data-markdown-editor-upload-url-value]"
+    assert_no_selector "[data-markdown-editor-item-type-value]"
+  end
+
   test "the vertical layout stacks and styles the label like a sibling field" do
     render_editor(layout: :vertical)
 
     assert_no_selector "div.md\\:w-3\\/12"
     assert_no_selector "div.md\\:w-9\\/12"
     assert_selector "div.mb-4 > label.block.text-sm.font-medium.text-gray-700"
-  end
-
-  test "both layouts wire up the markdown editor controller" do
-    render_editor(layout: :vertical)
-
     assert_selector "[data-controller='markdown-editor'] textarea.form-control"
   end
 end

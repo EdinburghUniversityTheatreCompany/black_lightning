@@ -1,8 +1,7 @@
 require "test_helper"
 
 class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
-  # Records which events it was asked about, and can be told to fail for one of
-  # them. This suite has no mocking library.
+  # Records which events it was asked about, and can be told to fail for one of them.
   class FakeSync
     attr_reader :events
 
@@ -22,14 +21,15 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
   end
 
   setup do
+    @token = ENV["PRETIX_API_TOKEN"]
+    ENV["PRETIX_API_TOKEN"] = "test-token"
     @sync = FakeSync.new
     Pretix::SyncPerformancesJob.sync_builder = -> { @sync }
-    Pretix::SyncPerformancesJob.settings = Class.new { def self.configured? = true }
   end
 
   teardown do
-    Pretix::SyncPerformancesJob.sync_builder = Pretix::SyncPerformancesJob::DEFAULT_SYNC_BUILDER
-    Pretix::SyncPerformancesJob.settings = Pretix::Settings
+    ENV["PRETIX_API_TOKEN"] = @token
+    Pretix::SyncPerformancesJob.sync_builder = -> { Pretix::PerformanceSync.new }
   end
 
   def event(slug:, sync: true, start_date: Date.current, end_date: Date.current + 3)
@@ -62,11 +62,9 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
     assert_equal [ tonight ], @sync.events
   end
 
-
   # One producer's wrong slug must not cost every other show its sync.
   test "one failing event does not stop the rest" do
     @sync = FakeSync.new(failing_slugs: [ "broken" ])
-    Pretix::SyncPerformancesJob.sync_builder = -> { @sync }
     event(slug: "broken")
     working = event(slug: "working")
 
@@ -76,7 +74,7 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
   end
 
   test "does nothing without pretix credentials" do
-    Pretix::SyncPerformancesJob.settings = Class.new { def self.configured? = false }
+    ENV["PRETIX_API_TOKEN"] = nil
     event(slug: "hamlet")
 
     Pretix::SyncPerformancesJob.perform_now

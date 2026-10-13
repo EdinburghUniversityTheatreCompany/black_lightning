@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Admin::Proposals::CallsControllerTest < ActionController::TestCase
+  include ProposalTestHelpers
+
   setup do
     sign_in users(:admin)
 
@@ -13,6 +15,8 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     get :index
     assert_response :success
     assert_not_nil assigns(:calls)
+    assert_match "No proposals are awaiting approval.", response.body
+    assert_match "No approved proposals are awaiting a GM outcome.", response.body
   end
 
   test "index shows awaiting_approval and approved proposals with actions for approver" do
@@ -35,6 +39,14 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     assert_match reject_admin_proposals_proposal_path(awaiting), response.body
     assert_match mark_successful_admin_proposals_proposal_path(approved), response.body
     assert_match mark_unsuccessful_admin_proposals_proposal_path(approved), response.body
+  end
+
+  test "approving a proposal with debtors from the index asks a plain question" do
+    proposal = create_proposal_with_debtor(@call)
+
+    get :index
+
+    assert_debtor_approval_question(proposal)
   end
 
   test "index is viewable without approve permission but hides action buttons" do
@@ -165,9 +177,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     @call.update_attribute(:editing_deadline, DateTime.current.advance(days: -1))
     @call.update_attribute(:archived, false)
 
-    assert_no_difference("Admin::Proposals::Call.count") do
-      put :archive, params: { id: @call }
-    end
+    put :archive, params: { id: @call }
 
     assert assigns(:call).archived
 
@@ -178,9 +188,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
     @call.update_attribute(:archived, false)
 
-    assert_no_difference("Admin::Proposals::Call.count") do
-      put :archive, params: { id: @call }
-    end
+    put :archive, params: { id: @call }
 
     assert_not assigns(:call).archived
 

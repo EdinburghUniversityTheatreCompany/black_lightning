@@ -19,9 +19,7 @@
 #  fk_rails_...  (user_id => users.id)
 #
 class MaintenanceCredit < ApplicationRecord
-  # Virtual, non-persisted. Used only by the maintenance session form: a representative credit
-  # carries the user's credit count here so one row can stand in for N credits.
-  # See MaintenanceSession#attendees_for_form and #maintenance_credits_attributes=.
+  # Not persisted: the maintenance session form shows one credit per user, carrying their count here.
   attr_accessor :quantity
 
   validates :maintenance_session, :user, presence: true
@@ -43,7 +41,6 @@ class MaintenanceCredit < ApplicationRecord
     %w[user maintenance_session]
   end
 
-  # Returns all maintenance credits without a debt associated.
   def self.unassociated
     where.missing(:maintenance_debt)
   end

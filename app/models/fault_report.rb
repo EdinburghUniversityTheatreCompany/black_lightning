@@ -21,7 +21,6 @@
 #  index_fault_reports_on_status          (status)
 #
 class FaultReport < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :item, length: { maximum: 255 }
   validates :description, length: { maximum: 16777215 }
   validates :item, :description, presence: true

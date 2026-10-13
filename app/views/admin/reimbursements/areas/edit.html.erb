@@ -15,9 +15,6 @@
       Detaching a line does not delete it. It becomes a standalone budget again, keeping its
       claims and history.
     </p>
-    <%# budgets is a real has_many association (unlike ticket_prices, a JSON
-        column), so this needs no template_object: — the partial reflects on
-        the association itself to build the blank "Add" row. %>
     <%= render "shared/form/sections/nested_fields", f: form, association_name: :budgets,
           partial_name: "budget_fields", add_object_name: "budget line" %>
   <% end %>

@@ -1,37 +1,28 @@
 module Reimbursements
   ##
-  # Fills the vendored EUSA BACS request template in place (preserving EUSA's
-  # exact cell styling) with one row per expense, and returns the workbook bytes.
-  #
-  # The template's BREAKDOWN sheet has a header in row 1 and an F40 example in
-  # row 2; data is written from row 3 (0-based index 2). Sort code, account
-  # number and nominal code are forced to TEXT format ("@") so leading zeros and
-  # dashes survive — the whole reason we don't build the sheet from scratch.
-  #
-  # The template carries 200 pre-styled data rows (rows 3-202) before the GRAND
-  # TOTAL row, whose SUM formula (and the Authorisation Form's cross-sheet
-  # total) covers exactly that range — #generate refuses a bigger batch rather
-  # than silently dropping rows off the total or overwriting the total row.
+  # Fills EUSA's BACS request template (its BREAKDOWN sheet) with one row per
+  # expense and returns the workbook bytes. Sort code, account number and
+  # nominal code are forced to TEXT so leading zeros and dashes survive.
   class BacsXlsx
-    # One row destined for the BACS spreadsheet. Bank-detail fields stay strings
-    # to preserve leading zeros; +amount+ is numeric (the template's currency
-    # format applies).
+    include XlsxTemplate
+
+    # Bank-detail fields stay strings to keep leading zeros; +amount+ is numeric.
     BacsRow = Struct.new(:payee_name, :amount, :sort_code, :account_number,
                          :nominal_code, :description, :payment_reference, :cost_centre,
                          keyword_init: true)
 
     SHEET_NAME = "BREAKDOWN".freeze
+    TEMPLATE_LABEL = "BACS template".freeze
     AUTHORISATION_SHEET_NAME = "AUTHORISATION FORM".freeze
     # 0-based [row, column]: D4, C16, C17.
     CENTRE_NAME_CELL = [ 3, 3 ].freeze
     AUTHORISER_NAME_CELL = [ 15, 2 ].freeze
     AUTHORISER_DESIGNATION_CELL = [ 16, 2 ].freeze
-    # 0-based: rows 0 (header) and 1 (example) are reserved by the template.
+    # 0-based, below the template's header and example rows.
     DATA_START_ROW = 2
-    # The template's GRAND TOTAL row (0-based) sits right after the last data
-    # row; its SUM formula covers exactly this many rows, so a batch bigger
-    # than this either silently drops off the total or overwrites the total
-    # row outright. Split a bigger batch into multiple BACS submissions.
+    # The GRAND TOTAL row's SUM (and the Authorisation Form's total) covers
+    # exactly this many rows, so a bigger batch would fall off the total or
+    # overwrite it. Split it into several submissions.
     MAX_ROWS = 200
     # Columns match the EUSA template, 0-based.
     COL_PAYEE = 0
@@ -42,59 +33,27 @@ module Reimbursements
     COL_COST_CENTRE = 5
     COL_PAYMENT_REFERENCE = 6
     COL_DESCRIPTION = 7
-    # Excel's builtin text number format.
-    TEXT_FORMAT = "@".freeze
 
     DEFAULT_TEMPLATE_PATH =
       Rails.root.join("lib/reimbursements/templates/EUSA_BACS_template.xlsx").freeze
 
-    class TemplateError < StandardError; end
-
-    def initialize(template_path: DEFAULT_TEMPLATE_PATH)
-      @template_path = Pathname(template_path)
-      return if @template_path.exist?
-
-      raise TemplateError, "BACS template not found at #{@template_path}"
-    end
-
-    # Render the spreadsheet as bytes, suitable for attaching to an email or
-    # uploading to SharePoint. The template is re-read on every call so one
-    # instance can produce many workbooks without state bleed.
+    # Re-reads the template on every call, so one instance builds many workbooks.
     def generate(rows, centre_name: nil, authoriser_name: nil, authoriser_designation: nil)
-      # Loaded here rather than at file scope: this class is eager-loaded in
-      # production, so a top-level require would pull rubyXL into every process
-      # at boot even though only the BACS build touches it (Gemfile require:false).
-      require "rubyXL"
-      require "rubyXL/convenience_methods"
-
       if rows.size > MAX_ROWS
         raise TemplateError,
               "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity. " \
               "split this into multiple submissions."
       end
 
-      # A blank cost centre refuses the workbook rather than defaulting: a
-      # termtime row silently stamped F40 books its spend against the Fringe and
-      # EUSA pays it from the wrong pot. The caller always has a cost centre.
-      if rows.any? { |row| row.cost_centre.blank? }
-        raise TemplateError, "every BACS row needs a cost-centre code before the spreadsheet can be built."
-      end
-
-      workbook = RubyXL::Parser.parse(@template_path.to_s)
-      sheet = workbook[SHEET_NAME]
-      unless sheet
-        raise TemplateError,
-              "template has no '#{SHEET_NAME}' sheet (found: #{workbook.worksheets.map(&:sheet_name).inspect})"
-      end
-
+      workbook, sheet = open_workbook
       rows.each_with_index do |row, index|
         write_row(sheet, DATA_START_ROW + index, row)
       end
 
       authorisation = workbook[AUTHORISATION_SHEET_NAME]
-      write_template_cell(authorisation, CENTRE_NAME_CELL, centre_name)
-      write_template_cell(authorisation, AUTHORISER_NAME_CELL, authoriser_name)
-      write_template_cell(authorisation, AUTHORISER_DESIGNATION_CELL, authoriser_designation)
+      write(authorisation, *CENTRE_NAME_CELL, CellSanitizer.sanitize(centre_name))
+      write(authorisation, *AUTHORISER_NAME_CELL, CellSanitizer.sanitize(authoriser_name))
+      write(authorisation, *AUTHORISER_DESIGNATION_CELL, CellSanitizer.sanitize(authoriser_designation))
 
       workbook.stream.string
     end
@@ -102,45 +61,16 @@ module Reimbursements
     private
 
     def write_row(sheet, row_index, row)
-      # payee_name / payment_reference / description are free text the
-      # submitter controls (incl. Invoice overrides), so they are
-      # formula-sanitised. The bank/nominal-code fields below are expected to
-      # already be digits/dashes from a validated source, but they're still
-      # finance-editable overrides (nominal_code_override in particular has
-      # no format validation anywhere) — sanitised too as defense-in-depth,
-      # since this is the one field class that actually steers where BACS
-      # money goes. The numeric amount is the only truly non-text cell.
-      sheet.add_cell(row_index, COL_PAYEE, sanitize(row.payee_name))
-      # rubyXL serialises a Float cleanly; the template's currency format renders it.
-      sheet.add_cell(row_index, COL_AMOUNT, row.amount.to_f)
-      text_cell(sheet, row_index, COL_SORT_CODE, row.sort_code)
-      text_cell(sheet, row_index, COL_ACCOUNT_NUMBER, row.account_number)
-      text_cell(sheet, row_index, COL_NOMINAL_CODE, row.nominal_code)
-      sheet.add_cell(row_index, COL_COST_CENTRE, row.cost_centre)
-      sheet.add_cell(row_index, COL_PAYMENT_REFERENCE, sanitize(row.payment_reference))
-      sheet.add_cell(row_index, COL_DESCRIPTION, sanitize(row.description))
-    end
-
-    # change_contents rather than add_cell, which would replace the cell and drop
-    # the template's styling.
-    def write_template_cell(sheet, (row, column), value)
-      sheet[row][column].change_contents(sanitize(value.to_s))
-    end
-
-    # Prefix a single quote when a submitter-controlled value begins with a
-    # formula trigger, so Excel renders it as literal text instead of executing
-    # it. Ordinary values (and empty ones) pass through untouched. Shared with
-    # the CSV/workbook exports via CellSanitizer so the rule can't drift.
-    def sanitize(value)
-      CellSanitizer.sanitize(value)
-    end
-
-    # A cell written as literal text so leading zeros / dashes are preserved,
-    # formula-sanitised like the free-text cells above.
-    def text_cell(sheet, row_index, column_index, value)
-      cell = sheet.add_cell(row_index, column_index, sanitize(value))
-      cell.set_number_format(TEXT_FORMAT)
-      cell
+      # Every text cell is formula-sanitised, the bank and nominal cells too as
+      # defence in depth (nominal_code_override has no format validation).
+      write(sheet, row_index, COL_PAYEE, CellSanitizer.sanitize(row.payee_name))
+      write(sheet, row_index, COL_AMOUNT, row.amount.to_f)
+      write_text(sheet, row_index, COL_SORT_CODE, CellSanitizer.sanitize(row.sort_code))
+      write_text(sheet, row_index, COL_ACCOUNT_NUMBER, CellSanitizer.sanitize(row.account_number))
+      write_text(sheet, row_index, COL_NOMINAL_CODE, CellSanitizer.sanitize(row.nominal_code))
+      write(sheet, row_index, COL_COST_CENTRE, row.cost_centre)
+      write(sheet, row_index, COL_PAYMENT_REFERENCE, CellSanitizer.sanitize(row.payment_reference))
+      write(sheet, row_index, COL_DESCRIPTION, CellSanitizer.sanitize(row.description))
     end
   end
 end

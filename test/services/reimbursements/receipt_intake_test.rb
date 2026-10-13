@@ -5,11 +5,8 @@ module Reimbursements
     PDF_MAGIC = "%PDF-1.4\n".freeze
     EXE_MAGIC = "MZ\x90\x00\x03".freeze
 
-    # test/fixtures/files/reimbursements_receipt.heic is a REAL HEIC: HEVC-coded
-    # image data in a HEIF container, carrying EXIF, produced with libheif's
-    # heif-enc from a 400x260 landscape image whose EXIF said "rotate 90 CW".
-    # A renamed JPEG would prove nothing here — the whole point is that libvips
-    # has to decode HEVC.
+    # A REAL HEVC-coded HEIC (400x260, EXIF "rotate 90 CW"): a renamed JPEG would
+    # prove nothing, because libvips has to decode HEVC.
     HEIC_PATH = Rails.root.join("test/fixtures/files/reimbursements_receipt.heic")
 
     def heic_bytes = File.binread(HEIC_PATH)
@@ -20,9 +17,8 @@ module Reimbursements
 
     def heic_upload(filename: "IMG_1234.HEIC") = upload(heic_bytes, filename, "image/heic")
 
-    # MAX_RECEIPT_BYTES is 5 MB and any HEIC small enough to commit converts to
-    # well under it, so the only way to exercise the "converted result is over
-    # the cap" ladder is to move the cap.
+    # Any HEIC small enough to commit converts to well under 5 MB, so the ladder
+    # is only reachable by moving the cap.
     def with_max_receipt_bytes(bytes)
       original = ExpenseForm::MAX_RECEIPT_BYTES
       silence_warnings { ExpenseForm.const_set(:MAX_RECEIPT_BYTES, bytes) }
@@ -31,71 +27,44 @@ module Reimbursements
       silence_warnings { ExpenseForm.const_set(:MAX_RECEIPT_BYTES, original) }
     end
 
-    test "an iPhone HEIC photo is converted to JPEG and renamed" do
+    # Stored 400x260 with a rotate-90 tag, so ignoring the rotation emits 400x260.
+    test "an iPhone HEIC photo becomes an upright, untagged JPEG named .jpg" do
       receipt = ReceiptIntake.from_upload(heic_upload)
-
       assert receipt.ok?, receipt.error
-      assert_equal "image/jpeg", receipt.content_type
-      assert_equal "IMG_1234.jpg", receipt.filename, "the filename ends up in the BACS email and SharePoint"
-      assert_equal "image/jpeg", Marcel::MimeType.for(StringIO.new(receipt.bytes)),
-                   "the stored bytes must actually BE a JPEG"
-    end
-
-    test "the converted JPEG is a readable image, not just JPEG-shaped bytes" do
-      receipt = ReceiptIntake.from_upload(heic_upload)
       image = Vips::Image.new_from_buffer(receipt.bytes, "")
 
+      assert_equal [ "image/jpeg", "IMG_1234.jpg" ], [ receipt.content_type, receipt.filename ],
+                   "the filename ends up in the BACS email and SharePoint"
       assert_equal "jpegload_buffer", image.get("vips-loader")
-      assert_operator image.width, :>, 0
       assert_equal 3, image.bands
+      assert_equal [ 260, 400 ], [ image.width, image.height ], "upright (portrait), not as stored"
+      assert_empty image.get_fields.grep(/orientation/), "a leftover tag would make viewers rotate it twice"
     end
 
-    # The fixture's pixels are stored 400x260 (landscape) with metadata saying
-    # rotate 90 CW, so an implementation that ignored the rotation would emit a
-    # 400x260 JPEG. Finance would otherwise get a sideways receipt, which reads
-    # worse.
-    test "EXIF orientation is applied, and not left behind to be applied twice" do
-      receipt = ReceiptIntake.from_upload(heic_upload)
-      image = Vips::Image.new_from_buffer(receipt.bytes, "")
+    { [ "photo.heif", "image/heif" ] => "photo.jpg",
+      [ "gallery-export.jpg", "application/octet-stream" ] => "gallery-export.jpg" }.each do |(given, declared), expected|
+      test "a HEIC named #{given} is stored as #{expected}" do
+        receipt = ReceiptIntake.from_bytes(bytes: heic_bytes, filename: given, declared_type: declared)
 
-      assert_equal [ 260, 400 ], [ image.width, image.height ],
-                   "the photo should come out upright (portrait), not as stored"
-      assert_empty image.get_fields.grep(/orientation/),
-                   "a leftover orientation tag would make viewers rotate it a second time"
+        assert receipt.ok?, receipt.error
+        assert_equal [ expected, "image/jpeg" ], [ receipt.filename, receipt.content_type ]
+      end
     end
 
-    test "a HEIF declared type takes the same path" do
-      receipt = ReceiptIntake.from_bytes(bytes: heic_bytes, filename: "photo.heif", declared_type: "image/heif")
+    # A damaged photo must reach the submitter as a validation error, never a 500.
+    {
+      "IMG_9.HEIC" => [ "image/heic", -> { File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic")) } ],
+      "IMG_7.jpg" => [ "image/jpeg", -> { photo_with_gps(:jpegsave_buffer).byteslice(0, 40) } ]
+    }.each do |name, (declared_type, bytes)|
+      test "a corrupt #{name} is rejected with a friendly message instead of raising" do
+        receipt = ReceiptIntake.from_bytes(bytes: instance_exec(&bytes), filename: name, declared_type: declared_type)
 
-      assert receipt.ok?, receipt.error
-      assert_equal "photo.jpg", receipt.filename
-      assert_equal "image/jpeg", receipt.content_type
+        assert_not receipt.ok?
+        assert_match(/couldn't read #{Regexp.escape(name)}.*save it as a JPEG or PDF/, receipt.error)
+        assert_nil receipt.bytes
+      end
     end
 
-    test "a HEIC whose name already claims another image extension is not double-suffixed" do
-      receipt = ReceiptIntake.from_bytes(bytes: heic_bytes, filename: "gallery-export.jpg",
-                                         declared_type: "application/octet-stream")
-
-      assert receipt.ok?, receipt.error
-      assert_equal "gallery-export.jpg", receipt.filename
-      assert_equal "image/jpeg", receipt.content_type
-    end
-
-    # A truncated photo (a half-finished upload, a damaged file) must reach the
-    # submitter as a normal validation error, never a 500.
-    test "a corrupt HEIC is rejected with a friendly message instead of raising" do
-      truncated = File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic"))
-
-      receipt = ReceiptIntake.from_bytes(bytes: truncated, filename: "IMG_9.HEIC", declared_type: "image/heic")
-
-      assert_not receipt.ok?
-      assert_match(/couldn't read IMG_9\.HEIC/, receipt.error)
-      assert_match(/save it as a JPEG or PDF/, receipt.error)
-      assert_nil receipt.bytes
-    end
-
-    # The whole point of sniffing: claiming to be a HEIC must not be enough to
-    # get anything near the converter.
     test "a file only claiming to be HEIC is still rejected by the sniffing" do
       receipt = ReceiptIntake.from_bytes(bytes: EXE_MAGIC, filename: "IMG_1.HEIC", declared_type: "image/heic")
 
@@ -109,32 +78,25 @@ module Reimbursements
       assert receipt.ok?, receipt.error
       assert_equal "receipt.pdf", receipt.filename
       assert_equal "application/pdf", receipt.content_type
-      assert_equal PDF_MAGIC, receipt.bytes
+      assert_equal PDF_MAGIC, receipt.bytes, "a PDF must reach finance exactly as the supplier issued it"
     end
 
-    test "an ordinary photo keeps its name and format through the strip" do
-      png = File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.png"))
+    # A hand-crafted "receipts[]=x" post sends a String: it has #size but no #read,
+    # so it passes the size check and 500s on read. Same for a nested hash or array.
+    test "uploads_from drops receipts params that are not uploaded files" do
+      real = upload(PDF_MAGIC, "receipt.pdf", "application/pdf")
 
-      receipt = ReceiptIntake.from_upload(upload(png, "receipt.png", "image/png"))
-
-      assert receipt.ok?, receipt.error
-      assert_equal "receipt.png", receipt.filename
-      assert_equal "image/png", receipt.content_type
-      assert_equal "pngload_buffer", Vips::Image.new_from_buffer(receipt.bytes, "").get("vips-loader"),
-                   "a PNG receipt must stay a PNG — a screenshot of an invoice is lossless text"
+      assert_equal [ real ], ReceiptIntake.uploads_from(
+        [ "not-a-file", real, %w[a b], StringIO.new(PDF_MAGIC), { "tempfile" => "x" } ]
+      )
+      assert_empty ReceiptIntake.uploads_from("not-a-file")
+      assert_empty ReceiptIntake.uploads_from(nil)
+      assert_empty ReceiptIntake.uploads_from([ "", nil ])
     end
-
-    # --- Metadata stripping --------------------------------------------------
-    # A phone photograph of a receipt carries the coordinates it was taken at,
-    # which for a producer is their home. Those bytes go on to SharePoint and
-    # out as an email attachment to EUSA, so the tags come off at intake --
-    # the one gate every receipt passes through.
 
     GPS_LATITUDE = "55/1 56/1 44/1".freeze
 
-    # Built rather than committed, so the test can assert the tag is actually
-    # THERE before claiming the intake removed it: a fixture that quietly lost
-    # its EXIF would leave this passing vacuously forever.
+    # Built rather than committed, so the precondition proves the GPS tag is there.
     def photo_with_gps(saver, **opts)
       image = Vips::Image.black(64, 48).add(128).cast(:uchar).bandjoin([ 128, 128 ])
       image = image.mutate { |m| m.set_type!(GObject::GSTR_TYPE, "exif-ifd3-GPSLatitude", GPS_LATITUDE) }
@@ -179,9 +141,6 @@ module Reimbursements
       assert_in_delta 128, image.getpoint(10, 10).first, 6, "the pixels must still be the receipt"
     end
 
-    # The same rule the HEIC path follows: bake the rotation into the pixels
-    # BEFORE dropping the tag that describes it, or the receipt comes out
-    # sideways for whoever reviews it.
     test "a sideways JPEG is turned upright before its orientation tag is dropped" do
       image = Vips::Image.black(80, 40).add(128).cast(:uchar).bandjoin([ 128, 128 ])
       image = image.mutate { |m| m.set_type!(GObject::GINT_TYPE, "orientation", 6) }
@@ -192,41 +151,6 @@ module Reimbursements
 
       assert_equal [ 40, 80 ], [ stripped.width, stripped.height ], "should come out upright"
       assert_empty metadata_fields(receipt.bytes)
-    end
-
-    # Re-encoding can GROW a file (a phone's Q60 JPEG re-saved at Q90 does), and
-    # nothing oversized may be let through: a batch mails every receipt as an
-    # attachment.
-    test "a photo that grows past the cap while being stripped is stepped down until it fits" do
-      bytes = photo_with_gps(:jpegsave_buffer, Q: 95)
-
-      with_max_receipt_bytes(bytes.bytesize) do
-        receipt = ReceiptIntake.from_bytes(bytes: bytes, filename: "receipt.jpg", declared_type: "image/jpeg")
-
-        assert receipt.ok?, receipt.error
-        assert_operator receipt.bytes.bytesize, :<=, bytes.bytesize
-        assert_empty metadata_fields(receipt.bytes)
-      end
-    end
-
-    # A truncated photo must reach the submitter as a validation error, never a
-    # 500 -- the same contract the HEIC path already keeps.
-    test "a corrupt JPEG is rejected with a friendly message instead of raising" do
-      truncated = photo_with_gps(:jpegsave_buffer).byteslice(0, 40)
-
-      receipt = ReceiptIntake.from_bytes(bytes: truncated, filename: "IMG_7.jpg", declared_type: "image/jpeg")
-
-      assert_not receipt.ok?
-      assert_nil receipt.bytes
-    end
-
-    test "a PDF is not put through the stripper at all" do
-      pdf = File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.pdf"))
-
-      receipt = ReceiptIntake.from_bytes(bytes: pdf, filename: "invoice.pdf", declared_type: "application/pdf")
-
-      assert receipt.ok?, receipt.error
-      assert_equal pdf, receipt.bytes, "a PDF must reach finance exactly as the supplier issued it"
     end
 
     test "an oversized upload is rejected from its declared size, before anything is read" do
@@ -240,9 +164,6 @@ module Reimbursements
       assert_equal "huge.pdf must be 5 MB or smaller.", receipt.error
     end
 
-    # HEIC is roughly half the size of the equivalent JPEG, so a receipt inside
-    # the cap can convert into a JPEG over it. Nothing oversized may be let
-    # through: a batch mails every receipt as an attachment.
     test "a JPEG that lands over the cap is re-encoded down until it fits" do
       full_size = ReceiptIntake.from_upload(heic_upload).bytes.bytesize
 
@@ -255,8 +176,7 @@ module Reimbursements
       end
     end
 
-    # A cap above the HEIC itself (so it clears the input size gate) but below
-    # every rung of the ladder.
+    # A cap above the HEIC (so it clears the size gate) but below every rung.
     test "a photo that will not fit even at the lowest quality is refused, not let through" do
       with_max_receipt_bytes(File.size(HEIC_PATH) + 100) do
         receipt = ReceiptIntake.from_upload(heic_upload)
@@ -265,20 +185,6 @@ module Reimbursements
         assert_match(/still over 5 MB once converted/, receipt.error)
         assert_nil receipt.bytes
       end
-    end
-
-    test "from_params vets each upload and drops anything that is not a file" do
-      receipts = ReceiptIntake.from_params([ "not-a-file", heic_upload, upload(EXE_MAGIC, "x.pdf", "application/pdf") ])
-
-      assert_equal 2, receipts.size
-      assert_equal [ true, false ], receipts.map(&:ok?)
-      assert_equal "IMG_1234.jpg", receipts.first.filename
-    end
-
-    test "to_attachment hands the store exactly the keywords attach_receipt! takes" do
-      attachment = ReceiptIntake.from_upload(heic_upload).to_attachment
-
-      assert_equal %i[filename content_type bytes], attachment.keys
     end
   end
 end

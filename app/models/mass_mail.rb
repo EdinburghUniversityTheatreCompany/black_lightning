@@ -17,7 +17,6 @@
 #  index_mass_mails_on_sender_id  (sender_id)
 #
 class MassMail < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :subject, length: { maximum: 255 }
   validates :body, length: { maximum: 16777215 }
   validate :send_date_is_not_in_the_past
@@ -39,7 +38,7 @@ class MassMail < ApplicationRecord
   end
 
   def prepare_send!
-    raise(Exceptions::MassMail::NoRecipients, "There are no recipients") if recipients.nil? || recipients.empty?
+    raise(Exceptions::MassMail::NoRecipients, "There are no recipients") if recipients.empty?
     raise(Exceptions::MassMail::NoSender, "There is no sender") if sender.nil?
     raise(Exceptions::MassMail::AlreadySent, "The mass mail has already been send") unless draft
 
@@ -54,7 +53,7 @@ class MassMail < ApplicationRecord
   private
 
   def send_date_is_in_the_past?
-    !send_date.present? || (send_date.present? && send_date < DateTime.current)
+    send_date.blank? || send_date < DateTime.current
   end
 
   def check_if_mail_has_been_sent
@@ -65,7 +64,6 @@ class MassMail < ApplicationRecord
   end
 
   def send!
-    # Schedule the mass mail job for the specified send_date
     MassMailJob.set(wait_until: send_date).perform_later(id)
   end
 end

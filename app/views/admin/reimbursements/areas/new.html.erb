@@ -16,7 +16,7 @@
       <% end %>
     </p>
 
-    <%= render "fields", form: form, people: @people, cost_centres: @cost_centres,
+    <%= render "fields", form: form, people: @people, cost_centres: selectable_cost_centres,
           owner_ids: @owner_ids, cost_centre_id: selected_cost_centre&.id %>
   <% end %>
 <% end %>

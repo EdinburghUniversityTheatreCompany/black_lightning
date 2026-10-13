@@ -8,12 +8,10 @@ fi
 
 # If running the rails server then create or migrate existing database.
 #
-# Matched on the BASENAME, because the command is spelled differently depending on
-# whether /rails/bin is on PATH: the Dockerfile's CMD was "./bin/rails server" and
-# is now "rails server". An exact-string test silently stopped matching when that
-# changed, so db:prepare stopped running and every deploy after it shipped code
-# against an un-migrated database — which surfaces as NoMethodError on the new
-# column, nowhere near the cause.
+# Matched on the BASENAME: the command is "rails server" or "./bin/rails server" depending on
+# whether /rails/bin is on PATH. An exact-string test stopped matching when the Dockerfile's CMD
+# changed, db:prepare silently stopped running, and deploys shipped code against an un-migrated
+# database (a NoMethodError on the new column, nowhere near the cause).
 last_arg="${@: -1:1}"
 second_last_arg="${@: -2:1}"
 if [ "$last_arg" == "server" ] && [ "$(basename "$second_last_arg")" == "rails" ]; then

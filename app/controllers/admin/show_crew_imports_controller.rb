@@ -1,22 +1,17 @@
 # frozen_string_literal: true
 
-##
-# Controller for bulk importing show crew (users + team memberships).
-# Creates user accounts and adds them to an event's team.
-##
+# Bulk-imports an event's crew: creates any missing users and adds everyone to the team.
 class Admin::ShowCrewImportsController < AdminController
   include Importable
 
   before_action :load_event
+  before_action { authorize! :update, @event }
 
   def new
-    authorize! :update, @event
     @title = "Bulk Crew Import for #{@event.name}"
   end
 
   def preview
-    authorize! :update, @event
-
     data, input_type = parse_import_params
 
     if data.blank?
@@ -33,12 +28,10 @@ class Admin::ShowCrewImportsController < AdminController
       return
     end
 
-    # Check for existing team members and categorize them
     @existing_team_members = categorize_existing_team_members(@import)
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    @cache_key = generate_import_cache_key("crew_import")
-    write_import_cache(@cache_key, {
+    @cache_key = cache_import("crew_import", {
       event_id: @event.id,
       categorized: serialize_import(@import.categorized),
       existing_team_members: @existing_team_members
@@ -47,8 +40,6 @@ class Admin::ShowCrewImportsController < AdminController
   end
 
   def confirm
-    authorize! :update, @event
-
     import_data = read_and_clear_cache(params[:cache_key])
 
     if import_data.blank? || import_data["event_id"].to_i != @event.id
@@ -57,75 +48,55 @@ class Admin::ShowCrewImportsController < AdminController
       return
     end
 
-    categorized = import_data["categorized"]
-    existing_team_members = import_data["existing_team_members"] || {}
     actions = params[:actions] || {}
     existing_actions = params[:existing_actions] || {}
+    results = { created: 0, added: 0, updated: 0, skipped: 0, errors: [] }
 
-    results = { created: 0, added: 0, updated: 0, skipped: 0 }
-
-    # Process new/matched users
-    all_items = categorized.values.flatten
-    all_items.each do |item|
-      index = item["index"].to_s
-      action = actions[index]
+    import_data["categorized"].values.flatten.each do |item|
       row = item["row"].with_indifferent_access
 
-      user = case action
+      user = case actions[item["index"].to_s]
       when "create"
-        results[:created] += 1
-        new_user = create_user_from_row(row)
-        new_user.send_welcome_email
-        new_user
-      when "link"
-        # Use existing user (single-match bucket)
-        User.find_by(id: item["existing_user_id"])
-      when /\Alink_(\d+)\z/
-        # Use selected user from multi-candidate fuzzy match
-        User.find_by(id: $1.to_i)
-      when "skip", nil
-        results[:skipped] += 1
-        next
-      else
-        next
-      end
-
-      next unless user
-
-      # Add to team if position is provided
-      if row[:position].present?
-        add_or_update_team_member(user, row[:position])
-        results[:added] += 1
-      end
-    end
-
-    # Process existing team members
-    existing_team_members.each do |user_id, data|
-      user_id = user_id.to_i
-      action = existing_actions[user_id.to_s]
-      new_position = data["new_position"]
-
-      case action
+        create_user_from_row(row).tap do |created|
+          results[:created] += 1
+          created.send_welcome_email
+        end
+      when "link" then User.find_by(id: item["existing_user_id"])
+      when /\Alink_(\d+)\z/ then User.find_by(id: $1.to_i)
       when "skip"
         results[:skipped] += 1
-      when "merge"
-        team_member = @event.team_members.find_by(user_id: user_id)
-        if team_member && new_position.present?
-          merged_position = [ team_member.position, new_position ].join("/").split("/").map(&:strip).reject(&:blank?).uniq.join(" / ")
-          team_member.update!(position: merged_position)
-          results[:updated] += 1
-        end
-      when "replace"
-        team_member = @event.team_members.find_by(user_id: user_id)
-        if team_member && new_position.present?
-          team_member.update!(position: new_position)
-          results[:updated] += 1
-        end
+        next
+      else next
       end
+      next unless user && row[:position].present?
+
+      @event.team_members.find_or_initialize_by(user: user).update!(position: row[:position])
+      results[:added] += 1
+    rescue ActiveRecord::RecordInvalid => e
+      results[:errors] << "#{row[:original_name]}: #{e.record.errors.full_messages.to_sentence}"
     end
 
-    helpers.append_to_flash(:success, "Import complete: #{results[:created]} users created, #{results[:added]} added to crew, #{results[:updated]} positions updated, #{results[:skipped]} skipped")
-    redirect_to admin_show_path(@event)
+    (import_data["existing_team_members"] || {}).each do |user_id, data|
+      action = existing_actions[user_id.to_s]
+      if action == "skip"
+        results[:skipped] += 1
+        next
+      end
+      next unless action.in?(%w[merge replace])
+
+      team_member = @event.team_members.find_by(user_id: user_id)
+      position = data["new_position"]
+      next unless team_member && position.present?
+
+      position = [ team_member.position, position ].join("/").split("/").map(&:strip).compact_blank.uniq.join(" / ") if action == "merge"
+      team_member.update!(position: position)
+      results[:updated] += 1
+    end
+
+    message = "Import complete: #{results[:created]} users created, #{results[:added]} added to crew, #{results[:updated]} positions updated, #{results[:skipped]} skipped"
+    message += ". Errors: #{results[:errors].join('; ')}" if results[:errors].any?
+    helpers.append_to_flash(:success, message)
+    redirect_to [ :admin, @event ]
   end
 
   private
@@ -136,39 +107,14 @@ class Admin::ShowCrewImportsController < AdminController
   end
 
   def categorize_existing_team_members(import)
-    existing = {}
+    team = @event.team_members.index_by(&:user_id)
 
-    # Check each imported row to see if the user is already on the team
-    import.categorized.each do |bucket, items|
-      items.each do |item|
-        # Collect users from both single-match and multi-match buckets
-        users = item[:existing_users] || [ item[:existing_user] ].compact
-        users.each do |user|
-          team_member = @event.team_members.find_by(user_id: user.id)
-          next unless team_member
+    import.categorized.values.flatten.each_with_object({}) do |item, existing|
+      (item[:existing_users] || [ item[:existing_user] ].compact).each do |user|
+        next unless (member = team[user.id])
 
-          existing[user.id] = {
-            "user_id" => user.id,
-            "user_name" => user.name_or_email,
-            "current_position" => team_member.position,
-            "new_position" => item[:row][:position],
-            "index" => item[:index]
-          }
-        end
+        existing[user.id] = { "user_name" => user.name_or_email, "current_position" => member.position, "new_position" => item[:row][:position] }
       end
-    end
-
-    existing
-  end
-
-  def add_or_update_team_member(user, position)
-    existing = @event.team_members.find_by(user_id: user.id)
-
-    if existing
-      # User already on team - this shouldn't happen here, but just in case
-      existing.update!(position: position)
-    else
-      @event.team_members.create!(user: user, position: position)
     end
   end
 end

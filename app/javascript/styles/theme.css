@@ -1,8 +1,6 @@
-/* Source Sans 3, not the Source Sans Pro this file used to name: same typeface,
- * renamed upstream, but Pro ships no weight 500 and `font-medium` is the
- * most-used weight in this codebase. Self-hosted so no page depends on an
- * external request. The non-latin subsets carry a unicode-range and are
- * declared but never downloaded. */
+/* Source Sans 3, not Pro: the same typeface, but Pro has no weight 500 for
+ * font-medium. Self-hosted; the non-latin subsets carry a unicode-range, so
+ * they are never downloaded. */
 @import "@fontsource-variable/source-sans-3/wght.css";
 @import "@fontsource-variable/source-sans-3/wght-italic.css";
 

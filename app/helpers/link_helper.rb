@@ -42,7 +42,7 @@ module LinkHelper
     generate_icon_prefix("trash", text_with_span)
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, variant: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, variant: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
     raise(ArgumentError, "The object is nil") if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -83,11 +83,7 @@ module LinkHelper
       end
     end
 
-    # You might notice that the names of the variables given do not match the parameter names defined in the function definition.
-    # We switched from data confirmation plugins, and they have a different naming convention.
-    # To prevent having to change all existing code that called this function (get_link). I left the names of the parameters of this function intact,
-    # and only changed it within the get_confirm_data function.
-    confirm_data = get_confirm_data(object, action, confirm, detail, type_confirm)
+    confirm_data = get_confirm_data(object, action, confirm, detail) || {}
 
     namespace = get_namespace_for_link(object, admin)
 
@@ -101,17 +97,11 @@ module LinkHelper
     title ||= strip_tags(link_text).strip
 
     if http_method.nil? || http_method == :get
-      link = link_to(link_text, link_target, class: button_class, data: (confirm_data || {}), title: title, target: target)
+      link = link_to(link_text, link_target, class: button_class, data: confirm_data, title: title, target: target)
     else
-      confirm_message = confirm_data&.dig(:turbo_confirm)
-      form_data = confirm_message.present? ? {
-        controller: "confirm",
-        action: "submit->confirm#confirm",
-        confirm_message_value: confirm_message
-      } : {}
       link = button_to(link_text.html_safe, link_target, method: http_method,
                        class: button_class, title: title,
-                       form: { style: "display:contents", data: form_data })
+                       form: { style: "display:contents", data: form_confirm_data(confirm_data) })
     end
 
     link = wrap_in_tags(link, wrap_tag) if wrap_tag
@@ -212,22 +202,19 @@ module LinkHelper
     end
   end
 
-  def get_confirm_data(object, action, title, confirm, verify)
-    return unless action == :destroy || title.present? || confirm.present? || verify.present?
+  def get_confirm_data(object, action, confirm, detail)
+    message = detail || confirm
+    # Only destroy gets a default message: for other actions it could be misleading.
+    message ||= "Are you sure you want to delete #{get_object_name(object, include_class_name: true, include_the: true)}?" if action == :destroy
 
-    confirm_data = {
-      title: title,
-      turbo_confirm: confirm,
-      verify: verify
-    }
+    { turbo_confirm: message } if message
+  end
 
-    # Destroy has a default hash, that we don't want to use for other confirm dialogs because that could lead to confusion.
-    if action == :destroy
-      name = get_object_name(object, include_class_name: true, include_the: true)
-      confirm_data[:title] ||= "Deleting #{name}"
-      confirm_data[:turbo_confirm] ||= "Are you sure you want to delete #{name}?"
-    end
+  # On the public site the button posts to an admin page, which has another layout, and a Turbo
+  # submit would lose the flash there. So confirm_controller asks, then submits natively.
+  def form_confirm_data(confirm_data)
+    return confirm_data if @admin_site || confirm_data.empty?
 
-    confirm_data
+    { controller: "confirm", action: "submit->confirm#confirm", confirm_message_value: confirm_data[:turbo_confirm] }
   end
 end

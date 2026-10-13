@@ -1,14 +1,7 @@
 ##
-# An event's performances, read back as the shape a human would describe them in.
-#
-# Five nights in a row is "Wed 11 - Sun 15 October", not five rows; a year of
-# Fridays is "Every Friday", because a date range there prints "Sep 1 - Jun 30",
-# the exact string the box office screen exists to avoid. This is what the
-# retired performance_weekdays column used to say, now derived from real dates
-# rather than a hand-set field -- and it knows the curtain time.
-#
-# The whole run is described, not the part still to come: Mick's call. The board
-# advertises the run as the poster does.
+# An event's performances read back as a person would describe them: five nights
+# in a row is one range, a year of Fridays is "Every Friday" (a range would print
+# "Sep 1 - Jun 30"). The whole run is described, not just what is still to come.
 ##
 class Event::Schedule
   # One unbroken stretch of consecutive days sharing a curtain time.
@@ -18,20 +11,18 @@ class Event::Schedule
     end
   end
 
-  # A standing fixture has to look like one. Two dates a week apart are a short
-  # run; three inside a fortnight are a short run that happens to be weekly. The
-  # Improverts play for most of the academic year.
+  # Two dates a week apart are a short run, and three inside a fortnight are a
+  # short run that happens to be weekly.
   WEEKLY_MINIMUM = 3
   WEEKLY_MINIMUM_SPAN = 14
 
-  attr_reader :event, :occurrences
+  attr_reader :occurrences
 
   def self.for(event)
     new(event)
   end
 
   def initialize(event)
-    @event = event
     @occurrences = event.event_occurrences.select { |occurrence| occurrence.starts_at.present? }
                         .sort_by(&:starts_at)
   end
@@ -49,39 +40,26 @@ class Event::Schedule
     @blocks ||= build_blocks
   end
 
-  # The curtain time every performance shares, as "19:30"; nil when they differ.
+  # A representative start, for formatting the shared time.
+  def starts_at
+    occurrences.first&.starts_at
+  end
+
+  def weekday_name
+    Date::DAYNAMES[occurrences.first.on_date.wday] if weekly?
+  end
+
+  private
+
+  # The hours every performance shares; nil when they differ.
   def time_of_day
     times = occurrences.map { |occurrence| time_key(occurrence) }.uniq
 
     times.one? ? times.first : nil
   end
 
-  # A representative start, for formatting the shared time.
-  def starts_at
-    occurrences.first&.starts_at
-  end
-
-  def weekday
-    return nil unless weekly?
-
-    occurrences.first.on_date.wday
-  end
-
-  def weekday_name
-    weekday && Date::DAYNAMES[weekday]
-  end
-
-  private
-
-  ##
-  # Consecutive dates at the same curtain time fold together; a gap starts a new
-  # block.
-  #
-  # Grouped BY TIME first, rather than walked in one chronological pass. A
-  # Saturday matinee sorts in between the Friday and Saturday evenings, so a
-  # single pass would let it cut the evening run in three -- the matinee is its
-  # own block, and the run either side of it is still one run.
-  ##
+  # Grouped by curtain time first, then folded by consecutive date: a Saturday
+  # matinee sorts between the evenings and would otherwise cut the run in three.
   def build_blocks
     occurrences.group_by { |occurrence| time_key(occurrence) }
                .flat_map { |time, group| consecutive_blocks(time, group) }
@@ -95,8 +73,7 @@ class Event::Schedule
       if last && occurrence.on_date == last.ends_on + 1
         built[-1] = last.with(ends_on: occurrence.on_date, occurrences: last.occurrences + [ occurrence ])
       elsif last && occurrence.on_date == last.ends_on
-        # Two performances the same day at the same time is not a thing, but a
-        # duplicated row must not create a zero-length gap and a second block.
+        # A duplicated row must not open a zero-length gap and a second block.
         built[-1] = last.with(occurrences: last.occurrences + [ occurrence ])
       else
         built << Block.new(starts_on: occurrence.on_date, ends_on: occurrence.on_date,
@@ -105,11 +82,7 @@ class Event::Schedule
     end
   end
 
-  ##
-  # Every performance on the same weekday, at the same time, a week apart or a
-  # multiple of one -- so a reading week or a cancelled night does not stop it
-  # reading as "every Friday".
-  ##
+  # Gaps may be any multiple of a week, so a reading week does not break it.
   def weekly?
     return false if occurrences.length < WEEKLY_MINIMUM
     return false if time_of_day.nil?
@@ -123,12 +96,9 @@ class Event::Schedule
     dates.each_cons(2).all? { |from, to| ((to - from).to_i % 7).zero? }
   end
 
-  ##
-  # Both ends, not just the curtain. The view prints one block's hours from its
-  # first occurrence, so a Season open 12pm-1am on Tuesday and 12pm-10pm on
-  # Wednesday would fold into one block and advertise Wednesday as closing at
-  # 1am. Different hours are a different block.
-  ##
+  # Both ends, not just the curtain: the view prints a block's hours from its first
+  # occurrence, so a Season open 12pm-1am one day and 12pm-10pm the next would
+  # advertise 1am for both.
   def time_key(occurrence)
     [ occurrence.starts_at.strftime("%H:%M"), end_key(occurrence) ].compact.join("-")
   end
@@ -136,8 +106,7 @@ class Event::Schedule
   def end_key(occurrence)
     return nil if occurrence.ends_at.blank?
 
-    # Days apart, so a close after midnight does not read as the same hours as
-    # one before it.
+    # Days apart, so a close after midnight differs from one before it.
     offset = (occurrence.ends_at.to_date - occurrence.starts_at.to_date).to_i
 
     "#{occurrence.ends_at.strftime('%H:%M')}+#{offset}"

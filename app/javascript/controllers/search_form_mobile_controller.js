@@ -25,11 +25,9 @@ export default class extends Controller {
 
   #update(mq) {
     if (mq.matches) {
-      // Desktop: body always visible, toggle hidden
       this.bodyTarget.hidden = false
       this.toggleTarget.hidden = true
     } else {
-      // Mobile: body hidden (collapsed), toggle visible
       this.bodyTarget.hidden = true
       this.toggleTarget.hidden = false
     }

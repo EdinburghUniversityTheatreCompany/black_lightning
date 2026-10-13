@@ -1,11 +1,7 @@
 require "test_helper"
 
-# Bots probing for Next.js server actions POST gzip-encoded multipart bodies
-# whose declared boundary never appears in the body, which makes Rack raise
-# Rack::Multipart::BoundaryTooLongError while parsing params. That happens inside
-# Rack::MethodOverride — outside ActionDispatch::ShowExceptions — so without a
-# handler it bubbles up as an uncaught 500 and gets reported to Honeybadger.
-# It is always a malformed client request and should return a plain 400.
+# A multipart body whose boundary never appears makes Rack raise inside Rack::MethodOverride,
+# outside ShowExceptions, so only MalformedRequestHandler stands between it and a 500.
 class MalformedRequestTest < ActionDispatch::IntegrationTest
   test "malformed multipart body returns 400, not a 500" do
     post "/",

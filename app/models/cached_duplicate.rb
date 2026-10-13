@@ -1,5 +1,4 @@
-# Stores cached results from background duplicate detection job.
-# Prevents resource-intensive fuzzy-both-names checking on every page load.
+# Fuzzy-both-names matches computed by a background job, too slow to find on every page load.
 # == Schema Information
 #
 # Table name: cached_duplicates
@@ -24,7 +23,6 @@
 #  fk_rails_...  (user2_id => users.id)
 #
 class CachedDuplicate < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :bucket_type, length: { maximum: 255 }
   belongs_to :user1, class_name: "User"
   belongs_to :user2, class_name: "User"
@@ -35,7 +33,7 @@ class CachedDuplicate < ApplicationRecord
   scope :overlapping, -> { where(bucket_type: "overlapping") }
   scope :no_overlap, -> { where(bucket_type: "no_overlap") }
 
-  # Ensure user1_id < user2_id for consistent ordering and uniqueness
+  # Smaller id first, so a pair is unique whichever way round it was found.
   before_validation :order_user_ids
 
   private

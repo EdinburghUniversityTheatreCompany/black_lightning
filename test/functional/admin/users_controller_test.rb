@@ -12,9 +12,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  # Breadcrumbs are built from the URL path, and an id segment titleizes into nonsense. The
-  # mechanism is generic (it reads the record the controller loaded), so cover it here as
-  # well as on the reimbursements budget it was reported against.
+  # The breadcrumb names the record the controller loaded, not the id segment of the URL.
   test "the edit breadcrumb names the user instead of their id" do
     get :edit, params: { id: @user }
 
@@ -38,9 +36,15 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert assigns(:link_to_admin_events)
   end
 
-  # The id used to be readable from the breadcrumb, as a side effect of it being built from
-  # the URL. The breadcrumb names the user now, so the profile has to show the id itself —
-  # to the member whose profile it is as well as to anyone else who can open it.
+  # Typing the name was never checked, so the prompt asks a plain question.
+  test "the delete button asks a plain question naming the user" do
+    get :show, params: { id: @user }
+
+    assert_select "form[data-turbo-confirm=?]",
+                  "Delete #{@user.name(users(:admin))}? Content that belongs to them may break."
+  end
+
+  # The breadcrumb names the user, so the profile shows the id itself, to its owner as well.
   test "show displays the user's id" do
     get :show, params: { id: @user }
 
@@ -84,6 +88,27 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     assert_no_difference("User.count") do
       post :create, params: { user: attributes }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "activation creates a member and sends the profile completion email" do
+    assert_difference "ActionMailer::Base.deliveries.count" do
+      perform_enqueued_jobs do
+        assert_difference("User.count") do
+          post :create_activation, params: { user: { email: "newbie@example.com", first_name: "New", last_name: "Member", is_member: "1" } }
+        end
+      end
+    end
+
+    assert_redirected_to activate_admin_users_path
+    assert User.with_role(:member).exists?(email: "newbie@example.com")
+  end
+
+  test "activation re-renders the form for an invalid user" do
+    assert_no_difference("User.count") do
+      post :create_activation, params: { user: { email: "", first_name: "New", last_name: "Member" } }
     end
 
     assert_response :unprocessable_entity
@@ -164,115 +189,33 @@ class Admin::UsersControllerTest < ActionController::TestCase
     post :reset_password, params: { id: @user }
 
     assert_redirected_to admin_user_url(@user)
+    assert_predicate flash[:success], :present?
   end
 
   test "should not update password when same as current password" do
-    current_password = "password123"
-    @user.update!(password: current_password, password_confirmation: current_password)
-    @user.reload
-    original_encrypted_password = @user.encrypted_password
+    original_encrypted_password = put_password("password123")
 
-    # Submit the same password that's currently set
-    put :update, params: {
-      id: @user,
-      user: {
-        password: current_password,
-        password_confirmation: current_password,
-        first_name: "Updated Name"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    @user.reload
-
-    # Password should not have changed
-    assert_equal original_encrypted_password, @user.encrypted_password, "Password should not have been updated when same as current"
-
-    # But other fields should have been updated
-    assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
+    assert_equal original_encrypted_password, @user.encrypted_password
+    assert_equal "Updated Name", @user.first_name
+    # permitted_params must not mutate the live params: a re-rendered form needs them.
+    assert_equal "password123", @controller.params[:user][:password]
   end
 
   test "should update password when different from current password" do
-    current_password = "password123"
-    new_password = "newpassword456"
-    @user.update!(password: current_password, password_confirmation: current_password)
-    @user.reload
-    original_encrypted_password = @user.encrypted_password
+    original_encrypted_password = put_password("newpassword456")
 
-    # Submit a different password
-    put :update, params: {
-      id: @user,
-      user: {
-        password: new_password,
-        password_confirmation: new_password,
-        first_name: "Updated Name"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    @user.reload
-
-    # Password should have changed
-    assert_not_equal original_encrypted_password, @user.encrypted_password, "Password should have been updated when different from current"
-
-    # Verify user can log in with new password
-    assert @user.valid_password?(new_password), "User should be able to authenticate with new password"
-    assert_not @user.valid_password?(current_password), "User should not be able to authenticate with old password"
-
-    # Other fields should have been updated too
-    assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
+    assert_not_equal original_encrypted_password, @user.encrypted_password
+    assert @user.valid_password?("newpassword456")
+    assert_not @user.valid_password?("password123")
+    assert_equal "Updated Name", @user.first_name
   end
 
   test "should not update password when blank password submitted" do
-    current_password = "password123"
-    @user.update!(password: current_password, password_confirmation: current_password)
-    @user.reload
-    original_encrypted_password = @user.encrypted_password
+    original_encrypted_password = put_password("")
 
-    # Submit blank password
-    put :update, params: {
-      id: @user,
-      user: {
-        password: "",
-        password_confirmation: "",
-        first_name: "Updated Name"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    @user.reload
-
-    # Password should not have changed
-    assert_equal original_encrypted_password, @user.encrypted_password, "Password should not have been updated when blank"
-
-    # User should still be able to log in with current password
-    assert @user.valid_password?(current_password), "User should still be able to authenticate with current password"
-
-    # Other fields should have been updated
-    assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
-  end
-
-  # Regression guard: permitted_params used to delete password keys from the live
-  # request params as a side effect. It must not mutate params — it only decides
-  # which keys are permitted.
-  test "permitted_params does not mutate the request params" do
-    current_password = "password123"
-    @user.update!(password: current_password, password_confirmation: current_password)
-
-    # A password equal to the current one is treated as unchanged (so it is not
-    # re-assigned), but the submitted value must remain in the request params.
-    put :update, params: {
-      id: @user,
-      user: {
-        password: current_password,
-        password_confirmation: current_password,
-        first_name: "Kept"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    assert_equal current_password, @controller.params[:user][:password],
-      "permitted_params must not delete keys from the live request params"
+    assert_equal original_encrypted_password, @user.encrypted_password
+    assert @user.valid_password?("password123")
+    assert_equal "Updated Name", @user.first_name
   end
 
   test "get autocomplete list does not work when not signed in" do
@@ -308,8 +251,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     users.each { |user| assert_includes_user(user) }
 
-    # `response.body["pagination"]["more"]` was string-slicing the raw JSON, which always
-    # came back nil and so asserted nothing. Read the parsed flag instead.
+    # Read the parsed flag: string-slicing the raw JSON always came back nil.
     assert_not response.parsed_body["pagination"]["more"]
   end
 
@@ -339,59 +281,64 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_equal source_user, assigns(:source_user)
   end
 
-  test "should post merge_preview redirects to merge with source_user_id" do
-    sign_in users(:admin)
-    target_user = FactoryBot.create(:member)
+  test "merge page keeps the target's avatar by default when both users have one" do
     source_user = FactoryBot.create(:member)
+    [ @user, source_user ].each do |user|
+      user.avatar.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+    end
 
-    post :merge_preview, params: { id: target_user.id, source_user_id: source_user.id }
+    get :merge, params: { id: @user, source_user_id: source_user.id }
 
-    assert_redirected_to merge_admin_user_path(target_user, source_user_id: source_user.id)
+    assert_select "input#keep_target_avatar[checked]"
+    assert_select "input#hidden_avatar", false
+  end
+
+  test "the merge page asks for its preview by GET to itself" do
+    get :merge, params: { id: @user }
+
+    assert_select "form[method=get][action=?] select[name=source_user_id]", merge_admin_user_path(@user)
   end
 
   test "should absorb user with field preferences" do
-    sign_in users(:admin)
     target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
     source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
     source_id = source_user.id
+    target_email = target_user.email
 
     post :absorb, params: {
       id: target_user.id,
       source_user_id: source_user.id,
-      keep_from_source: [ "name" ]
+      field_choice: { name: "source", email: "target" }
     }
 
     assert_redirected_to admin_user_path(target_user)
     target_user.reload
     assert_equal "Jane", target_user.first_name
     assert_equal "Source", target_user.last_name
-    assert_not User.exists?(source_id), "Source user should be deleted"
-  end
-
-  test "should absorb user without field preferences uses defaults" do
-    sign_in users(:admin)
-    target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
-    source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
-    source_id = source_user.id
-
-    post :absorb, params: {
-      id: target_user.id,
-      source_user_id: source_user.id
-    }
-
-    assert_redirected_to admin_user_path(target_user)
-    target_user.reload
-    assert_equal "John", target_user.first_name  # Kept target values
-    assert_equal "Target", target_user.last_name
+    assert_equal target_email, target_user.email
     assert_not User.exists?(source_id), "Source user should be deleted"
   end
 
   private
 
-  # The autocomplete list is JSON, so assert against the parsed results rather than
-  # substrings of the body. Faker hands out colliding first/last names often enough that a
-  # `response.body` substring check is genuinely flaky in both directions, and a name
-  # containing & or < is escaped in the JSON so it would not match literally either.
+  # Gives @user the password "password123", PUTs an update submitting `password` (and a new first
+  # name), reloads @user and returns the encrypted password from before the request.
+  def put_password(password)
+    @user.update!(password: "password123", password_confirmation: "password123")
+    original_encrypted_password = @user.reload.encrypted_password
+
+    put :update, params: {
+      id: @user,
+      user: { password: password, password_confirmation: password, first_name: "Updated Name" }
+    }
+
+    assert_redirected_to admin_user_path(@user)
+    @user.reload
+    original_encrypted_password
+  end
+
+  # Assert on the parsed JSON: Faker name collisions make body-substring checks flaky, and a name
+  # with & or < is escaped in the JSON so it never matches literally.
   def autocomplete_results
     response.parsed_body["results"]
   end

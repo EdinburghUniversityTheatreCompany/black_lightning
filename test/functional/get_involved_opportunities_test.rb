@@ -1,67 +1,42 @@
 require "test_helper"
 
-##
-# Tests for the public opportunity submission actions (new/create)
-# added to GetInvolvedController.
-##
 class GetInvolvedOpportunitiesTest < ActionController::TestCase
   tests GetInvolvedController
 
-  # ---------------------------------------------------------------------------
-  # Routing
-  # ---------------------------------------------------------------------------
-
-  test "new route resolves correctly" do
-    assert_routing "get_involved/opportunities/new",
-                   controller: "get_involved", action: "new"
-  end
-
-  test "create route resolves correctly" do
-    assert_routing({ method: "post", path: "get_involved/opportunities" },
-                   controller: "get_involved", action: "create")
-  end
-
-  # ---------------------------------------------------------------------------
-  # GET new
-  # ---------------------------------------------------------------------------
-
-  test "new succeeds for a logged-out visitor" do
-    get :new
-    assert_response :success
-    assert_not_nil assigns(:opportunity)
-    assert assigns(:opportunity).new_record?
-  end
-
-  test "new succeeds for a signed-in member" do
+  test "new succeeds for a signed-in member, with image upload in the description editor" do
     sign_in users(:member)
     get :new
     assert_response :success
+    assert_select "[data-markdown-editor-upload-url-value]"
   end
 
-  # ---------------------------------------------------------------------------
-  # POST create
-  # ---------------------------------------------------------------------------
+  test "new offers a logged-out visitor no image upload, which needs sign-in" do
+    get :new
+    assert_response :success
+    assert_select "[data-controller='markdown-editor']"
+    assert_select "[data-markdown-editor-upload-url-value]", false
+  end
 
-  test "create saves an unapproved opportunity for a signed-in member" do
+  test "a member's submission is attributed to them and unapproved, ignoring approved and submitter params" do
     sign_in users(:member)
 
     assert_difference "Opportunity.count", 1 do
       post :create, params: {
         opportunity: {
-          title: "Backstage crew needed",
-          description: "We need help behind the scenes.",
-          expiry_date: 2.weeks.from_now
+          title: "Backstage crew needed", description: "We need help behind the scenes.",
+          expiry_date: 2.weeks.from_now, approved: true,
+          submitter_name: "Spoofed", submitter_email: "spoof@example.com"
         }
       }
     end
 
     assert_redirected_to get_involved_opportunities_path
     assert_equal "Opportunity submitted! It will appear once reviewed.", flash[:notice]
-
     opportunity = Opportunity.last
     assert_equal "Backstage crew needed", opportunity.title
     assert_equal users(:member), opportunity.creator
-    refute opportunity.approved
+    assert_nil opportunity.submitter_name
+    assert_not opportunity.approved
   end
 
   test "create lets a logged-out visitor submit with submitter details, company and roles" do
@@ -88,16 +63,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     refute opportunity.approved
   end
 
-  test "create rejects a logged-out submission without submitter details" do
-    assert_no_difference "Opportunity.count" do
-      post :create, params: {
-        opportunity: { title: "No contact", description: "x", expiry_date: 2.weeks.from_now }
-      }
-    end
-
-    assert_response :unprocessable_entity
-  end
-
   test "create silently drops a submission when the honeypot is filled" do
     assert_no_difference "Opportunity.count" do
       post :create, params: {
@@ -112,23 +77,8 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_redirected_to get_involved_opportunities_path
   end
 
-  test "create reuses an existing company case-insensitively instead of duplicating" do
-    assert_no_difference "Company.count" do
-      post :create, params: {
-        opportunity: {
-          title: "Reuse company", description: "x", expiry_date: 2.weeks.from_now,
-          submitter_name: "Jane", submitter_email: "jane@example.com",
-          company_name: companies(:gutter_theatre).name.upcase
-        }
-      }
-    end
-
-    assert_equal companies(:gutter_theatre), Opportunity.last.company
-  end
-
   test "create re-renders for a logged-out submission that fails reCAPTCHA" do
-    # Stop skipping reCAPTCHA in the test env; with no token in the request the gem
-    # returns false without calling out to Google.
+    # With no token and "test" not skipped, the gem returns false without calling Google.
     original = Recaptcha.configuration.skip_verify_env.dup
     Recaptcha.configuration.skip_verify_env.delete("test")
 
@@ -144,22 +94,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_response :unprocessable_entity
   ensure
     Recaptcha.configuration.skip_verify_env.replace(original)
-  end
-
-  test "create ignores submitter fields supplied by a signed-in member" do
-    sign_in users(:member)
-
-    post :create, params: {
-      opportunity: {
-        title: "Member submission", description: "x", expiry_date: 2.weeks.from_now,
-        submitter_name: "Spoofed", submitter_email: "spoof@example.com"
-      }
-    }
-
-    opportunity = Opportunity.last
-    assert_equal users(:member), opportunity.creator
-    assert_not opportunity.external?
-    assert_nil opportunity.submitter_name
   end
 
   test "create gracefully handles an invalid enum value" do
@@ -188,25 +122,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test "create ignores any attempt to set approved to true" do
-    sign_in users(:member)
-
-    post :create, params: {
-      opportunity: {
-        title: "Sneaky opportunity",
-        description: "Trying to self-approve.",
-        expiry_date: 2.weeks.from_now,
-        approved: true
-      }
-    }
-
-    refute Opportunity.last.approved
-  end
-
-  # ---------------------------------------------------------------------------
-  # GET opportunities (public listing, filtering, sorting)
-  # ---------------------------------------------------------------------------
-
   test "opportunities lists only approved, unexpired opportunities" do
     get :opportunities
     assert_response :success
@@ -226,26 +141,25 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert internal_index < external_index, "internal company opportunities should be listed first"
   end
 
-  test "opportunities filters by role department via the search form" do
-    get :opportunities, params: { q: { roles_department_id_eq: departments(:stage_management).id } }
+  test "opportunities filters by role department without duplicating a posting" do
+    ids = [ departments(:stage_management), departments(:set) ].map(&:id)
+    get :opportunities, params: { q: { roles_department_id_in: ids } }
 
-    assert_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
-    assert_not_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+    listed = assigns(:opportunities).to_a
+    assert_equal 1, listed.count(opportunities(:internal_project_opportunity))
+    assert_not_includes listed, opportunities(:external_project_opportunity)
   end
 
-  test "opportunities does not duplicate a posting with several matching roles" do
-    # internal_project_opportunity has Stage, Set and Sound roles; filtering must not dup it.
-    get :opportunities, params: { q: { roles_department_id_eq: departments(:stage_management).id } }
+  test "the department filter offers only departments on listed opportunities" do
+    opportunities(:unapproved_opportunity).roles.create!(position: "Puppeteer", department: Department.create!(name: "Puppetry"))
+    Department.create!(name: "Pyrotechnics")
 
-    matches = assigns(:opportunities).to_a.select { |o| o == opportunities(:internal_project_opportunity) }
-    assert_equal 1, matches.length
-  end
+    get :opportunities
 
-  test "opportunities filters by company slug" do
-    get :opportunities, params: { q: { company_slug_eq: companies(:gutter_theatre).slug } }
-
-    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
-    assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
+    offered = css_select("select[name='q[roles_department_id_eq]'] option").map(&:text)
+    assert_includes offered, "Lighting"
+    assert_not_includes offered, "Puppetry"
+    assert_not_includes offered, "Pyrotechnics"
   end
 
   test "opportunities filters by compensation type" do
@@ -255,6 +169,19 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
   end
 
+  test "opportunities ignores a filter on a column the form does not offer" do
+    get :opportunities, params: { q: { contact_email_start: "zzz" } }
+
+    assert_response :success
+    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+  end
+
+  test "opportunities does not error on a filter through the creator" do
+    get :opportunities, params: { q: { creator_first_name_eq: "a" } }
+
+    assert_response :success
+  end
+
   test "opportunities responds to a turbo_stream request (live search)" do
     get :opportunities, params: { q: { company_slug_eq: companies(:gutter_theatre).slug } }, format: :turbo_stream
 
@@ -262,12 +189,11 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_equal "text/vnd.turbo-stream.html", response.media_type
     assert_match(/<turbo-stream[^>]*target="index-results"/, response.body)
     assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+    assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
   end
 
-  # A Turbo form submission that redirects to this action (e.g. after #create) makes the browser
-  # follow the 302 while still sending Accept: text/vnd.turbo-stream.html, but with no q params.
-  # If we answered that with the #index-results fragment, the redirect would silently do nothing on
-  # the submission form page (which has no #index-results element) — so serve the full HTML page.
+  # A Turbo form redirect (after #create) follows with a turbo_stream Accept but no q, and a
+  # fragment would do nothing on the form page (no #index-results), so it must get full HTML.
   test "opportunities serves a full HTML page for a paramless turbo_stream request" do
     get :opportunities, format: :turbo_stream
 

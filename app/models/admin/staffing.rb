@@ -1,7 +1,7 @@
 ##
 # Represents staffing that has many jobs. Users sign up for the Staffing_Job, not the Staffing.
 #
-# A StaffingReminderJob will be scheduled to send out reminders, and updated whenever the staffing is saved.
+# Each save (re)schedules a StaffingReminderJob.
 #
 # == Schema Information
 #
@@ -26,17 +26,14 @@
 #  index_admin_staffings_on_start_time  (start_time)
 #
 class Admin::Staffing < ApplicationRecord
-  # Length validations enforcing database column limits
-  validates :show_title, length: { maximum: 255 }
-  validates :slug, length: { maximum: 255 }
-  validates :scheduled_job_id, length: { maximum: 255 }
+  validates :show_title, :slug, :scheduled_job_id, length: { maximum: 255 }
   validates :show_title, presence: true
   validates :start_time, :end_time, presence: true, on: [ :create, :update ]
 
   after_save     :update_reminder
   after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
   after_save     :send_calendar_update_emails, if: :staffing_details_changed?
-  before_destroy :reminder_cleanup
+  before_destroy :cancel_scheduled_reminder
 
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
@@ -65,20 +62,14 @@ class Admin::Staffing < ApplicationRecord
 
   private
 
-  ##
-  # Remove scheduled jobs when the Staffing is deleted to prevent jobs from failing.
-  ##
-  def reminder_cleanup
-    # Cancel ActiveJob if exists
-    if scheduled_job_id.present?
-      begin
-        # Try to cancel the job in Solid Queue
-        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
-        job&.destroy
-      rescue => e
-        Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
-      end
-    end
+  # Also runs before destroy: a reminder left queued for a deleted staffing would fail.
+  # The queue database may be unreachable, so a failure is only logged.
+  def cancel_scheduled_reminder
+    return if scheduled_job_id.blank?
+
+    SolidQueue::Job.find_by(active_job_id: scheduled_job_id)&.destroy
+  rescue => e
+    Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
   end
 
   ##
@@ -90,27 +81,17 @@ class Admin::Staffing < ApplicationRecord
     # Don't schedule a new job if we're just marking the current job as executed
     return if saved_change_to_reminder_job_executed? && reminder_job_executed?
 
-    # Cancel existing job if present
-    if scheduled_job_id.present?
-      begin
-        # Try to cancel the job in Solid Queue
-        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
-        job&.destroy
-      rescue => e
-        Rails.logger.warn "Could not cancel existing job #{scheduled_job_id}: #{e.message}"
-      end
-    end
+    cancel_scheduled_reminder
 
-    # Schedule new reminder job
     job = StaffingReminderJob.set(wait_until: start_time.advance(hours: -2)).perform_later(id)
 
-    # Update attributes immediately since we're in an after_save callback
+    # update_columns: a save here would run this callback again.
     self.update_columns(
       scheduled_job_id: job.job_id,
       reminder_job_executed: false
     )
 
-    # Reset individual reminder flags so they get re-sent
+    # Every reminder goes out again for the new time.
     staffing_jobs.update_all(reminder_sent_at: nil)
   end
 
@@ -121,7 +102,7 @@ class Admin::Staffing < ApplicationRecord
   def send_calendar_update_emails
     staffing_jobs.where.not(user_id: nil).each do |job|
       job.bump_calendar_sequence
-      StaffingMailer.calendar_invite(job, method: :request).deliver_later
+      StaffingMailer.calendar_invite(job).deliver_later
     end
   end
 

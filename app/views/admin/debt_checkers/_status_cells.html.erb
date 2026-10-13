@@ -1,0 +1,14 @@
+<td>
+  <% if @member_ids.include?(user.id) %>
+    <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
+  <% else %>
+    <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
+  <% end %>
+</td>
+<td>
+  <% if in_debt %>
+    <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
+  <% else %>
+    <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
+  <% end %>
+</td>

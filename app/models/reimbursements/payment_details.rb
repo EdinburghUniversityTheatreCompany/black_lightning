@@ -5,8 +5,6 @@
 #
 #  id             :bigint           not null, primary key
 #  account_number :string(255)      default(""), not null
-#  bic            :string(255)      default(""), not null
-#  iban           :string(255)      default(""), not null
 #  notes          :text(65535)
 #  sort_code      :string(255)      default(""), not null
 #  verified       :boolean          default(FALSE), not null
@@ -24,63 +22,37 @@
 #
 module Reimbursements
   ##
-  # A payee's bank details, split out of Person as a first-class model (one
-  # per person today; unique index on person_id). The notes column doubles as
-  # the People page's audit trail of verification decisions.
+  # A payee's bank details, one per Person. The notes column doubles as the
+  # People page's audit trail.
   class PaymentDetails < ApplicationRecord
     include RecordId
     belongs_to :person, class_name: "Reimbursements::Person", inverse_of: :payment_details
 
-    # The operator-writable vocabulary, i.e. every column of this table that is not
-    # bookkeeping. It lives here, next to the columns, because the store's person-update
-    # path routes exactly these keys onto the payment_details record: keeping a second copy
-    # over there meant a new bank field could be added to the model and then silently
-    # dropped on the way in. `payment_details_fields_are_complete` in the model test holds
-    # the two in step.
-    FIELDS = %i[sort_code account_number iban bic verified notes].freeze
+    # Every writable column. The store's person-update path routes exactly these
+    # keys here, so a field missing from the list is silently dropped; the FIELDS
+    # test in payment_details_test.rb holds them in step.
+    FIELDS = %i[sort_code account_number verified notes].freeze
 
-    # Bank details encrypted at rest. Non-deterministic (the default):
-    # nothing queries these by value — the modulus check and the BACS builder
-    # read the decrypted attributes, and uniqueness is on person_id. `notes`
-    # is encrypted too because its audit trail can reference bank details.
-    # support_unencrypted_data (config/application.rb) is on during the rollout
-    # so pre-encryption plaintext rows keep reading until the backfill runs.
+    # Nothing ever wrote them: an international claim carries its own IBAN and BIC. The next
+    # deploy drops both columns.
+    self.ignored_columns += %w[iban bic]
+
+    # Encrypted at rest, non-deterministic: nothing queries these by value.
+    # `notes` is encrypted too because its audit trail can reference bank details.
     encrypts :sort_code
     encrypts :account_number
-    encrypts :iban
-    encrypts :bic
     encrypts :notes
 
     validates :person_id, uniqueness: true
 
-    # Column fit: Rails' auto-injected validate_column_size guard is off (it
-    # measures the decrypted value — see config/application.rb), so cap the
-    # plaintext explicitly instead. Both columns are string(255), which holds
-    # ciphertext for roughly 123 characters of plaintext; a formatted UK sort code
-    # or account number is 8. `notes` is TEXT (65535), with headroom for a far
-    # longer audit trail than this app can produce, so it is left uncapped.
+    # validate_column_size is off (config/application.rb), so cap the plaintext
+    # explicitly: string(255) holds ciphertext for ~123 characters. `notes` is TEXT
+    # with ample headroom, so it is left uncapped.
     validates :sort_code, :account_number,
               length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
-    validates :iban, length: { maximum: BankDetails::IBAN_MAX_LENGTH }
-    validates :bic, length: { maximum: BankDetails::BIC_MAX_LENGTH }
 
-    def bank_details?
-      sort_code.present? && account_number.present?
-    end
-
-    # The international pair, kept separate from bank_details? rather than
-    # folded into it: every caller of that predicate is a producer-facing
-    # "add your bank details before claiming" prompt on the UK rail, and a
-    # payee with only an IBAN on file must not read as having satisfied it.
-    def international_bank_details?
-      iban.present? && bic.present?
-    end
-
-    # Append one timestamped line to a notes audit trail, preserving what is
-    # already there. Lives here, next to the column, because two callers write
-    # it — the People page on every bank-detail change, and
-    # BankDetailsRetention when it clears one — and a trail whose lines were
-    # formatted two different ways would be markedly worse to read.
+    # Appends one timestamped line to a notes trail. One formatter for both
+    # callers (the People page and BankDetailsRetention) keeps the trail uniform.
     def self.append_note(existing, line, at: Time.current)
       stamped = "[#{at.utc.strftime('%Y-%m-%d %H:%M UTC')}] #{line}"
       existing.to_s.strip.empty? ? stamped : "#{existing.to_s.rstrip}\n#{stamped}"

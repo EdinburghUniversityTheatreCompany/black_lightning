@@ -1,15 +1,4 @@
-##
-# Provides version history and diff functionality for PaperTrail-enabled models.
-#
-# Include this concern in any model that uses has_paper_trail to enable
-# Wikipedia-style diff views and author notes.
-#
-# Usage:
-#   class MyModel < ApplicationRecord
-#     include Versionable
-#     has_paper_trail meta: { version_note: :version_note }
-#   end
-##
+# Version diffs and author notes for a has_paper_trail model.
 module Versionable
   extend ActiveSupport::Concern
 
@@ -17,11 +6,8 @@ module Versionable
     attr_accessor :version_note
   end
 
-  # Returns a hash of { attribute_name => [old_value, new_value] } for a given version.
-  #
-  # PaperTrail's `object` column stores the state of the record *before* the change.
-  # To reconstruct the "after" state, we look at the next version's `object` column,
-  # or the current record attributes if this is the most recent version.
+  # { attribute => [old, new] } for a version. Its `object` is the state BEFORE the change, so the
+  # state after is the next version's `object`, or the live record for the latest version.
   def diff_for_version(version)
     old_attributes = deserialize_version_object(version.object)
     return {} if old_attributes.blank?

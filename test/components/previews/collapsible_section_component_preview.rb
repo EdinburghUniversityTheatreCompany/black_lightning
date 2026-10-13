@@ -16,10 +16,4 @@ class CollapsibleSectionComponentPreview < ViewComponent::Preview
       "<p class='text-sm'>Important notice.</p>".html_safe
     end
   end
-
-  def with_title_right
-    render CollapsibleSectionComponent.new(title: "Section with Badge", title_right: "<span class='badge badge-primary'>New</span>".html_safe) do
-      "<p class='text-sm text-gray-700'>Content here.</p>".html_safe
-    end
-  end
 end

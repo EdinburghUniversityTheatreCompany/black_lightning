@@ -4,10 +4,4 @@ class AttachmentsGalleryComponent < ViewComponent::Base
     @include_item_link = include_item_link
     @include_header = include_header
   end
-
-  private
-
-  def any_attachments?
-    @attachments.any?
-  end
 end

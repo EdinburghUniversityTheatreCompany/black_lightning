@@ -13,10 +13,6 @@
 #  doors_open_minutes_before :integer
 #  duration_minutes          :integer
 #  end_date                  :date
-#  image_content_type        :string(255)
-#  image_file_name           :string(255)
-#  image_file_size           :integer
-#  image_updated_at          :datetime
 #  is_public                 :boolean
 #  maintenance_debt_amount   :integer
 #  maintenance_debt_start    :date
@@ -67,10 +63,6 @@ class Workshop < Event
   # A workshop is taught, not staged. schema.org has EducationEvent for exactly
   # this; publishing it as a TheaterEvent puts it in theatre rich results.
   SCHEMA_TYPE = "EducationEvent".freeze
-
-  # Validate uniqueness on Event Subtype basis instead of on the event.
-  # Otherwise, you cannot have two different types with the same slug.
-  validates :slug, uniqueness: { case_sensitive: false }
 
   def self.ransackable_associations(auth_object = nil)
     super

@@ -3,14 +3,9 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # Every way OUT of an import wizard, clicked.
-    #
-    # Both wizards live in one Turbo Frame, because Turbo Drive discards a
-    # non-redirect response to a form POST and a stateless wizard cannot
-    # redirect. The cost of that is invisible to every request test: a link
-    # inside a frame navigates THE FRAME, so a link to a page with no matching
-    # frame replaces the wizard with Turbo's "Content missing" and dead-ends the
-    # operator. Every escape link shipped that way until this test.
+    # Every way OUT of an import wizard, clicked. A link inside the wizard's
+    # Turbo Frame navigates the frame, so one to a page without that frame
+    # shows "Content missing", which no request test can see.
     class ImportWizardFramesJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -33,8 +28,20 @@ module Admin
         assert_escapes_frame admin_reimbursements_budget_import_path, "All budgets", "New budget"
       end
 
+      test "the budget import's Cancel leaves the frame for the page's year and cost centre" do
+        termtime = create_second_reimbursements_cost_centre
+        assert_escapes_frame admin_reimbursements_budget_import_path(year: @year.key, cost_centre: termtime.key),
+                             "Cancel", "New budget"
+
+        assert_current_path admin_reimbursements_budgets_path(year: @year.key, cost_centre: termtime.key)
+      end
+
       test "the expense import's back link leaves the frame" do
         assert_escapes_frame admin_reimbursements_expense_import_path, "All expenses", "Filter & search"
+      end
+
+      test "the expense import's Cancel leaves the frame" do
+        assert_escapes_frame admin_reimbursements_expense_import_path, "Cancel", "Filter & search"
       end
     end
   end

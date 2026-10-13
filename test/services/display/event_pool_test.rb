@@ -17,10 +17,9 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_includes pool.map(&:id), weekly.id
   end
 
-  # sort_by is not stable and every event running today shares the key
-  # [0, today], so without the start_date/id tiebreakers the six slot pages --
-  # each of which re-sorts independently, minutes apart -- can show the same
-  # show twice and skip another. During the Fringe that is the normal state.
+  # sort_by is not stable and every event running today shares [0, today], so
+  # without the start_date/id tiebreakers the six slot pages could show one show
+  # twice and skip another.
   test "events running today keep one total order across repeated calls" do
     Event.delete_all
 
@@ -31,7 +30,7 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     same_start = FactoryBot.create(:show, name: "Same start", is_public: true,
                                           start_date: Date.current - 3, end_date: Date.current + 2)
 
-    # The key implies: all three are on today, so start_date ascending, then id.
+    # All three are on today: start_date ascending, then id.
     by_key = [ earlier_start, same_start ].sort_by(&:id).map(&:id) + [ later_start.id ]
 
     5.times do
@@ -46,18 +45,12 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_equal [ soon.id, later.id ], Display::EventPool.upcoming.map(&:id)
   end
 
-  test "a season is in the pool like any other event" do
-    festival = FactoryBot.create(:season, is_public: true,
-                                          start_date: Date.current + 1, end_date: Date.current + 4)
+  test "seasons and workshops are in the pool like any other event" do
+    %i[season workshop].each do |type|
+      event = FactoryBot.create(type, is_public: true, start_date: Date.current + 1, end_date: Date.current + 2)
 
-    assert_includes Display::EventPool.upcoming.map(&:id), festival.id
-  end
-
-  test "a workshop is in the pool" do
-    workshop = FactoryBot.create(:workshop, is_public: true,
-                                            start_date: Date.current + 1, end_date: Date.current + 2)
-
-    assert_includes Display::EventPool.upcoming.map(&:id), workshop.id
+      assert_includes Display::EventPool.upcoming.map(&:id), event.id, type.to_s
+    end
   end
 
   test "private and finished events are excluded" do
@@ -70,10 +63,8 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_not_includes ids, finished.id
   end
 
-  # The run dates decide what is on, not the performance list. A producer who
-  # enters the first week and forgets the second must not have the show vanish
-  # for that second week -- partial data would otherwise produce a worse result
-  # than entering nothing at all.
+  # The run dates decide what is on: a producer who forgets the second week's
+  # performances must not see the show vanish.
   test "an event whose listed performances have all passed stays until its run ends" do
     friday = Date.current.next_occurring(:friday)
     partial = FactoryBot.create(:show, is_public: true,
@@ -81,15 +72,6 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     FactoryBot.create(:event_occurrence, event: partial, starts_at: (friday + 2).noon + 7.hours)
 
     assert_includes Display::EventPool.upcoming(on: friday + 4).map(&:id), partial.id
-  end
-
-  test "an event drops out only once its run has ended" do
-    friday = Date.current.next_occurring(:friday)
-    finished = FactoryBot.create(:show, is_public: true,
-                                        start_date: friday - 6, end_date: friday - 1)
-    FactoryBot.create(:event_occurrence, event: finished, starts_at: (friday - 5).noon + 7.hours)
-
-    assert_not_includes Display::EventPool.upcoming(on: friday).map(&:id), finished.id
   end
 
   test "slots wrap around when there are fewer events than slots" do

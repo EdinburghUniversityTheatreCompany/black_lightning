@@ -1,24 +1,22 @@
 
 ##
-# A single role/position within an Opportunity (e.g. "Stage Manager").
-#
-# Each role belongs to a Department (the grouping used by the public listing's filter). The
-# department is usually auto-suggested from the position text; +department_name+ is a virtual
-# field so the form can submit (and, on the admin form, create) a department by name.
+# A position within an Opportunity (e.g. "Stage Manager"), grouped by Department for the public
+# listing's filter.
 ##
 # == Schema Information
 #
 # Table name: opportunity_roles
 # Database name: primary
 #
-#  id             :bigint           not null, primary key
-#  note           :string(255)
-#  ordering       :integer
-#  position       :string(255)      not null
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  department_id  :bigint
-#  opportunity_id :integer          not null
+#  id                   :bigint           not null, primary key
+#  note                 :string(255)
+#  ordering             :integer
+#  position             :string(255)      not null
+#  suggested_department :string(255)
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  department_id        :bigint
+#  opportunity_id       :integer          not null
 #
 # Indexes
 #
@@ -31,26 +29,32 @@
 #  fk_rails_...  (opportunity_id => opportunities.id)
 #
 class OpportunityRole < ApplicationRecord
-  # Length validations enforcing database column limits
-  validates :position, length: { maximum: 255 }
-  validates :note, length: { maximum: 255 }
+  validates :position, presence: true, length: { maximum: 255 }
+  validates :note, :suggested_department, length: { maximum: 255 }
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true
 
-  # +department_name+ resolves to a Department (created if needed) in a before_validation hook.
-  # Only the admin role form offers tagging, so in practice public submitters pick an existing
-  # department rather than creating one.
-  attr_writer :department_name
+  # Set on a public submission. Only a reviewer adds a department, so a name matching none is kept
+  # in suggested_department for them instead, which only the admin pages show.
+  attr_accessor :existing_department_only
 
   before_validation :assign_department_from_name
-
-  validates :position, presence: true
+  before_save :clear_suggested_department, if: :department
 
   normalizes :position, with: ->(position) { position&.strip }
 
   default_scope { order(:ordering) }
 
-  # The typed department name, falling back to the associated department so the form pre-fills.
+  # Virtual field so the forms can submit a department by name, resolved before validation: an
+  # unknown name builds a Department, saved by belongs_to autosave, unless existing_department_only.
+  # A row whose only edit is its department must count as changed, or the opportunity's nested
+  # save skips it and the pick is lost.
+  def department_name=(name)
+    @department_name = name
+    department_id_will_change! unless name.to_s.strip.casecmp?(department&.name.to_s)
+  end
+
+  # Falls back to the department so the form pre-fills.
   def department_name
     return @department_name if defined?(@department_name)
 
@@ -70,7 +74,17 @@ class OpportunityRole < ApplicationRecord
   def assign_department_from_name
     return unless defined?(@department_name)
 
-    name = @department_name.to_s.strip
-    self.department = name.present? ? Department.find_or_build_by_name(name) : nil
+    department = Department.find_or_build_by_name(@department_name)
+    if existing_department_only && department&.new_record?
+      self.department = nil
+      # Cut, not refused: the public form has no field to show this column's error on.
+      self.suggested_department = department.name.first(255)
+    else
+      self.department = department
+    end
+  end
+
+  def clear_suggested_department
+    self.suggested_department = nil
   end
 end

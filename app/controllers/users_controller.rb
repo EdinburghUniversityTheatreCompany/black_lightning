@@ -17,9 +17,8 @@ class UsersController < ApplicationController
 
     @team_memberships = @user.team_memberships(true)
 
-    # Public profiles are indexed on purpose -- members opt out with public_profile, and a
-    # profile the guest ability cannot see never reaches this line. What they must not all share
-    # is the site-wide boilerplate description.
+    # Public profiles are indexed on purpose (members opt out with public_profile), so each
+    # needs its own description, not the site-wide boilerplate.
     @meta[:description] = profile_description
 
     super

@@ -6,9 +6,8 @@ class AlertComponent < ViewComponent::Base
     info:    "bg-info/10 border-info/30 text-info"
   }.freeze
 
-  def initialize(type: :info, html_class: nil)
+  def initialize(type: :info)
     @type = type.to_sym
-    @html_class = html_class
   end
 
   def style_classes

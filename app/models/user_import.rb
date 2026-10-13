@@ -1,26 +1,15 @@
 # frozen_string_literal: true
 
-##
-# Service-like model for parsing user import data and categorizing rows.
-# Not backed by a database table.
-#
-# Accepts either pasted TSV data or an uploaded xlsx file.
-# Categorizes each row into buckets based on matching rules:
-# - exact_match_id: User with matching user_id, student_id, or associate_id
-# - exact_match_email: User with matching email
-# - fuzzy_match: Possible match by name (active users only)
-# - create_new: No match found
-#
-# Used by both:
-# - Bulk User Import (creates users without member role)
-# - Bulk Show Crew Import (creates users + adds team membership)
-##
+# Parses pasted TSV or an uploaded xlsx and sorts each row into a BUCKETS entry by how it matches
+# existing users. Used by the bulk user import and the show crew import.
 class UserImport
   include ImportParsing
+  include UserMatching
 
   BUCKETS = %i[exact_match_id exact_match_email fuzzy_match create_new].freeze
 
-  attr_reader :years_active_cache
+  # What the previews call each id an exact_match_id row matched on.
+  MATCH_TYPE_LABELS = { user_id: "User ID", student_id: "Student ID", associate_id: "Associate ID" }.freeze
 
   def initialize(data, input_type:, import_mode: :user)
     @errors = []
@@ -28,11 +17,7 @@ class UserImport
     @rows = parse_data(data, input_type)
     validate_rows
     @categorized = categorize_rows
-    @years_active_cache = load_years_active_cache
-  end
-
-  def valid?
-    @errors.empty? && @rows.any?
+    @years_active_cache = years_active_cache_for(:fuzzy_match)
   end
 
   private
@@ -40,7 +25,6 @@ class UserImport
   def validate_rows
     return if @rows.empty?
 
-    # For crew imports, validate that position column exists and has data
     if @import_mode == :crew
       rows_without_position = @rows.select { |row| row[:position].blank? }
       if rows_without_position.size == @rows.size
@@ -55,7 +39,6 @@ class UserImport
     name_data = parse_name(find_column(row, "name"))
     id_data = collect_ids_from_row(row)
 
-    # Email handling: accept multiple column names for flexibility
     raw_email = find_column(row, "email")
     email = raw_email.to_s.strip.downcase.presence
     if email.blank? && id_data[:student_id].present?
@@ -66,7 +49,6 @@ class UserImport
       email: email
     )
 
-    # Add position for crew imports
     if @import_mode == :crew
       result[:position] = find_column(row, "position").to_s.strip.presence
     end
@@ -75,74 +57,16 @@ class UserImport
   end
 
   def categorize_rows
-    # For fuzzy matching, only consider "active" users (with recent team memberships)
-    # Use the same threshold as the duplicates index
-    @active_user_ids = active_user_ids_for_matching
+    @active_user_ids = user_ids_active_since(3)
 
     build_categorized_result(multi_match_bucket: :fuzzy_match)
   end
 
   def determine_bucket(row)
-    # 0. Match by database primary key (highest priority)
-    if row[:user_id].present?
-      user = User.find_by(id: row[:user_id])
-      return [ :exact_match_id, user, :user_id ] if user
-    end
+    user, match_type = exact_match(row)
+    return [ match_type ? :exact_match_id : :exact_match_email, user, match_type ] if user
 
-    # 1. Match by student_id
-    if row[:student_id].present?
-      user = User.find_by(student_id: row[:student_id])
-      return [ :exact_match_id, user, :student_id ] if user
-    end
-
-    # 2. Match by associate_id
-    if row[:associate_id].present?
-      user = User.find_by(associate_id: row[:associate_id])
-      return [ :exact_match_id, user, :associate_id ] if user
-    end
-
-    # 3. Match by email
-    if row[:email].present?
-      user = User.find_by(email: row[:email])
-      return [ :exact_match_email, user, nil ] if user
-    end
-
-    # 4. Fuzzy name match (last name exact, first name fuzzy) - only for active users
-    if row[:last_name].present?
-      candidates = User.where(last_name: row[:last_name]).where(id: @active_user_ids)
-      matches = candidates
-        .select { |user| User.fuzzy_first_name_match?(row[:first_name], user.first_name) }
-        .sort_by { |user| -StringSimilarity.match_confidence(row[:first_name], user.first_name) }
-      return [ :fuzzy_match, matches, nil ] if matches.any?
-    end
-
-    # 5. No match found - create new
-    [ :create_new, nil, nil ]
-  end
-
-  # Bulk-load years_active for all users in the fuzzy_match bucket to avoid N+1 queries.
-  def load_years_active_cache
-    fuzzy_user_ids = @categorized[:fuzzy_match].flat_map { |item| item[:existing_users].map(&:id) }
-    return {} if fuzzy_user_ids.empty?
-
-    User.bulk_years_active_for(fuzzy_user_ids)
-  end
-
-  # Get IDs of users who have been active in recent events (team memberships).
-  # Uses the same threshold as the duplicates index (current academic year + 3 years back).
-  def active_user_ids_for_matching
-    current_academic_year = ApplicationController.helpers.date_to_academic_year(Date.current)
-    threshold_year = current_academic_year - 3
-
-    # Convert academic years to actual date range (September of threshold year to now)
-    threshold_date = Date.new(threshold_year, 9, 1)
-
-    # Use unscoped to avoid default ORDER BY which conflicts with DISTINCT in MySQL
-    TeamMember.unscoped
-              .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
-              .where(teamwork_type: "Event")
-              .where("events.start_date >= ? OR events.end_date >= ?", threshold_date, threshold_date)
-              .distinct
-              .pluck(:user_id)
+    matches = fuzzy_matches(row, @active_user_ids)
+    matches.any? ? [ :fuzzy_match, matches, nil ] : [ :create_new, nil, nil ]
   end
 end

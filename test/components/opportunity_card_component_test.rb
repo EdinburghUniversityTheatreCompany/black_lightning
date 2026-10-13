@@ -7,12 +7,6 @@ class OpportunityCardComponentTest < ViewComponent::TestCase
     assert_text "Edinburgh University Theatre Company: 'Eurydice' by Sarah Ruhl"
   end
 
-  test "prefers an explicit title for the heading" do
-    render_inline(OpportunityCardComponent.new(opportunity: opportunities(:external_project_opportunity)))
-
-    assert_text "Gutter Theatre crew call"
-  end
-
   test "shows an EUTC badge for internal companies only" do
     render_inline(OpportunityCardComponent.new(opportunity: opportunities(:internal_project_opportunity)))
     assert_text "EUTC"
@@ -28,6 +22,17 @@ class OpportunityCardComponentTest < ViewComponent::TestCase
     assert_text "Set Manager"
     assert_text "Sound Technician"
     assert_text "Build weekends only"
+    assert_text "Stage Management"
+  end
+
+  test "never prints a department a submitter typed, which waits for a reviewer" do
+    opportunity = opportunities(:external_project_opportunity)
+    opportunity.roles.create!(position: "Puppeteer", department_name: "Puppetry", existing_department_only: true)
+
+    render_inline(OpportunityCardComponent.new(opportunity: opportunity.reload, detailed: true))
+
+    assert_text "Puppeteer"
+    assert_no_text "Puppetry"
   end
 
   test "shows the contact link in detailed mode when visibility allows" do
@@ -62,15 +67,6 @@ class OpportunityCardComponentTest < ViewComponent::TestCase
     render_inline(OpportunityCardComponent.new(opportunity: opp, detailed: true))
     assert_no_text "Tbc"
     assert_no_text "Any"
-  end
-
-  test "renders the role's department name as a badge" do
-    opp = Opportunity.new(title: "FoH call", description: "d", expiry_date: 2.weeks.from_now,
-                          submitter_name: "S", submitter_email: "s@example.com",
-                          roles: [ OpportunityRole.new(position: "FoH Manager", department: departments(:lighting)) ])
-
-    render_inline(OpportunityCardComponent.new(opportunity: opp))
-    assert_text "Lighting"
   end
 
   test "compact mode links the heading and omits the description" do

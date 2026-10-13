@@ -1,44 +1,31 @@
 module Admin
   module Reimbursements
     ##
-    # A payee's sort code and account number, masked until an operator asks.
+    # A payee's sort code and account number, or an international claim's IBAN,
+    # masked until an operator asks.
     #
-    # A DISCLOSURE control, not an access control: everyone reaching these
-    # screens is entitled to the numbers, and the full pair is in the markup
-    # behind the toggle. What it stops is incidental exposure — Build Batch
-    # printing every payee's account number on load, a screen shared in a
-    # meeting. Reading one becomes a deliberate act.
-    #
-    # The mask is ::Reimbursements::BankDetails.mask, the same last-four form
-    # the CSV exports and the notes trail use, so a row can be eyeball-matched
-    # across all three. It leaves four of a sort code's six digits showing,
-    # which is fine: a sort code names a bank branch and is published.
+    # A DISCLOSURE control, not an access control: the full value is in the markup
+    # behind the toggle. It stops incidental exposure (a screen shared in a
+    # meeting), not anyone entitled to the numbers. The mask is the same last-four
+    # form as the CSV exports and the notes trail.
     class BankDetailsComponent < ViewComponent::Base
-      # +payee+ names the toggle, so a screen reader on a table of twenty claims
-      # hears which one each button belongs to.
-      def initialize(sort_code:, account_number:, payee: nil, separator: " / ")
-        @sort_code = sort_code.to_s
-        @account_number = account_number.to_s
+      # +iban+ replaces the UK pair. +payee+ names the toggle for screen readers.
+      def initialize(sort_code: nil, account_number: nil, iban: nil, payee: nil)
+        @parts = [ sort_code.to_s, account_number.to_s ]
+        @parts = [ ::Reimbursements::BankDetails.format_iban(iban.to_s) ] unless iban.nil?
         @payee = payee.presence
-        @separator = separator
       end
 
       private
 
-      attr_reader :separator
+      def blank_details? = @parts.all?(&:blank?)
 
-      def blank_details? = @sort_code.blank? && @account_number.blank?
+      def masked = join(@parts.map { |part| ::Reimbursements::BankDetails.mask(part) })
 
-      def masked = join(mask(@sort_code), mask(@account_number))
+      def revealed = join(@parts)
 
-      def revealed = join(@sort_code, @account_number)
-
-      def mask(value)
-        ::Reimbursements::BankDetails.mask(value).presence || "-"
-      end
-
-      def join(sort_code, account_number)
-        [ sort_code.presence || "-", account_number.presence || "-" ].join(separator)
+      def join(parts)
+        parts.map { |part| part.presence || "-" }.join(" / ")
       end
 
       def toggle_label

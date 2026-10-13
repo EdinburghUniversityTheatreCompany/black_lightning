@@ -6,19 +6,15 @@
 # Table name: news
 # Database name: primary
 #
-#  id                 :integer          not null, primary key
-#  body               :text(16777215)
-#  image_content_type :string(255)
-#  image_file_name    :string(255)
-#  image_file_size    :integer
-#  image_updated_at   :datetime
-#  publish_date       :datetime
-#  show_public        :boolean
-#  slug               :string(255)
-#  title              :string(255)
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  author_id          :integer
+#  id           :integer          not null, primary key
+#  body         :text(16777215)
+#  publish_date :datetime
+#  show_public  :boolean
+#  slug         :string(255)
+#  title        :string(255)
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  author_id    :integer
 #
 # Indexes
 #
@@ -27,12 +23,12 @@
 #  index_news_on_slug                          (slug)
 #
 class News < ApplicationRecord
-  # Length validations enforcing database column limits
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[image_content_type image_file_name image_file_size image_updated_at]
+
   validates :title, length: { maximum: 255 }
   validates :body, length: { maximum: 16777215 }
   validates :slug, length: { maximum: 255 }
-  validates :image_file_name, length: { maximum: 255 }
-  validates :image_content_type, length: { maximum: 255 }
   include Sluggable
 
   resourcify
@@ -52,8 +48,7 @@ class News < ApplicationRecord
   # News should always be ordered by publish_date DESC
   default_scope -> { order("publish_date DESC") }
 
-  # Callbacks
-  before_validation :generate_slug_from_title
+  slug_from :title
 
   scope :current, -> { where([ "publish_date <= ?", Time.current ]) }
 
@@ -82,42 +77,6 @@ class News < ApplicationRecord
 
     image
   end
-
-  private
-
-  def generate_slug_from_title
-    return unless title.present?
-
-    # If we have an existing slug and the title didn't change, don't modify
-    return if slug.present? && !title_changed?
-
-    base_slug = title.to_url
-
-    # If title changed, only update if current slug looks auto-generated from old title
-    if title_changed? && slug.present?
-      old_title = title_was&.to_url
-      # For new records title_was is nil, so treat any pre-set slug as manually set
-      return if old_title.nil?
-      # Only update if the current slug matches what would have been auto-generated from the old title
-      # This indicates it was auto-generated, not manually set
-      unless slug == old_title || slug.start_with?("#{old_title}-")
-        return # Slug was manually set, don't change it
-      end
-    end
-
-    # Find a unique slug by appending numbers if needed
-    candidate_slug = base_slug
-    counter = 1
-
-    while News.where.not(id: id).where("LOWER(slug) = ?", candidate_slug.downcase).exists?
-      candidate_slug = "#{base_slug}-#{counter}"
-      counter += 1
-    end
-
-    self.slug = candidate_slug
-  end
-
-  public
 
   # Display the body up to the first line break after 140 characters.
   def preview

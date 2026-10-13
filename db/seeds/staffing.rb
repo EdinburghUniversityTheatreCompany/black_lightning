@@ -1,29 +1,22 @@
 alice, ben, chloe, david, emma, finn, grace, harry, isla =
   seed_demo_users.values_at(:alice, :ben, :chloe, :david, :emma, :finn, :grace, :harry, :isla)
 
-# ── Staffing Templates ─────────────────────────────────────────────────────────
 mainterm_template = Admin::StaffingTemplate.find_or_initialize_by(name: "Standard Mainterm")
 if mainterm_template.new_record?
   mainterm_template.save!
-  Admin::StaffingJob.create!(name: "Front of House Manager", staffable: mainterm_template)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: mainterm_template)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: mainterm_template)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: mainterm_template)
-  Admin::StaffingJob.create!(name: "Bar Staff", staffable: mainterm_template)
-  Admin::StaffingJob.create!(name: "Sound Operator", staffable: mainterm_template)
-  Admin::StaffingJob.create!(name: "Lighting Operator", staffable: mainterm_template)
+  [ "Front of House Manager", "Front of House", "Front of House", "Front of House", "Bar Staff", "Sound Operator", "Lighting Operator" ].each do |name|
+    Admin::StaffingJob.create!(name: name, staffable: mainterm_template)
+  end
 end
 
 lunchtime_template = Admin::StaffingTemplate.find_or_initialize_by(name: "Lunchtime / Teatime")
 if lunchtime_template.new_record?
   lunchtime_template.save!
-  Admin::StaffingJob.create!(name: "Front of House Manager", staffable: lunchtime_template)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: lunchtime_template)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: lunchtime_template)
-  Admin::StaffingJob.create!(name: "Tech Operator", staffable: lunchtime_template)
+  [ "Front of House Manager", "Front of House", "Front of House", "Tech Operator" ].each do |name|
+    Admin::StaffingJob.create!(name: name, staffable: lunchtime_template)
+  end
 end
 
-# ── Helper ─────────────────────────────────────────────────────────────────────
 def seed_staffing(slug:, show_title:, start_time:, end_time:, jobs:)
   return if Admin::Staffing.find_by(slug: slug)
 
@@ -39,7 +32,6 @@ def seed_staffing(slug:, show_title:, start_time:, end_time:, jobs:)
   end
 end
 
-# ── Season 1: Semester 1 2023-24 — Hamlet ─────────────────────────────────────
 seed_staffing(
   slug: "hamlet-opening-night-staffing",
   show_title: "Hamlet - Opening Night",
@@ -72,7 +64,6 @@ seed_staffing(
   ]
 )
 
-# ── Season 2: Semester 2 2023-24 — Cabaret ────────────────────────────────────
 seed_staffing(
   slug: "cabaret-preview-night-staffing",
   show_title: "Cabaret - Preview Night",
@@ -118,7 +109,6 @@ seed_staffing(
   ]
 )
 
-# ── Season 3: Semester 1 2024-25 — A Midsummer Night's Dream ──────────────────
 seed_staffing(
   slug: "midsummer-opening-night-staffing",
   show_title: "A Midsummer Night's Dream - Opening Night",
@@ -164,50 +154,45 @@ seed_staffing(
   ]
 )
 
-# ── Season 4: Semester 2 2024-25 — Rent ───────────────────────────────────────
-if Admin::Staffing.find_by(slug: "rent-preview-night-staffing").nil?
-  staffing = Admin::Staffing.create!(
-    show_title: "Rent - Preview Night",
-    start_time: Time.zone.parse("2025-02-05 19:00"),
-    end_time: Time.zone.parse("2025-02-05 22:30"),
-    counts_towards_debt: true,
-    slug: "rent-preview-night-staffing"
-  )
-  Admin::StaffingJob.create!(name: "Front of House Manager", staffable: staffing)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: staffing)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: staffing)
-  Admin::StaffingJob.create!(name: "Sound Operator", staffable: staffing, user: ben)
-  Admin::StaffingJob.create!(name: "Lighting Operator", staffable: staffing, user: alice)
-end
+seed_staffing(
+  slug: "rent-preview-night-staffing",
+  show_title: "Rent - Preview Night",
+  start_time: Time.zone.parse("2025-02-05 19:00"),
+  end_time:   Time.zone.parse("2025-02-05 22:30"),
+  jobs: [
+    [ "Front of House Manager", nil ],
+    [ "Front of House", nil ],
+    [ "Front of House", nil ],
+    [ "Sound Operator", ben ],
+    [ "Lighting Operator", alice ]
+  ]
+)
 
-if Admin::Staffing.find_by(slug: "rent-closing-night-staffing").nil?
-  staffing2 = Admin::Staffing.create!(
-    show_title: "Rent - Closing Night",
-    start_time: Time.zone.parse("2025-02-15 19:00"),
-    end_time: Time.zone.parse("2025-02-15 23:00"),
-    counts_towards_debt: true,
-    slug: "rent-closing-night-staffing"
-  )
-  Admin::StaffingJob.create!(name: "Front of House Manager", staffable: staffing2)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: staffing2)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: staffing2)
-  Admin::StaffingJob.create!(name: "Bar Staff", staffable: staffing2)
-end
+seed_staffing(
+  slug: "rent-closing-night-staffing",
+  show_title: "Rent - Closing Night",
+  start_time: Time.zone.parse("2025-02-15 19:00"),
+  end_time:   Time.zone.parse("2025-02-15 23:00"),
+  jobs: [
+    [ "Front of House Manager", nil ],
+    [ "Front of House", nil ],
+    [ "Front of House", nil ],
+    [ "Bar Staff", nil ]
+  ]
+)
 
-if Admin::Staffing.find_by(slug: "new-writing-festival-2025-staffing").nil?
-  staffing3 = Admin::Staffing.create!(
-    show_title: "New Writing Festival 2025",
-    start_time: Time.zone.parse("2025-03-12 19:00"),
-    end_time: Time.zone.parse("2025-03-12 22:00"),
-    counts_towards_debt: true,
-    slug: "new-writing-festival-2025-staffing"
-  )
-  Admin::StaffingJob.create!(name: "Front of House Manager", staffable: staffing3)
-  Admin::StaffingJob.create!(name: "Front of House", staffable: staffing3)
-  Admin::StaffingJob.create!(name: "Tech Operator", staffable: staffing3)
-end
+seed_staffing(
+  slug: "new-writing-festival-2025-staffing",
+  show_title: "New Writing Festival 2025",
+  start_time: Time.zone.parse("2025-03-12 19:00"),
+  end_time:   Time.zone.parse("2025-03-12 22:00"),
+  jobs: [
+    [ "Front of House Manager", nil ],
+    [ "Front of House", nil ],
+    [ "Tech Operator", nil ]
+  ]
+)
 
-# ── Upcoming: Semester 1 2025-26 (future placeholder) ─────────────────────────
 seed_staffing(
   slug: "semester-1-2025-26-mainterm-opening-staffing",
   show_title: "Semester 1 2025-26 Mainterm - Opening Night",

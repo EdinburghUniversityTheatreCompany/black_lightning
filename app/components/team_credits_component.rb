@@ -1,13 +1,8 @@
-# The Cast / Production Team credits, rendered on an event's public page, the
-# admin event page and a proposal. Named for what it shows rather than where it
-# shows it: the old partial was shared/_admin_show_team_members, which reads as
-# admin-only and is rendered on the public event page. Distinct from
-# Admin::Form::TeamMembersComponent, which is the editing side.
+# The Cast / Production Team credits on an event's public and admin pages and on a
+# proposal. Admin::Form::TeamMembersComponent is the editing side.
 class TeamCreditsComponent < ViewComponent::Base
-  # admin_site was an @admin_site read from inside the markup. It only widens
-  # who sees the status badges: anyone in the teamwork sees them on their
-  # collaborators wherever they are, and on the admin site they also show for
-  # anyone the viewer is allowed to see.
+  # Status badges show to anyone in the teamwork; admin_site also shows them
+  # for anyone the viewer may see.
   def initialize(team_members:, deadline: nil, admin_site: false)
     @team_members = team_members
     @deadline = deadline

@@ -1,53 +1,28 @@
 module Reimbursements
-  ##
-  # Polls the shared reimbursements mailbox (every 5 minutes via Solid Queue)
-  # and turns receipt emails into DRAFT expenses the sender then completes
-  # and submits in the portal:
+  # Polls each cost centre's receive mailbox (every 5 minutes) and turns receipt emails into
+  # blank DRAFT expenses the sender completes in the portal. Unknown and automated senders,
+  # and messages with no usable attachment, are filed in Rejected.
   #
-  # - unknown sender            -> "address not recognised" reply, Rejected folder
-  # - automated sender          -> no reply (loop guard), Rejected folder
-  # - no usable attachment      -> "please attach the receipt" reply, Rejected folder
-  # - known sender + attachment -> blank Draft expense (subject as description,
-  #   everything else left for the portal), receipts attached, reply with a
-  #   portal link, Processed
-  #
-  # Every inbound receipt becomes a blank draft plus the "please complete it in
-  # the portal" reply — the designed fallback, since nothing here can know the
-  # amount, budget or reference.
-  #
-  # Failure handling: before the expense exists, a message is simply left
-  # unread and retried next cycle. After the expense exists, the message is
-  # marked READ as the guaranteed idempotency step (unread_messages filters on
-  # unread, so a read message is never re-fetched) before the best-effort
-  # attach/reply/move — so a transient error there can't mint a duplicate
-  # expense every 5 minutes. If the mark-read step itself fails after the
-  # expense was created, that's the one duplicate-risk case, so it's flagged to
-  # Honeybadger rather than silently swallowed.
-  # Graph credential failures alert the IT subcommittee, deduped to once/day.
+  # Before the expense exists, a failed message is left unread and retried next cycle. After
+  # it exists, mark-read is the idempotency commit point (unread_messages never re-fetches a
+  # read message), so it runs before the best-effort attach/reply/move; a mark-read failure
+  # is the one duplicate-risk case and is flagged to Honeybadger.
+  # Graph credential failures alert the IT subcommittee, deduped to once a day.
   class MailboxPollJob < Reimbursements::ApplicationJob
     queue_as :default
-    # duration: set above the default 3-minute lock TTL — a poll fetches and
-    # attaches receipts across every cost centre's mailbox, plausibly exceeding
-    # 3 minutes; a lock expiring mid-run would let a concurrent second run past
-    # the single-flight guarantee that prevents double-processing unread mail.
+    # Must outlive a multi-mailbox poll, or a second run gets past the single-flight guard.
     limits_concurrency key: "reimbursements_mailbox_poll", duration: 10.minutes
 
     AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
-    # A compromised/spoofed sender address could otherwise mint an unbounded
-    # number of Draft expenses under a real payee's identity, or simply starve
-    # other senders' messages out of a poll cycle's PAGE_SIZE page. Capped
-    # generously above any plausible legitimate daily volume — this is a
-    # defence against abuse, not a limit any real submitter should ever hit.
+    # Caps a spoofed sender minting unbounded drafts or starving the PAGE_SIZE page; set well
+    # above any real daily volume.
     MAX_MESSAGES_PER_SENDER_PER_DAY = 30
 
-    # Injection seams for tests (no mocking library in this suite). The mailbox
-    # builder takes the cost centre so each is polled on its OWN receive mailbox.
+    # Test seam. Takes the cost centre so each is polled on its own receive mailbox.
     class_attribute :mailbox_builder,
-                    default: ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
+                    default: ->(cost_centre) { ::Graph::MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
 
-    # Every cost centre has its own receive mailbox (Fringe today, termtime next),
-    # so poll each in turn. The People registry is shared across the base, so
-    # sender lookups still work regardless of which mailbox a receipt arrived on.
+    # The People registry is shared, so sender lookups work whichever mailbox a receipt came to.
     def perform
       unless Settings.outbound_enabled?
         Rails.logger.info("Reimbursements mailbox poll skipped: outbound disabled in #{Rails.env}")
@@ -58,35 +33,26 @@ module Reimbursements
         return
       end
 
-      CostCentre.all.each { |cost_centre| poll_cost_centre_safely(cost_centre) }
-    rescue MailboxClient::AuthError => e
-      alert_auth_failure(e)
+      CostCentre.all.each { |cost_centre| poll_cost_centre(cost_centre) }
+    rescue GraphAuth::AuthError => e
+      GraphAuthAlert.notify(e, source: "reimbursements_mailbox_poll")
     end
 
     private
 
-    # A generic (non-auth) failure listing one cost centre's unread messages
-    # — a Graph 5xx, a timeout — must not abort polling every OTHER cost
-    # centre's mailbox for the rest of this cycle; only AuthError re-raises,
-    # since that's genuinely global (the same Entra credential every cost
-    # centre's mailbox client shares) and must still reach the IT alert path.
-    def poll_cost_centre_safely(cost_centre)
-      poll_cost_centre(cost_centre)
-    rescue MailboxClient::AuthError
-      raise
-    rescue => e
-      log_and_notify("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}", e,
-                     context: { source: "reimbursements_mailbox_poll", cost_centre: cost_centre.key })
-    end
+    attr_reader :mailbox
 
+    # Only AuthError re-raises: it is global (one Entra credential for every mailbox). Any other
+    # failure must not stop the other centres' polls.
     def poll_cost_centre(cost_centre)
       @current_cost_centre = cost_centre
       @mailbox = mailbox_builder.call(cost_centre)
       @mailbox.unread_messages.each { |message| process(message) }
-    end
-
-    def mailbox
-      @mailbox
+    rescue GraphAuth::AuthError
+      raise
+    rescue => e
+      log_and_notify("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}", e,
+                     context: { source: "reimbursements_mailbox_poll", cost_centre: cost_centre.key })
     end
 
     def process(message)
@@ -100,7 +66,7 @@ module Reimbursements
       return handle_missing_receipt(message, person) if receipts.empty?
 
       create_expense(message, person, receipts)
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify("Reimbursements poll failed for message #{message.id}: #{e.message}", e,
@@ -108,14 +74,8 @@ module Reimbursements
       # Leave the message unread; the next poll cycle retries it.
     end
 
-    # A message left unread because a LATER step failed (e.g. a write blowing
-    # up inside create_expense, caught by the rescue below) is reprocessed
-    # by every subsequent poll cycle until it succeeds. Counting it again on
-    # each retry would inflate one real email into many against the sender's
-    # tally, potentially rate-limiting a legitimate sender for a transient
-    # failure that was never their fault. Cache the count this message was
-    # first seen at, keyed by message id, so a retried message is only ever
-    # counted once no matter how many cycles it takes to actually process.
+    # Counted once per message id, so a message retried after a later failure does not inflate
+    # the sender's tally.
     def sender_over_daily_limit?(message)
       count_key = "reimbursements/mailbox-sender-count/#{message.from_address}/#{Date.current}"
       counted_key = "reimbursements/mailbox-sender-counted/#{message.id}"
@@ -125,31 +85,22 @@ module Reimbursements
       count.to_i > MAX_MESSAGES_PER_SENDER_PER_DAY
     end
 
-    # Bounces (NDRs), out-of-office replies and other automated mail must
-    # never get a reply — the reply would bounce again and ping-pong with the
-    # remote MTA every poll cycle.
+    # A reply to a bounce or auto-reply would bounce again and ping-pong every cycle.
     def automated_sender?(message)
       message.from_address.blank? ||
         message.from_address.match?(AUTOMATED_SENDER) ||
-        message.from_address.casecmp?(@current_cost_centre&.receive_mailbox)
+        message.from_address.casecmp?(@current_cost_centre.receive_mailbox)
     end
 
     def usable_receipts(message)
-      # Always fetch — Graph reports hasAttachments: false for messages whose
-      # only image is pasted inline, which is a perfectly normal way to send
-      # a receipt. All attachments and inline images count as receipts.
+      # Always fetch: Graph reports hasAttachments false when the only image is pasted inline.
       mailbox.attachments(message.id).filter_map do |attachment|
-        # Guard nil/empty bytes: a bad attachment must not raise here (it would
-        # leave the message unread and reprocessed forever), just be skipped.
+        # A raise here would leave the message unread and reprocessed for ever, so skip it.
         next if attachment[:bytes].blank?
 
-        # Size, real content type (Marcel, not the sender-declared type — an
-        # email attachment's declared type is exactly as spoofable as a browser
-        # upload's) and the HEIC-to-JPEG conversion all happen here. People
-        # emailing an iPhone photo to the shared mailbox is a likely route in,
-        # and ReceiptIntake never raises: an unreadable photo is simply not a
-        # usable receipt, so the message falls through to the existing
-        # "please attach the receipt" reply instead of being retried forever.
+        # Size, real content type (Marcel, not the declared type, which is as spoofable as a
+        # browser upload's) and HEIC-to-JPEG conversion happen here. ReceiptIntake never raises:
+        # an unreadable photo falls through to the "attach the receipt" reply.
         receipt = ReceiptIntake.from_bytes(bytes: attachment[:bytes], filename: attachment[:filename],
                                            declared_type: attachment[:content_type])
         next log_unusable(message, attachment, receipt) unless receipt.ok?
@@ -186,86 +137,45 @@ module Reimbursements
       mailbox.mark_read_and_move(message.id, :rejected)
     end
 
-    def create_expense(message, person, receipts)
-      # Idempotency backstop (database backend): if a previous cycle created
-      # the expense but died before marking the message read, don't mint a
-      # duplicate — just finish the bookkeeping on the message.
-      if (existing = store.expense_for_source_message(message.id))
-        handle_already_processed(message, existing, receipts)
-        return
-      end
-
-      expense = store.create_expense!(expense_attrs(message, person))
-      finalise_created(message, expense, receipts)
-    end
-
-    # The expense now exists, so the message must never be re-processed. Mark it
-    # read first — the guaranteed idempotency step (unread_messages filters on
-    # unread) — then do the best-effort attach/reply/move. A failure of the
-    # mark-read step is the one path that risks a duplicate next cycle, so it is
-    # surfaced loudly rather than swallowed.
+    # A previous cycle may have created the expense (found by source_message_id) and died before
+    # marking read: finish that message rather than mint a duplicate.
     #
-    # Attach and reply are separate best-effort steps (not one combined block)
-    # so an attach failure partway through a multi-receipt message can't skip
-    # the reply the sender is waiting on. The move to Processed is gated on
-    # attach succeeding: a partially-attached draft stays visible in the
-    # Inbox as a signal something needs manual follow-up, rather than looking
-    # identical to a fully successful run once filed away.
-    def finalise_created(message, expense, receipts)
+    # Mark read FIRST (the idempotency commit point; a failure there is the duplicate-risk case).
+    # Attach and reply are separate best-effort steps so an attach failure cannot skip the reply.
+    # The move to Processed is gated on attach, so a partly attached draft stays visible in the
+    # Inbox. On a retry, reply only if something was attached now: otherwise the earlier cycle
+    # most likely replied already.
+    def create_expense(message, person, receipts)
+      existing = store.expense_for_source_message(message.id)
+      if existing
+        Rails.logger.info("Reimbursements mailbox: message #{message.id} already created expense " \
+                          "#{existing.record_id}; finishing without a duplicate")
+      end
+      expense = existing || store.create_expense!(expense_attrs(message, person))
       mark_read_or_flag_duplicate(message, expense) or return
 
-      attached = best_effort(message, expense, "receipt attach") do
-        receipts.each do |receipt|
-          store.attach_receipt!(expense.record_id, filename: receipt[:filename],
-                                                   content_type: receipt[:content_type],
-                                                   bytes: receipt[:bytes])
-        end
+      receipts = missing_receipts(expense, receipts) if existing
+      attached = receipts.empty? || best_effort(message, expense, "receipt attach") do
+        receipts.each { |receipt| store.attach_receipt!(expense.record_id, **receipt) }
       end
-      best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
-      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
-    end
-
-    # The expense already exists from an earlier cycle (stamped with this
-    # message's id), but that cycle may have died anywhere after the create —
-    # before the attach, the reply, or the move. Finish whatever is missing:
-    # attach any receipts not yet on the expense, and reply only when we did
-    # (an untouched attach set means the earlier cycle got that far, and its
-    # reply most likely went out — re-replying would double-email the sender).
-    def handle_already_processed(message, expense, receipts)
-      Rails.logger.info("Reimbursements mailbox: message #{message.id} already created expense " \
-                        "#{expense.record_id}; finishing without a duplicate")
-      mark_read_or_flag_duplicate(message, expense) or return
-
-      missing = missing_receipts(expense, receipts)
-      attached = missing.empty? || best_effort(message, expense, "receipt attach") do
-        missing.each do |receipt|
-          store.attach_receipt!(expense.record_id, filename: receipt[:filename],
-                                                   content_type: receipt[:content_type],
-                                                   bytes: receipt[:bytes])
-        end
-      end
-      if missing.any? && attached
+      if existing.nil? || (receipts.any? && attached)
         best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
       end
       best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
     end
 
-    # Receipts from the message not yet attached (matched by filename + byte
-    # size, like the importer's re-run skip). Only ever runs on the database
-    # backend, where the expense is an AR record with receipt_files.
+    # Receipts not yet on the expense, matched by filename and byte size.
     def missing_receipts(expense, receipts)
       existing = expense.receipt_files.map { |file| [ file.filename.to_s, file.byte_size ] }
       receipts.reject { |receipt| existing.include?([ receipt[:filename], receipt[:bytes].bytesize ]) }
     end
 
-    # Marks the message read. Returns true on success. On failure the expense
-    # already exists but the message is still unread, so the next poll may mint
-    # a duplicate: flag it (duplicate_risk) so an operator can check, and skip
-    # the follow-up (a still-unread message shouldn't be replied to / moved).
+    # True on success. On failure the message is still unread and the next poll may mint a
+    # duplicate: flag it (duplicate_risk) and skip the reply/move.
     def mark_read_or_flag_duplicate(message, expense)
       mailbox.mark_read(message.id)
       true
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify(
@@ -276,15 +186,12 @@ module Reimbursements
       false
     end
 
-    # Runs a follow-up step that happens after the expense exists and the
-    # message is already read: any failure is logged + reported but never
-    # re-raised (the message is safe), except AuthError which aborts the poll to
-    # alert on credentials. Returns true on success, false on a swallowed
-    # failure, so a caller can gate a later step on this one's success.
+    # Failures are logged and reported, never raised (the message is already read), except
+    # AuthError. Returns false on a swallowed failure so a later step can be gated on it.
     def best_effort(message, expense, description)
       yield
       true
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify("Reimbursements #{description} failed for #{message.id}: #{e.message}", e,
@@ -292,24 +199,16 @@ module Reimbursements
       false
     end
 
-    # A blank DRAFT: only the receipt and the email subject (as a starting
-    # description) are known: the amount, budget and payment reference are all
-    # left for the sender to fill in. The reply asks them to
-    # complete and submit it in the portal, so review only ever sees confirmed
-    # claims.
+    # A blank DRAFT: only the subject (as description) is known. The reply asks the sender to
+    # complete and submit it, so review only sees confirmed claims.
     def expense_attrs(message, person)
       {
         person_record_id: person.record_id,
-        # The idempotency stamp: a later poll finds this expense by message id
-        # instead of creating a second one for the same email.
+        # The idempotency stamp: a later poll finds this expense by it.
         source_message_id: message.id,
         status: Status::DRAFT,
         description: message.subject.presence
       }.compact
-    end
-
-    def alert_auth_failure(error)
-      GraphAuthAlert.notify(error, source: "reimbursements_mailbox_poll")
     end
 
     def portal_url
@@ -326,10 +225,7 @@ module Reimbursements
       Rails.application.config.action_mailer.default_url_options || {}
     end
 
-    # Every reply is written in the name of the cost centre whose mailbox the
-    # message arrived on, so a termtime submitter is never told to write to the
-    # Fringe. Both read @current_cost_centre, which poll_cost_centre sets before
-    # any message is processed.
+    # Replies are in the name of the cost centre whose mailbox received the message.
     def sign_off
       "#{@current_cost_centre.name} finance (automated reply)"
     end
@@ -338,10 +234,8 @@ module Reimbursements
       @current_cost_centre.contact_email
     end
 
-    # The replies are raw HTML, not ERB, so nothing escapes for us — and the
-    # name is the first submitter-controlled value to reach one
-    # (User#first_name is self-service editable). unknown_sender_html and
-    # rate_limited_html keep a bare "Hi," on purpose: no matched person.
+    # The replies are raw HTML, so nothing escapes, and first_name is self-service editable.
+    # unknown_sender_html and rate_limited_html keep a bare "Hi," on purpose: no matched person.
     def greeting(person)
       ERB::Util.html_escape(GreetingName.for(person))
     end

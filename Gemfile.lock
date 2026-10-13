@@ -157,7 +157,6 @@ GEM
       marcel (~> 1.0)
       nokogiri (~> 1.10, >= 1.10.4)
       rubyzip (>= 2.4, < 4)
-    chronic (0.10.2)
     chunky_png (1.4.0)
     coffee-script-source (1.12.2)
     commander (5.0.0)
@@ -229,7 +228,6 @@ GEM
     honeybadger (6.9.2)
       logger
       ostruct
-    html_acceptance (0.1.19)
     htmlentities (4.4.2)
     i18n (1.15.2)
       concurrent-ruby (~> 1.0)
@@ -662,7 +660,6 @@ DEPENDENCIES
   cancancan
   capybara (>= 2.15)
   caxlsx
-  chronic
   coffee-script-source (= 1.12.2)
   commonmarker
   csv
@@ -680,7 +677,6 @@ DEPENDENCIES
   foreman
   herb
   honeybadger
-  html_acceptance
   icalendar
   image_processing
   json (< 3)

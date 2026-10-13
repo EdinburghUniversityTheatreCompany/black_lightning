@@ -72,39 +72,14 @@ class Admin::StaffingDebt < ApplicationRecord
     end
   end
 
-  def formatted_status
-    local_status.to_s.titleize
-  end
-
-  # Returns if the staffing debt no longer counts for debt.
-  # However, the job has not necessarily been completed, so it could revert to count again.
-  # This is the case UNLESS the status is normal and there is no associated staffing job.
-  # This is because a converted, successful or forgiven debt always counts as completed.
-  def fulfilled
-    !(normal? && admin_staffing_job.blank?)
-  end
-
-  # Returns if the staffing debt has been irreversibly completed.
-  # This is the case UNLESS the status is normal and there is no associated COMPLETED staffing job.
-  def completed
-    !(normal? && admin_staffing_job.try(:completed?))
-  end
-
   # returns unfulfilled staffing debts.
   def self.unfulfilled
     where(admin_staffing_job: nil, state: :normal)
   end
 
-  # Optimized scope for debt calculations - combines unfulfilled check with date filter
-  def self.unfulfilled_before_date(on_date)
-    where(admin_staffing_job: nil, state: :normal)
-      .where("due_by < ?", on_date)
-  end
+  def self.unfulfilled_before_date(on_date) = unfulfilled.where(due_by: ...on_date)
 
-  def self.unfulfilled_after_date(from_date)
-    where(admin_staffing_job: nil, state: :normal)
-      .where("due_by >= ?", from_date)
-  end
+  def self.unfulfilled_after_date(from_date) = unfulfilled.where(due_by: from_date..)
 
   # Creates a new maintenance debt with the same attributes as this staffing debt.
   def convert_to_maintenance_debt

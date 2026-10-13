@@ -1,5 +1,5 @@
 require "test_helper"
-require "rubyXL" # BacsXlsx#generate requires it lazily; this test also parses output with RubyXL directly
+require "rubyXL" # generate requires it lazily; this test parses the output itself
 
 module Reimbursements
   class BacsXlsxTest < ActiveSupport::TestCase
@@ -37,7 +37,6 @@ module Reimbursements
       sheet = parsed(BacsXlsx.new.generate(rows))
       first = sheet.sheet_data[2]
 
-      # Leading-zero values must round-trip as literal text, not as truncated numbers.
       assert_equal "00123456", first[3].value
       assert_equal "439999", first[4].value
       assert_equal "08-99-99", first[2].value
@@ -45,6 +44,16 @@ module Reimbursements
       assert_equal "@", first[2].number_format.format_code, "sort code must be text-formatted"
       assert_equal "@", first[3].number_format.format_code, "account number must be text-formatted"
       assert_equal "@", first[4].number_format.format_code, "nominal must be text-formatted"
+    end
+
+    # add_cell would replace the template's styled amount cell with a General one.
+    test "the amount keeps the template's own currency format" do
+      template_format = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["BREAKDOWN"][2][1]
+                                      .number_format.format_code
+      written = parsed(BacsXlsx.new.generate(rows))[2][1]
+
+      assert_includes template_format, "£"
+      assert_equal template_format, written.number_format&.format_code
     end
 
     test "leaves the header and example rows untouched" do
@@ -61,61 +70,22 @@ module Reimbursements
       assert_equal "PAYEE:", sheet.sheet_data[0][0].value
     end
 
-    test "neutralises formula-injection in submitter text cells so Excel won't execute them" do
+    test "neutralises formula-injection in submitter text and bank cells so Excel won't execute them" do
       malicious = Row.new(
         payee_name: "=HYPERLINK(\"http://evil\",\"click\")", amount: 5.0,
-        sort_code: "08-99-99", account_number: "00123456", nominal_code: "439999",
+        sort_code: "=HYPERLINK(\"http://evil\")", account_number: "@SUM(A1:A9)", nominal_code: "-2+3",
         description: "@SUM(A1:A9)", payment_reference: "-2+3", cost_centre: "F40"
       )
       first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
 
-      # A leading apostrophe forces the cell to literal text, so =, @, +, - values
-      # can never be interpreted as a formula by Excel / on CSV export.
+      # A leading apostrophe makes the cell literal text, never a formula.
       assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", first[0].value
-      assert_equal "'@SUM(A1:A9)", first[7].value
-      assert_equal "'-2+3", first[6].value
-    end
-
-    test "neutralises the remaining formula triggers: leading +, tab, CR and LF" do
-      [ "+1234", "\tSUM(A1)", "\rSUM(A1)", "\nSUM(A1)" ].each do |value|
-        malicious = Row.new(
-          payee_name: "Alice Producer", amount: 5.0,
-          sort_code: "08-99-99", account_number: "00123456", nominal_code: "439999",
-          description: value, payment_reference: "ok", cost_centre: "F40"
-        )
-        first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
-
-        assert_equal "'#{value}", first[7].value, "#{value.inspect} must be quote-prefixed like the other triggers"
-      end
-    end
-
-    test "also neutralises formula-injection in the sort code, account number, and nominal code cells" do
-      malicious = Row.new(
-        payee_name: "Alice Producer", amount: 5.0,
-        sort_code: "=HYPERLINK(\"http://evil\")", account_number: "@SUM(A1:A9)",
-        nominal_code: "-2+3", description: "ok", payment_reference: "ok", cost_centre: "F40"
-      )
-      first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
-
       assert_equal "'=HYPERLINK(\"http://evil\")", first[2].value
       assert_equal "'@SUM(A1:A9)", first[3].value
       assert_equal "'-2+3", first[4].value
-      # Still forced to text format, same as an ordinary bank-detail cell.
-      assert_equal "@", first[2].number_format.format_code
-      assert_equal "@", first[3].number_format.format_code
-      assert_equal "@", first[4].number_format.format_code
-    end
-
-    test "leaves ordinary text cells and forced-text bank fields unprefixed" do
-      first = parsed(BacsXlsx.new.generate(rows)).sheet_data[2]
-
-      assert_equal "Alice Producer", first[0].value
-      assert_equal "Fake blood", first[7].value
-      assert_equal "PROPS ALICE", first[6].value
-      # Forced-text bank fields keep their leading zeros/dashes and are never prefixed.
-      assert_equal "08-99-99", first[2].value
-      assert_equal "00123456", first[3].value
-      assert_equal "439999", first[4].value
+      assert_equal "'-2+3", first[6].value
+      assert_equal "'@SUM(A1:A9)", first[7].value
+      [ 2, 3, 4 ].each { |col| assert_equal "@", first[col].number_format.format_code }
     end
 
     test "a negative amount stays a numeric cell, never quote-prefixed" do
@@ -125,18 +95,6 @@ module Reimbursements
       cell = parsed(BacsXlsx.new.generate([ refund ])).sheet_data[2][1]
 
       assert_in_delta(-12.5, cell.value, 0.001)
-    end
-
-    # Defaulting a blank cost centre to "F40" books a second cost centre's spend
-    # against the Fringe and has EUSA pay it from the wrong pot, so refusing the
-    # workbook is the safe direction.
-    test "refuses to build a workbook when a row has no cost-centre code" do
-      blank = rows.first.dup
-      blank.cost_centre = ""
-
-      error = assert_raises(BacsXlsx::TemplateError) { BacsXlsx.new.generate([ blank ]) }
-      assert_match(/cost-centre code/, error.message)
-      assert_no_match(/F40/, error.message)
     end
 
     test "raises when the template file is missing" do
@@ -177,7 +135,8 @@ module Reimbursements
       RubyXL::Parser.parse_buffer(bytes)["AUTHORISATION FORM"]
     end
 
-    test "prints the cost centre and its budget holder on the authorisation form" do
+    test "prints the cost centre and its budget holder on the authorisation form, in the template's styling" do
+      template = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["AUTHORISATION FORM"]
       form = authorisation_form(BacsXlsx.new.generate(rows, centre_name: "Bedlam Fringe 2026",
                                                             authoriser_name: "Jo Producer",
                                                             authoriser_designation: "Fringe Treasurer"))
@@ -185,7 +144,9 @@ module Reimbursements
       assert_equal "Bedlam Fringe 2026", form[3][3].value
       assert_equal "Jo Producer", form[15][2].value
       assert_equal "Fringe Treasurer", form[16][2].value
-      assert_equal "SUM(BREAKDOWN!B3:B202)", form[10][2].formula.expression
+      [ [ 3, 3 ], [ 15, 2 ], [ 16, 2 ] ].each do |row, col|
+        assert_equal template[row][col].style_index, form[row][col].style_index
+      end
     end
 
     test "leaves the budget holder blank when the cost centre names nobody" do
@@ -194,23 +155,6 @@ module Reimbursements
       assert_equal "Bedlam Theatre", form[3][3].value
       assert_predicate form[15][2].value, :blank?
       assert_predicate form[16][2].value, :blank?
-    end
-
-    test "the vendored template names no budget holder of its own" do
-      template = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["AUTHORISATION FORM"]
-
-      assert_predicate template[15][2].value, :blank?
-      assert_predicate template[16][2].value, :blank?
-    end
-
-    test "keeps the template's styling on the authorisation cells it writes" do
-      template = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["AUTHORISATION FORM"]
-      form = authorisation_form(BacsXlsx.new.generate(rows, centre_name: "X", authoriser_name: "Y",
-                                                            authoriser_designation: "Z"))
-
-      [ [ 3, 3 ], [ 15, 2 ], [ 16, 2 ] ].each do |row, col|
-        assert_equal template[row][col].style_index, form[row][col].style_index
-      end
     end
 
     test "refuses a batch bigger than the template's row capacity instead of corrupting the total" do

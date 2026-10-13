@@ -1,6 +1,6 @@
 admin = User.find_by!(email: "admin@bedlamtheatre.co.uk")
 
-# ── News articles ──────────────────────────────────────────────────────────────
+# News articles
 [
   {
     title: "Welcome to Semester 2 2024-25",
@@ -38,14 +38,10 @@ admin = User.find_by!(email: "admin@bedlamtheatre.co.uk")
     show_public: false
   }
 ].each do |attrs|
-  news = News.find_or_initialize_by(slug: attrs[:slug])
-  if news.new_record?
-    news.assign_attributes(attrs.merge(author: admin))
-    news.save!
-  end
+  find_or_seed(News, { slug: attrs[:slug] }, attrs.merge(author: admin))
 end
 
-# ── Opportunities ──────────────────────────────────────────────────────────────
+# Opportunities
 [
   {
     title: "Fringe Venue Seeking Front of House Volunteers",
@@ -72,19 +68,12 @@ end
     approved: false
   }
 ].each do |attrs|
-  opportunity = Opportunity.find_or_initialize_by(title: attrs[:title])
-  if opportunity.new_record?
-    opportunity.assign_attributes(attrs.merge(
-      creator: admin,
-      approver: attrs[:approved] ? admin : nil
-    ))
-    opportunity.save!
-  end
+  find_or_seed(Opportunity, { title: attrs[:title] }, attrs.merge(creator: admin, approver: attrs[:approved] ? admin : nil))
 end
 
-# ── Editable Blocks ────────────────────────────────────────────────────────────
+# Editable Blocks
 editable_blocks = [
-  # ── Main public pages ──────────────────────────────────────────────────────
+  # Main public pages
   {
     url: "about",
     name: "About",
@@ -157,7 +146,7 @@ editable_blocks = [
     ordering: 6,
     content: "External opportunities for EUTC members — auditions, crew calls, and more from around Edinburgh."
   },
-  # ── Admin pages ────────────────────────────────────────────────────────────
+  # Admin pages
   {
     url: "admin/resources",
     name: "Resources",
@@ -174,7 +163,7 @@ editable_blocks = [
     ordering: 2,
     content: "Use the form below to check whether someone is a current EUTC member."
   },
-  # ── Special blocks (looked up by name, no URL) ─────────────────────────────
+  # Special blocks (looked up by name, no URL)
   {
     url: nil,
     name: "No Opportunities",
@@ -191,7 +180,7 @@ editable_blocks.each do |attrs|
   block.save!
 end
 
-# ── Carousel Items ─────────────────────────────────────────────────────────────
+# Carousel Items
 carousel_items = [
   {
     title: "Welcome to Bedlam Theatre",

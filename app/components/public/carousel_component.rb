@@ -1,7 +1,6 @@
 class Public::CarouselComponent < ViewComponent::Base
-  def initialize(carousel_items:, aspect_ratio: nil, fit_mode: "cover")
+  def initialize(carousel_items:, aspect_ratio: nil)
     @carousel_items = carousel_items
     @aspect_ratio = aspect_ratio
-    @fit_mode = fit_mode
   end
 end

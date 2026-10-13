@@ -16,12 +16,12 @@
     <div class="sm:col-span-10">
       <%= f.text_area :redirect_uri, class: "form-control #{ 'is-invalid' if application.errors[:redirect_uri].present? }" %>
       <%= doorkeeper_errors_for application, :redirect_uri %>
-      <span class="form-text text-secondary">
+      <span class="form-text">
         <%= t('doorkeeper.applications.help.redirect_uri') %>
       </span>
 
       <% if Doorkeeper.configuration.allow_blank_redirect_uri?(application) %>
-        <span class="form-text text-secondary">
+        <span class="form-text">
           <%= t('doorkeeper.applications.help.blank_redirect_uri') %>
         </span>
       <% end %>
@@ -33,7 +33,7 @@
     <div class="sm:col-span-10">
       <%= f.check_box :confidential, class: "checkbox #{ 'is-invalid' if application.errors[:confidential].present? }" %>
       <%= doorkeeper_errors_for application, :confidential %>
-      <span class="form-text text-secondary">
+      <span class="form-text">
         <%= t('doorkeeper.applications.help.confidential') %>
       </span>
     </div>
@@ -44,7 +44,7 @@
     <div class="sm:col-span-10">
       <%= f.text_field :scopes, class: "form-control #{ 'has-error' if application.errors[:scopes].present? }" %>
       <%= doorkeeper_errors_for application, :scopes %>
-      <span class="form-text text-secondary">
+      <span class="form-text">
         <%= t('doorkeeper.applications.help.scopes') %>
       </span>
     </div>

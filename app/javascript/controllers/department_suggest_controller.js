@@ -1,14 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Suggests a Department for an opportunity role from its position text, unless the user has
-// already chosen one. Reads the departments + their match terms (embedded as a JSON value) and
-// sets the department tom-select silently so the suggestion doesn't count as a manual choice.
+// Suggests an opportunity role's Department from its position text, until the
+// user picks one.
 export default class extends Controller {
   static targets = ["position", "department"]
   static values = { departments: Array }
 
   connect() {
-    // Respect a pre-filled department (e.g. when editing an existing role).
     this.userChosen = this.#hasValue()
   }
 
@@ -25,7 +23,7 @@ export default class extends Controller {
   }
 
   departmentChanged() {
-    // Programmatic changes below are silent, so reaching here means the user picked something.
+    // #setDepartment is silent, so only the user's own pick lands here.
     this.userChosen = this.#hasValue()
   }
 
@@ -36,7 +34,7 @@ export default class extends Controller {
   #setDepartment(name) {
     const select = this.departmentTarget
     if (select.tomselect) {
-      // silent = true: doesn't fire change, so it isn't treated as a manual choice.
+      // Silent: a suggestion must not count as a manual choice.
       select.tomselect.setValue(name, true)
     } else {
       select.value = name

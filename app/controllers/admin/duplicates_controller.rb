@@ -1,16 +1,13 @@
-##
-# Controller for viewing and managing potential duplicate users.
-##
+# Lists potential duplicate users and records pairs marked as not duplicates.
 class Admin::DuplicatesController < AdminController
   authorize_resource class: false
 
   def index
-    # Buckets 1-3: Real-time (fast, already optimized)
     @duplicates = User.find_potential_duplicates
 
-    # Buckets 4-5: From cache (background job computed)
-    @duplicates[:fuzzy_both_overlapping] = load_cached_duplicates("overlapping")
-    @duplicates[:fuzzy_both_no_overlap] = load_cached_duplicates("no_overlap")
+    # The fuzzy-both buckets come from the cache the background job fills.
+    @duplicates[:fuzzy_both_overlapping] = load_cached_duplicates(CachedDuplicate.overlapping)
+    @duplicates[:fuzzy_both_no_overlap] = load_cached_duplicates(CachedDuplicate.no_overlap)
 
     @title = "Potential Duplicate Users"
   end
@@ -20,6 +17,8 @@ class Admin::DuplicatesController < AdminController
     @user2 = User.find(params[:other_user_id])
 
     @user1.mark_not_duplicate(@user2)
+    low, high = [ @user1.id, @user2.id ].minmax
+    CachedDuplicate.where(user1_id: low, user2_id: high).delete_all
 
     respond_to do |format|
       format.turbo_stream
@@ -32,13 +31,9 @@ class Admin::DuplicatesController < AdminController
 
   private
 
-  def load_cached_duplicates(bucket_type)
-    CachedDuplicate.includes(:user1, :user2).where(bucket_type: bucket_type).map do |cached|
-      {
-        users: [ cached.user1, cached.user2 ],
-        years_overlap: (bucket_type == "overlapping"),
-        years_active_cache: {} # View falls back to user.years_active if not present
-      }
-    end
+  def load_cached_duplicates(scope)
+    pairs = scope.includes(:user1, :user2).to_a
+    years = User.bulk_years_active_for(pairs.flat_map { |pair| [ pair.user1_id, pair.user2_id ] })
+    pairs.map { |pair| { users: [ pair.user1, pair.user2 ], years_active_cache: years } }
   end
 end

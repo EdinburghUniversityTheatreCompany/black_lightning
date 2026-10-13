@@ -11,6 +11,16 @@ class Archives::EventsControllerTest < ActionController::TestCase
     assert assigns(:events).length > 0, "Make sure there is at least one event. Otherwise, you might need to create some."
   end
 
+  test "X-Total-Count is every matching event, not the rows on this page" do
+    FactoryBot.create_list(:show, 16, is_public: true)
+
+    get :index
+    assert_response :success
+
+    assert_equal 15, assigns(:events).size
+    assert_equal "16", response.headers["X-Total-Count"]
+  end
+
   test "should ransack on event tags" do
     event = FactoryBot.create(:show, is_public: true, tag_count: 1)
     event_tag = event.event_tags.first
@@ -26,32 +36,18 @@ class Archives::EventsControllerTest < ActionController::TestCase
     assert_match event.name, response.body, "Event title not in index."
   end
 
-  test "ransack on name filters the rendered collection" do
+  test "ransack on name filters the rendered collection, as html and as a turbo_stream" do
     match     = FactoryBot.create(:show, is_public: true, name: "Pericles Prince of Tyre")
     non_match = FactoryBot.create(:show, is_public: true, name: "Hamlet")
 
-    get :index, params: { q: { name_cont: "pericles" } }
+    [ :html, :turbo_stream ].each do |format|
+      get :index, params: { q: { name_cont: "pericles" } }, format: format
 
-    assert_response :success
-    assert_includes assigns(:events), match
-    assert_not_includes assigns(:events), non_match
-    assert_match match.name, response.body
-    assert_no_match(/#{non_match.name}/, response.body)
-  end
-
-  test "responds to a turbo_stream request (live search)" do
-    match     = FactoryBot.create(:show, is_public: true, name: "Pericles Prince of Tyre")
-    non_match = FactoryBot.create(:show, is_public: true, name: "Hamlet")
-
-    get :index, params: { q: { name_cont: "pericles" } }, format: :turbo_stream
-
-    assert_response :success
-    # Regression: the index used to return `head :ok` (empty body) for turbo_stream
-    # because no archives/events/_index_results partial existed, so live search did nothing.
+      assert_response :success
+      assert_match match.name, response.body, format.to_s
+      assert_no_match(/#{non_match.name}/, response.body, format.to_s)
+    end
+    # Regression: turbo_stream once returned an empty body, so live search did nothing.
     assert_match "index-results", response.body
-    assert_includes assigns(:events), match
-    assert_not_includes assigns(:events), non_match
-    assert_match match.name, response.body
-    assert_no_match(/#{non_match.name}/, response.body)
   end
 end

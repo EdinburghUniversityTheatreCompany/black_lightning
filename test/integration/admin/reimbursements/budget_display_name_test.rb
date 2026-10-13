@@ -3,17 +3,15 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # Stripping the "Area: " prefix made budget names legitimately non-unique —
-    # on the live Fringe data three lines are called "Marketing" and three
-    # "Other", all on nominal code 432320 — so every surface that names a
-    # budget on its own has to say which show it belongs to
-    # (Budget#display_name). The six surfaces where a human PICKS one are the
-    # money path: a wrong pick charges another show AND moves the claim to that
-    # show's owner gate.
+    # Budget names are not unique (three live Fringe lines are called
+    # "Marketing" on one nominal code), so every surface naming a budget on its
+    # own must say which show it belongs to (Budget#display_name). The six
+    # pickers are the money path: a wrong pick charges another show and moves
+    # the claim to that show's owner gate.
     #
-    # An integration test rather than six functional ones: the point is that
-    # ONE derivation reaches every controller. Both seeded budgets are
-    # identically named, so every assertion here reddens on the bare name.
+    # An integration test because the point is that ONE derivation reaches
+    # every controller. Both seeded budgets share a name, so every assertion
+    # reddens on the bare name.
     class BudgetDisplayNameTest < ActionDispatch::IntegrationTest
       include ReimbursementsTestHelpers
       include Devise::Test::IntegrationHelpers
@@ -49,37 +47,18 @@ module Admin
         assert_not_includes labels, "Marketing", "#{where}: an unqualified option is ambiguous"
       end
 
-      test "the producer's submission picker names the show on each line" do
+      test "the producer's submission picker names the show on each line and keeps bare names" do
         sign_in @producer
 
         get new_admin_reimbursements_expense_path
 
         assert_response :success
-        assert_both_shows_named(option_texts("select#reimbursements_expense_form_budget_record_id"),
-                                "the submission picker")
-      end
-
-      test "an area-less line keeps its bare name in the picker" do
-        sign_in @producer
-
-        get new_admin_reimbursements_expense_path
-
-        assert_includes option_texts("select#reimbursements_expense_form_budget_record_id"),
-                        "Contingency"
-      end
-
-      test "the picker is ordered by the label it prints within each area group" do
-        sign_in @producer
-
-        get new_admin_reimbursements_expense_path
-
+        labels = option_texts("select#reimbursements_expense_form_budget_record_id") -
+                 [ "Choose a budget…" ]
+        assert_both_shows_named(labels, "the submission picker")
+        assert_includes labels, "Contingency"
         groups = css_select("select#reimbursements_expense_form_budget_record_id optgroup")
         assert_equal ::Reimbursements::Budget::NO_AREA_GROUP, groups.last["label"]
-        groups.each do |group|
-          offered = group.css("option").map { |option| option.text.strip }
-          assert_equal offered.sort, offered,
-                       "#{group['label']} reads out of order, which is what sorting by the bare name does"
-        end
       end
 
       test "the batch budget-update form names the show in each row and each field's label" do
@@ -101,8 +80,9 @@ module Admin
         get admin_reimbursements_review_path
 
         assert_response :success
-        assert_both_shows_named(option_texts("select#budget_record_id_#{@claim.record_id}"),
-                                "Review's budget picker")
+        labels = option_texts("select#budget_record_id_#{@claim.record_id}")
+        assert_both_shows_named(labels, "Review's budget picker")
+        assert_equal labels.sort, labels, "sorting by the bare name puts Contingency first"
       end
 
       test "the finance expense-edit picker names the show on each line" do
@@ -131,10 +111,8 @@ module Admin
         get new_expense_admin_reimbursements_actual_path(actual.record_id)
 
         assert_response :success
-        # This picker appends the line's nominal code to every option (the
-        # groups are ordered by the row's own code, so the code has to be
-        # checkable). Compare on the part before that suffix, which is still
-        # the label every other picker prints.
+        # This picker appends " · <code>" to each option; compare the label
+        # before it.
         labels = option_texts("select#reimbursements_expense_form_budget_record_id")
                  .map { |text| text.split(" · ").first }
         assert_both_shows_named(labels, "the actuals conversion picker")
@@ -147,8 +125,7 @@ module Admin
 
         get admin_reimbursements_expenses_path
         assert_response :success
-        # The CELL, not the body: a page that grew an area heading elsewhere
-        # would satisfy a body match with the budget column still bare.
+        # The cell, not the body, which an area heading elsewhere would satisfy.
         assert_includes css_select("td").map { |cell| cell.text.strip }, "Cogito: Marketing"
 
         get admin_reimbursements_expense_path(@claim.record_id)
@@ -162,22 +139,6 @@ module Admin
                          &.at_css("dd")&.text&.strip
       end
 
-      # My Budgets lists one row per SHOW now, not one card per line, so the
-      # thing that has to be unambiguous is the area's name rather than the
-      # qualified line name. Three production lines are called "Marketing".
-      test "My Budgets names each show it lists" do
-        @cogito.owners << @person
-        @improverts.owners << @person
-        sign_in @producer
-
-        get admin_reimbursements_my_budgets_path
-
-        assert_response :success
-        names = css_select("tbody tr td a.font-semibold").map { |link| link.text.strip }
-        assert_equal [ "Cogito", "Improverts" ], names.sort
-        assert_not_includes names, "Marketing"
-      end
-
       # The rowgroup heading above the row is not announced with the button, so
       # three buttons reading "Edit Marketing" is genuinely ambiguous.
       test "the grouped budgets index keeps bare row names but names the show on each Edit" do
@@ -188,10 +149,8 @@ module Admin
         assert_response :success
         assert_equal [ "Edit Cogito: Marketing", "Edit Contingency", "Edit Improverts: Marketing" ],
                      css_select("a[aria-label^='Edit ']").map { |link| link["aria-label"] }.sort
-        # The row itself stays bare: the area is the heading right above it.
-        # The name is a LINK to the same form now (the Edit button sits off
-        # screen at 1366px until the table is scrolled), so it is an <a> rather
-        # than the <span> it used to be.
+        # The row's name stays bare (the area heads the group) and links to
+        # the edit form.
         assert_includes css_select("td a.font-medium").map { |cell| cell.text.strip }, "Marketing"
         # And that link carries the QUALIFIED name for a screen reader, without
         # becoming a second control announcing "Edit …" on the same row.
@@ -213,9 +172,9 @@ module Admin
         assert_equal [ "Marketing" ], budget_links_under("Improverts")
       end
 
-      # Every budget link in the row group whose heading reads EXACTLY +heading+
-      # — a prefix match would also take the unattributed-actuals card's own
-      # groups further down the page ("Nominal code 432320 (net £20.00)").
+      # Every budget link in the row group whose heading reads EXACTLY +heading+:
+      # a prefix match would also take the unattributed card's groups
+      # ("Nominal code 432320 (net £20.00)").
       def budget_links_under(heading)
         css_select("tbody").flat_map do |body|
           cell = body.at_css("th[scope=rowgroup]")

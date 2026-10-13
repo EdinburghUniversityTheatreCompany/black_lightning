@@ -7,20 +7,14 @@ class KonamiCodeTest < ApplicationSystemTestCase
     "b", "a"
   ].freeze
 
-  test "konami code shows unicorn on public site" do
-    visit root_path
-
-    find("body").send_keys(*KONAMI_SEQUENCE)
-
-    assert_selector ".__itify_head", wait: 3
-  end
-
-  test "konami code shows unicorn on admin site" do
+  test "konami code shows the unicorn on the public and admin sites" do
     login_as users(:admin)
-    visit admin_path
 
-    find("body").send_keys(*KONAMI_SEQUENCE)
+    [ root_path, admin_path ].each do |path|
+      visit path
+      find("body").send_keys(*KONAMI_SEQUENCE)
 
-    assert_selector ".__itify_head", wait: 3
+      assert has_selector?(".__itify_head", wait: 3), "no unicorn on #{path}"
+    end
   end
 end

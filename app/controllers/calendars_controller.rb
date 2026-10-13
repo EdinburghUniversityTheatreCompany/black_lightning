@@ -30,8 +30,6 @@ class CalendarsController < ApplicationController
   private
 
   def build_feed(jobs)
-    require "icalendar"
-
     cal = Icalendar::Calendar.new
     cal.prodid = "-//Bedlam Theatre//BlackLightning//EN"
     cal.append_custom_property("X-PUBLISHED-TTL", "PT1H")

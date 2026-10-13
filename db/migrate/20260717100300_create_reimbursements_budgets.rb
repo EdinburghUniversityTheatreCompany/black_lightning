@@ -4,7 +4,7 @@ class CreateReimbursementsBudgets < ActiveRecord::Migration[8.1]
   # The Airtable rollups/formulas (current_forecast, committed_amount,
   # total_paid, remaining, variance) are NOT stored — the AR model computes
   # them from expenses + forecasts (formulas confirmed from the base schema
-  # export; see docs/reimbursements/mysql-migration-and-roadmap.md).
+  # export).
   #
   # cost_centre: an expense resolves its cost centre via its budget — this FK
   # is what makes per-cost-centre scoping (nightly, Build Batch, Reconcile)

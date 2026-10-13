@@ -20,10 +20,6 @@
 #  doors_open_minutes_before :integer
 #  duration_minutes          :integer
 #  end_date                  :date
-#  image_content_type        :string(255)
-#  image_file_name           :string(255)
-#  image_file_size           :integer
-#  image_updated_at          :datetime
 #  is_public                 :boolean
 #  maintenance_debt_amount   :integer
 #  maintenance_debt_start    :date
@@ -69,66 +65,43 @@
 #  fk_rails_...  (proposal_id => admin_proposals_proposals.id)
 #
 class Event < ApplicationRecord
-  # Stable token identifying the unfilled members-only-text template so the show
-  # page can skip rendering it. The template carries it in a self-documenting HTML
-  # comment (`<!-- members-only-template — delete this line… -->`); only this token
-  # is the contract, so the human instruction after it can be reworded freely.
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[image_content_type image_file_name image_file_size image_updated_at]
+
+  # Marks the unfilled members-only template so the show page can skip it. Only
+  # this token is the contract; the instruction after it can be reworded.
   MEMBERS_ONLY_TEMPLATE_MARKER = "<!-- members-only-template"
 
-  # What this type calls its EventOccurrences. Overridden by each subclass; a
-  # constant rather than a string typed into each view, so the admin form, the
-  # public page and the box office screen cannot drift on the word.
+  # What this type calls its EventOccurrences; each subclass overrides it.
   OCCURRENCE_LABEL = "Date".freeze
 
-  # Whether an occurrence of this type is a performance of the event, or merely a
-  # span of time it is open for. Season overrides it: publishing its opening
-  # hours as events of their own claims the theatre is staging a show for every
-  # day the box office is open.
+  # Season overrides this: publishing its opening hours as performances would
+  # claim a show on every day the box office is open.
   OCCURRENCES_ARE_PERFORMANCES = true
 
-  # The schema.org type this event is published as, on both the run node and its
-  # performance nodes. A constant per subclass for the same reason as the label
-  # above: the word must not be typed into SchemaHelper, where a new subclass
-  # would silently inherit whatever the last one needed.
+  # The schema.org type of the run and its performance nodes.
   SCHEMA_TYPE = "TheaterEvent".freeze
 
-  # Length validations enforcing database column limits
-  validates :name, length: { maximum: 255 }
-  validates :tagline, length: { maximum: 255 }
-  validates :slug, length: { maximum: 255 }
+  validates :name, :tagline, :slug, length: { maximum: 255 }
   validates :publicity_text, length: { maximum: 16777215 }
-  validates :image_file_name, length: { maximum: 255 }
-  validates :image_content_type, length: { maximum: 255 }
-  validates :author, length: { maximum: 255 }
-  validates :type, length: { maximum: 255 }
-  validates :price, length: { maximum: 255 }
-  validates :spark_seat_slug, length: { maximum: 255 }
+  validates :author, :type, :price, :spark_seat_slug, length: { maximum: 255 }
   validates :members_only_text, length: { maximum: 16777215 }
-  validates :pretix_slug_override, length: { maximum: 255 }
-  validates :pretix_view, length: { maximum: 255 }
+  validates :pretix_slug_override, :pretix_view, length: { maximum: 255 }
   validates :content_warnings, length: { maximum: 16777215 }
-  validates :digital_programme_url, length: { maximum: 255 }
-  validates :age_guidance, length: { maximum: 255 }
-  # Blank is normal; a running time of zero or of a day and a half is a typo.
+  validates :digital_programme_url, :age_guidance, length: { maximum: 255 }
+  # The upper bounds are fat-finger backstops.
   validates :duration_minutes, numericality: {
     only_integer: true, greater_than: 0, less_than_or_equal_to: 1440
   }, allow_nil: true
   validates :doors_open_minutes_before, numericality: {
     only_integer: true, greater_than: 0, less_than_or_equal_to: 240
   }, allow_nil: true
-  # greater_than 0, not >= 0, because a decimal column casts unreadable input to
-  # zero without complaint -- "£0 booking fee on the door" published from a typo.
-  # A fee of nothing is no fee: leave it blank.
+  # Not >= 0: a decimal column casts unreadable input to 0, which would publish
+  # "£0 booking fee on the door".
   validates :booking_fee, numericality: { greater_than: 0 }, allow_nil: true
-  # A scheme is required rather than merely encouraged: this value is rendered
-  # as an anchor on the public page and encoded straight into a QR code on the
-  # box office screen, and a bare "bedlamtheatre.co.uk/programme" resolves as a
-  # relative path in the first case and as nothing at all in the second. Only
-  # http(s), so a "javascript:" paste cannot become a link on a public page.
-  #
-  # Anchored at BOTH ends, and no whitespace anywhere: Ruby's \A alone still
-  # admits a newline and whatever follows it, which is how a scheme that passed
-  # the check smuggles one that did not into an href.
+  # A public anchor and a box office QR code: a scheme-less value breaks both and
+  # "javascript:" would run. \z and \S, because \A alone lets a newline smuggle a
+  # second scheme into the href.
   validates :digital_programme_url, format: {
     with: %r{\Ahttps?://\S+\z}i, message: "must be a full http:// or https:// link"
   }, allow_blank: true
@@ -141,7 +114,7 @@ class Event < ApplicationRecord
   include Sluggable
   include TeamMemberOrdering
 
-  # +company_name+ is a virtual field resolved to a Company (created if needed) by a before_validation hook.
+  # Resolved to a Company (created if needed) by assign_company_from_name.
   attr_writer :company_name
 
   has_paper_trail
@@ -177,16 +150,10 @@ class Event < ApplicationRecord
 
   has_and_belongs_to_many :event_tags, optional: true
 
-  # NOT :all_blank. The nested form's access_flags check_boxes always post a
-  # leading "" from their hidden field, so an untouched blank row is never
-  # all-blank -- it was saved, failed validation, and took the whole event update
-  # down with "starts at must not be blank".
-  # The rule exists to drop the empty "Add a performance" template row, which
-  # carries no id. An existing record must NOT be rejected for a missing
-  # starts_at: a pretix-synced row renders its times as text rather than inputs
-  # (they are pretix's to set), so an edit to its flags, note or cancelled state
-  # posts no starts_at at all -- and on the blanket rule it saved, redirected and
-  # silently discarded the change.
+  # Not :all_blank: the access_flags check_boxes post a leading "", so the empty
+  # template row is never all-blank. Only a row with no id is dropped, because a
+  # pretix-synced row posts no starts_at (its times are text, not inputs) and
+  # rejecting it would silently discard an edit to its flags or note.
   accepts_nested_attributes_for :event_occurrences, allow_destroy: true,
                                 reject_if: ->(attributes) {
                                   attributes["id"].blank? && attributes["starts_at"].blank?
@@ -209,14 +176,9 @@ class Event < ApplicationRecord
   scope :future, -> { where([ "end_date >= ?", Date.current ]) }
   scope :this_academic_year, -> { where("end_date >= ?", ApplicationController.helpers.start_of_year).where("start_date < ?", ApplicationController.helpers.next_year_start) }
 
-  # Artwork somebody actually uploaded, as opposed to an attachment of any kind.
-  # The two are not the same: fetch_image *attaches* a generated placeholder, so
-  # every archive event whose page has ever been rendered carries an attachment
-  # whether or not it has a poster. What separates them is the filename --
-  # ActiveStorageHelper stores its placeholders under a reserved prefix, which
-  # is also how get_file_attached_hint tells them apart. sanitize_sql_like
-  # escapes the underscores in that prefix, which LIKE would otherwise read as
-  # single-character wildcards.
+  # Artwork somebody uploaded. fetch_image attaches a placeholder to any event
+  # whose page was rendered, so filter on the placeholder filename prefix;
+  # sanitize_sql_like escapes its underscores, which LIKE reads as wildcards.
   scope :with_uploaded_image, -> {
     joins(image_attachment: :blob)
       .where.not("active_storage_blobs.filename LIKE ?",
@@ -235,16 +197,12 @@ class Event < ApplicationRecord
   default_scope -> { order("end_date DESC") }
 
   # Callbacks
-  before_validation :generate_slug_from_name, :assign_company_from_name
+  slug_from :name
+  before_validation :assign_company_from_name
   after_initialize :set_default_members_only_text
   before_validation :derive_price_from_ticket_prices, if: :will_save_change_to_ticket_prices?
-  after_update :recache_author_list_if_changed
+  after_commit :clear_author_name_list
   after_destroy :cleanup_orphaned_company
-
-  # Returns the last event to have finished.
-  def self.last_event
-    reorder("end_date DESC").where([ "end_date < ? AND is_public = ?", Date.current, true ]).first
-  end
 
   # Formats the shows so they can be used in a selection field
   def self.selection_collection
@@ -368,11 +326,8 @@ class Event < ApplicationRecord
     super(options)
   end
 
-  # The events Pretix::SyncPerformancesJob keeps in step with their series.
-  #
-  # Bounded by the run's end rather than its start: a show still selling for
-  # tonight is due, an archive row is not. Both dates are required above, so a
-  # ticked event always has one.
+  # Bounded by the run's end: a show selling for tonight is due, an archive row
+  # is not.
   scope :pretix_performance_sync_due, -> {
     where(pretix_sync_performances: true).where(end_date: Date.current..)
   }
@@ -381,13 +336,8 @@ class Event < ApplicationRecord
     pretix_slug_override.presence || slug
   end
 
-  ##
-  # The priced bands of this event's tickets, dearest first.
-  #
-  # Stored as an array of plain hashes in the ticket_prices JSON column. Defining
-  # <name>_attributes= below is what makes fields_for treat this as if it were an
-  # association, so the existing nested-form UI edits it with no new JavaScript.
-  ##
+  # The priced bands, dearest first, stored as hashes in a JSON column.
+  # ticket_prices_attributes= lets fields_for edit it as if it were an association.
   def ticket_prices
     Array(super).map { |attributes| TicketPrice.from_h(attributes) }
                 .sort_by { |price| -(price.amount || 0) }
@@ -396,27 +346,21 @@ class Event < ApplicationRecord
   def ticket_prices=(values)
     prices = Array(values).map { |value| value.is_a?(TicketPrice) ? value : TicketPrice.from_h(value) }
 
-    # Held from assignment because the cast destroys the evidence: "ten" is
-    # already 0 by the time the column is read back, and 0 reads as Free.
+    # Held from assignment: the cast turns "ten" into 0, and 0 reads as Free.
     @invalid_ticket_prices = prices.reject(&:valid?)
 
     super(prices.map(&:to_h))
   end
 
-  ##
-  # The nested-form params shape: a hash of index => attributes, each of which may
-  # carry _destroy. A row with no amount is the blank one the form's template
-  # always posts, and storing it would mean a band with no price.
-  ##
+  # A row with no amount is the blank template row the form always posts.
   def ticket_prices_attributes=(attributes)
     rows = attributes.respond_to?(:values) ? attributes.values : Array(attributes)
 
-    self.ticket_prices = rows.reject { |row| destroy_flagged?(row) || row_amount(row).blank? }
+    self.ticket_prices = rows.map { |row| row.to_h.with_indifferent_access }
+                             .reject { |row| ActiveModel::Type::Boolean.new.cast(row[:_destroy]) || row[:amount].blank? }
   end
 
-  # "2 hours 15 minutes". distance_of_time_in_words rounds this to "about 2
-  # hours", which throws away the quarter hour somebody is planning their evening
-  # around.
+  # "2 hours 15 minutes"; distance_of_time_in_words would round off the quarter hour.
   def duration_in_words
     return nil if duration_minutes.blank?
 
@@ -428,8 +372,7 @@ class Event < ApplicationRecord
     parts.join(" ")
   end
 
-  # The running time as schema.org wants it: "PT2H15M". Nil when nobody has said
-  # how long the thing runs for, which is most of the archive.
+  # "PT2H15M", as schema.org wants it.
   def iso8601_duration
     return nil if duration_minutes.blank?
 
@@ -438,8 +381,6 @@ class Event < ApplicationRecord
     "PT#{"#{hours}H" if hours.positive?}#{"#{minutes}M" if minutes.positive?}"
   end
 
-  # What this event calls its EventOccurrences. Resolved through the STI
-  # ancestry, so Show gets "Performance" and everything unspecified gets "Date".
   def occurrence_label
     self.class::OCCURRENCE_LABEL
   end
@@ -452,9 +393,7 @@ class Event < ApplicationRecord
     self.class::SCHEMA_TYPE
   end
 
-  # The facts that hold for the whole run rather than for one night: running
-  # time, doors, age guidance, the booking fee. Doors moved off the per-night
-  # rows when those collapsed into ranges -- it is the same offset every night.
+  # The facts that hold for every night of the run.
   def schedule_details
     details = []
     details << "running time #{duration_in_words}, including any interval" if duration_minutes.present?
@@ -468,12 +407,8 @@ class Event < ApplicationRecord
     details
   end
 
-  ##
-  # An event with NO occurrences plays every day of its run. That is not a
-  # placeholder: it is every one of the ~3000 archive rows, plus any event whose
-  # producer has not filled the times in yet, and it is exactly the behaviour
-  # the retired performance_weekdays column gave when left blank.
-  ##
+  # No occurrences means every day of the run: the ~3000 archive rows, and any
+  # event whose times are not filled in yet.
   def on_today?(date = Date.current)
     return false if start_date.nil? || end_date.nil?
     return false unless (start_date..end_date).cover?(date)
@@ -482,8 +417,8 @@ class Event < ApplicationRecord
     event_occurrences.any? { |occurrence| occurrence.on_date == date }
   end
 
-  # The next date this event actually plays, on or after +from+; nil if it never
-  # plays again.
+  # The next date it plays on or after +from+, or nil. Works in memory, not by
+  # query: the box office display asks this of every event in its pool.
   def next_occurrence(from = Date.current)
     return nil if start_date.nil? || end_date.nil?
 
@@ -491,15 +426,7 @@ class Event < ApplicationRecord
     return nil if from > end_date
     return from if event_occurrences.empty?
 
-    next_occurrence_at(from)&.on_date
-  end
-
-  # The occurrence record itself, so a caller can print a curtain time. Loaded
-  # from the association in memory rather than queried, because the box office
-  # display asks every event in the pool three of these questions in a row.
-  def next_occurrence_at(from = Date.current)
-    event_occurrences.select { |occurrence| occurrence.on_date && occurrence.on_date >= from }
-                     .min_by(&:starts_at)
+    event_occurrences.filter_map(&:on_date).select { |date| date >= from }.min
   end
 
   # Returns a list of the all authors for every event.
@@ -511,46 +438,10 @@ class Event < ApplicationRecord
 
   private
 
-  def generate_slug_from_name
-    return unless name.present?
-
-    # Only generate slug if it's blank or if the name changed
-    should_generate = slug.blank? || name_changed?
-
-    # If we have an existing slug and the name didn't change, don't modify
-    return if slug.present? && !name_changed?
-
-    base_slug = name.to_url
-
-    # If name changed, only update if current slug looks auto-generated from old name
-    if name_changed? && slug.present?
-      old_name = name_was&.to_url
-      # For new records name_was is nil, so treat any pre-set slug as manually set
-      return if old_name.nil?
-      # Only update if the current slug matches what would have been auto-generated from the old name
-      # This indicates it was auto-generated, not manually set
-      unless slug == old_name || slug.start_with?("#{old_name}-")
-        return # Slug was manually set, don't change it
-      end
-    end
-
-    # Find a unique slug by appending numbers if needed
-    candidate_slug = base_slug
-    counter = 1
-
-    while Event.where.not(id: id).where("LOWER(slug) = ?", candidate_slug.downcase).exists?
-      candidate_slug = "#{base_slug}-#{counter}"
-      counter += 1
-    end
-
-    self.slug = candidate_slug
-  end
-
-  def recache_author_list_if_changed
-    if saved_change_to_author?
-      # Clear the cache for the author_name_list so it regenerates.
-      Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
-    end
+  # On every commit, not only an author change: after_commit sees only the last
+  # save's changes, so a transaction saving twice would hide the author edit.
+  def clear_author_name_list
+    Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
   end
 
   def end_date_after_start_date
@@ -562,17 +453,10 @@ class Event < ApplicationRecord
   end
 
   def assign_company_from_name
-    return if @company_name.nil?
-
-    self.company = @company_name.present? ? Company.find_or_build_by_name(@company_name) : nil
+    self.company = Company.find_or_build_by_name(@company_name) unless @company_name.nil?
   end
 
-  ##
-  # TicketPrice validates itself, but nothing was running those validations --
-  # there is no association here to cascade through, and the form's min="0" is
-  # client-side only. Without this a negative, an unknown band or a typo saves
-  # clean and is published.
-  ##
+  # A JSON column has no association to cascade the bands' validations through.
   def ticket_prices_are_valid
     invalid = Array(@invalid_ticket_prices) + ticket_prices.reject(&:valid?)
 
@@ -581,20 +465,8 @@ class Event < ApplicationRecord
     end
   end
 
-  def destroy_flagged?(row)
-    ActiveModel::Type::Boolean.new.cast(row["_destroy"] || row[:_destroy])
-  end
-
-  def row_amount(row)
-    row["amount"] || row[:amount]
-  end
-
-  ##
-  # price stays the free-text string every existing view renders; the structured
-  # bands regenerate it whenever they change, so the two cannot drift. The
-  # backfill deliberately does NOT go through here -- it writes ticket_prices with
-  # update_columns, leaving all ~3000 archive rows rendering byte-identically.
-  ##
+  # price stays the display string every view renders, regenerated whenever the
+  # bands change.
   def derive_price_from_ticket_prices
     prices = ticket_prices
 
@@ -607,12 +479,9 @@ class Event < ApplicationRecord
     prices.all?(&:free?) ? "Free" : prices.map(&:to_price_string).join(" / ")
   end
 
-  ##
-  # Only when it is still the string the previous bands wrote. Anything typed by
-  # hand ("Pay what you can") belongs to whoever typed it, and a Show validates
-  # the presence of price -- so clearing a derived one correctly fails the save
-  # and asks them what the price is now.
-  ##
+  # Only the string the previous bands wrote: a hand-typed price belongs to whoever
+  # typed it. A Show validates price presence, so clearing a derived one fails the
+  # save and asks for the new price.
   def clear_derived_price
     previous = Array(ticket_prices_in_database).map { |attributes| TicketPrice.from_h(attributes) }
 

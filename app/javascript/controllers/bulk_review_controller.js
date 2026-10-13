@@ -1,11 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Drives the Review queue's bulk-select toolbar: a select-all checkbox, a live
-// "N selected" counter, enabling the Approve/Reject buttons only when at least
-// one expense is ticked, and injecting the count into the reject confirmation
-// ("Reject N expenses and email each producer?"). The per-item checkboxes live
-// in the expense cards but are wired to the toolbar form via a shared `form`
-// attribute, so no card form is nested inside the bulk form.
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`
+
+// The Review queue's bulk toolbar. Card checkboxes join the toolbar form through
+// their `form` attribute, so no card form is nested inside it.
 export default class extends Controller {
   static targets = [
     "checkbox",
@@ -31,15 +29,17 @@ export default class extends Controller {
   refresh() {
     const selected = this.selectedCount
     const none = selected === 0
+    // The reason box is shared with Approve, so it cannot carry `required`. Gating
+    // Reject and Override on it stops the confirm firing over a decision the
+    // server will refuse.
+    const reasonGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
 
     if (this.hasApproveButtonTarget) {
       this.approveButtonTarget.disabled = none
-      // Approval commits real money to a BACS batch, and "Select all" ticks
-      // flagged (needs-attention) cards indistinguishably from clean ones —
-      // so the confirm carries the flagged count, the only warning between
-      // a blanket select-all and approving a flagged expense.
+      // Select-all ticks flagged cards just like clean ones, so the confirm
+      // carries the flagged count.
       const flagged = this.flaggedSelectedCount
-      const base = `Approve ${selected} expense${selected === 1 ? "" : "s"}?`
+      const base = `Approve ${plural(selected, "expense")}?`
       this.approveButtonTarget.dataset.turboConfirm =
         flagged === 0
           ? base
@@ -50,33 +50,18 @@ export default class extends Controller {
             } before continuing.`
     }
     if (this.hasRejectButtonTarget) {
-      // Gated on the reason too, not just on a selection. The reason box is
-      // shared with "Approve selected" and so cannot carry `required`, and
-      // without this the irreversible "and email each producer?" confirm fired
-      // BEFORE the server refused the blank reason — agreeing to something
-      // that was never going to happen.
-      const reasonGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
       this.rejectButtonTarget.disabled = none || !reasonGiven
       this.rejectButtonTarget.title = reasonGiven
         ? ""
         : "Type a reason above: it is emailed to the producer."
-      this.rejectButtonTarget.dataset.turboConfirm = `Reject ${selected} expense${
-        selected === 1 ? "" : "s"
-      } and email each producer?`
+      this.rejectButtonTarget.dataset.turboConfirm = `Reject ${plural(selected, "expense")} and email each producer?`
     }
     if (this.hasOverrideButtonTarget) {
-      // Gated on the note as well as on a selection, for the reason Reject is
-      // gated on its reason: the note is the only record that finance bypassed
-      // a control on several claims at once, and the server refuses a blank
-      // one — so the confirm must not fire over a decision that cannot happen.
-      const noteGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
-      this.overrideButtonTarget.disabled = none || !noteGiven
-      this.overrideButtonTarget.title = noteGiven
+      this.overrideButtonTarget.disabled = none || !reasonGiven
+      this.overrideButtonTarget.title = reasonGiven
         ? ""
         : "Say why above: it is the only record of the decision."
-      this.overrideButtonTarget.dataset.turboConfirm = `Approve ${selected} claim${
-        selected === 1 ? "" : "s"
-      } without their budget owner's sign-off? Your name and reason are recorded against each one.`
+      this.overrideButtonTarget.dataset.turboConfirm = `Approve ${plural(selected, "claim")} without their budget owner's sign-off? Your name and reason are recorded against each one.`
     }
     if (this.hasCounterTarget) {
       this.counterTarget.textContent = `${selected} selected`

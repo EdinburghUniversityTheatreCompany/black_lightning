@@ -1,16 +1,11 @@
 module Reimbursements
-  ##
-  # The one place that turns a payee into the word an email greets them by —
-  # shared so the Notifier's ERB templates and MailboxPollJob's plain-Ruby
-  # reply heredocs can't drift apart.
+  # The one derivation of the word an email greets a payee by, shared by the Notifier's ERB
+  # templates and MailboxPollJob's reply heredocs so they cannot drift.
   #
-  # A linked account's +first_name+ wins: the payee typed it into their own
-  # profile. Person#name is second because PersonLink stores a user's EMAIL
-  # there when they have no full name, hence the "@" guard below.
-  #
-  # Case is deliberately left alone ("PAT PRODUCER" greets as "PAT"):
-  # titlecasing mangles McDonald, O'Brien and van der Berg. Titles, compound
-  # given names and inverted "Last, First" are likewise not handled.
+  # A linked account's +first_name+ wins (the payee typed it). Person#name is second, but
+  # PersonLink stores the user's EMAIL there when they have no full name, hence the "@" guard.
+  # Case is deliberately left alone ("PAT PRODUCER" greets as "PAT"): titlecasing mangles
+  # McDonald, O'Brien and van der Berg. Titles, compound given names and "Last, First" are not handled.
   module GreetingName
     FALLBACK = "there".freeze
 
@@ -21,17 +16,15 @@ module Reimbursements
       from_user(person) || from_name(person.try(:name)) || FALLBACK
     end
 
-    # +person.user+ is a query, not an attribute read — one indexed row fetch
-    # per payee, deliberately not a preload on DatabaseStore#expenses, which
-    # the finance grid, the producer portal and every exporter also use. Both
-    # callers already make a Graph HTTP call per payee in the same loop.
+    # +person.user+ is a query, deliberately not a preload on DatabaseStore#expenses (shared with
+    # the finance grid, producer portal and exporters); both callers already make a Graph call
+    # per payee in the same loop.
     def from_user(person)
       user = person.try(:user)
       user && user.first_name.to_s.strip.presence
     end
 
-    # The "@" guard is on the FIRST token, not the whole string, so a name
-    # starting with an address can't sneak through on a later word.
+    # The "@" guard reads the FIRST token, the only one used.
     def from_name(name)
       first = name.to_s.strip.split(/\s+/).first.to_s
       return nil if first.blank? || first.include?("@")

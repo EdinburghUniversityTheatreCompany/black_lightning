@@ -19,7 +19,7 @@
             allow_custom_input: true, include_blank: true,
             hint: "Optional. Pick a venue or type another location." %>
 
-        <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical) %>
+        <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical, uploads: user_signed_in?) %>
         <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
 
         <%= f.input :compensation_type, as: :select,
@@ -44,7 +44,7 @@
         <% end %>
 
         <h3>Roles</h3>
-        <p class="text-gray-500 small mb-2">Add each position you're recruiting for.</p>
+        <p class="text-gray-500 small mb-2">Add each position you're recruiting for. If its department is not in the list, type it in and a reviewer will decide whether to add it.</p>
         <%= render("shared/form/sections/nested_fields", f: f, association_name: :roles, partial_name: "admin/opportunities/opportunity_role_fields") %>
       </div>
 

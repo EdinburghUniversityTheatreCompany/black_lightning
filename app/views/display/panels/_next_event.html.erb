@@ -1,16 +1,6 @@
 <%# locals: (event:, tonight:, on:) %>
 <div class="relative h-full w-full overflow-hidden bg-neutral-950">
-  <%# nil when the blob has gone missing from storage. Degrading to the text
-      over black beats a 500 on an unattended screen. %>
-  <% if (image_url = display_image_url(event)) %>
-    <%= image_tag image_url, class: "absolute inset-0 h-full w-full object-cover", alt: "" %>
-  <% end %>
-
-  <%# The logo sits over the artwork, so it carries its own scrim: a white
-      wordmark on a pale poster would otherwise disappear. %>
-  <div class="absolute inset-x-0 top-0 flex justify-end bg-gradient-to-b from-black/70 to-transparent px-16 pb-24 pt-10">
-    <%= display_logo %>
-  </div>
+  <%= render "display/panels/artwork", event: event %>
 
   <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-14 pt-48">
     <div class="flex items-end gap-14">
@@ -26,11 +16,9 @@
           <p class="mt-4 text-4xl text-neutral-300">by <%= event.author %></p>
         <% end %>
 
-        <%# whitespace-pre-line, as on the What's On board: display_when separates a
-            run's two stretches with a newline. %>
+        <%# whitespace-pre-line: display_when separates a run's two stretches with a newline. %>
         <p class="mt-8 whitespace-pre-line text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
 
-        <%# display_price, not event.price: the value rendered is the one to test. %>
         <% if display_price(event).present? %>
           <p class="mt-3 text-4xl text-neutral-300"><%= display_price(event) %></p>
         <% end %>

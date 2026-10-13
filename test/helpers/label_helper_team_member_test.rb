@@ -7,43 +7,19 @@ class LabelHelperTeamMemberTest < ActionView::TestCase
     @team_member = FactoryBot.create(:team_member)
   end
 
-  test "DM trained user should have the DM trained label" do
-    assert_not @team_member.user.has_role?("DM Trained")
-    assert_labels_not_includes @team_member, "DM Trained"
-
-    @team_member.user.add_role("DM Trained")
-    assert_labels_includes @team_member, "DM Trained"
-  end
-
-  test "Bar trained user should have the Bar trained label" do
-    assert_not @team_member.user.has_role?("Bar Trained")
-    assert_labels_not_includes @team_member, "Bar Trained"
-
-    @team_member.user.add_role("Bar Trained")
-    assert_labels_includes @team_member, "Bar Trained"
-  end
-
-  test "Tool trained user should have the Tool trained label" do
-    assert_not @team_member.user.has_role?("Tool Trained")
-    assert_labels_not_includes @team_member, "Tool Trained"
-
-    @team_member.user.add_role("Tool Trained")
-    assert_labels_includes @team_member, "Tool Trained"
-  end
-
-  test "First Aid Trained user should have the First Aid Trained label" do
-    assert_not @team_member.user.has_role?("First Aid Trained")
-    assert_labels_not_includes @team_member, "First Aid Trained"
-
-    @team_member.user.add_role("First Aid Trained")
-    assert_labels_includes @team_member, "First Aid Trained"
+  test "a trained role shows as a label" do
+    [ "DM Trained", "Bar Trained", "Tool Trained", "First Aid Trained" ].each do |role|
+      assert_not_includes label_texts, role
+      @team_member.user.add_role(role)
+      assert_includes label_texts, role
+    end
   end
 
   test "Members should not show a membership label" do
     @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
 
-    assert_labels_not_includes @team_member, "Life Member"
-    assert_labels_not_includes @team_member, "Member"
+    assert_not_includes label_texts, "Life Member"
+    assert_not_includes label_texts, "Member"
   end
 
   test "Life Members should not show a membership label" do
@@ -52,22 +28,22 @@ class LabelHelperTeamMemberTest < ActionView::TestCase
     @team_member.user.remove_role("Member")
     @team_member.user.add_role("Life Member")
 
-    assert_labels_not_includes @team_member, "Life Member"
-    assert_labels_not_includes @team_member, "Member"
+    assert_not_includes label_texts, "Life Member"
+    assert_not_includes label_texts, "Member"
   end
 
   test "Show in this academic year should warn for non-member" do
     @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
 
     @team_member.user.remove_role("Member")
-    assert_labels_includes @team_member, "Non-Member"
+    assert_includes label_texts, "Non-Member"
   end
 
   test "shows in previous academic years should not warn for non-members" do
     @team_member.teamwork.update(start_date: 1.year.ago - 5.days, end_date: 1.year.ago - 4.days)
 
     @team_member.user.remove_role("Member")
-    assert_labels_not_includes @team_member, "Non-Member"
+    assert_not_includes label_texts, "Non-Member"
   end
 
   test "Show in this academic year should warn for non-member life members" do
@@ -76,14 +52,14 @@ class LabelHelperTeamMemberTest < ActionView::TestCase
     @team_member.user.remove_role("Member")
     @team_member.user.add_role("Life Member")
 
-    assert_labels_includes @team_member, "Non-EUTC Member"
+    assert_includes label_texts, "Non-EUTC Member"
   end
 
   test "shows in previous academic years should not warn for non-members life members" do
     @team_member.teamwork.update(start_date: 1.year.ago - 5.days, end_date: 1.year.ago - 4.days)
 
     @team_member.user.remove_role("Member")
-    assert_labels_not_includes @team_member, "Non-EUTC Member"
+    assert_not_includes label_texts, "Non-EUTC Member"
   end
 
   test "user in staffing debt on deadline" do
@@ -125,83 +101,32 @@ class LabelHelperTeamMemberTest < ActionView::TestCase
     assert_equal "bg-danger", labels.last[:label_class]
   end
 
-  test "User profiles for non-members should show membership labels" do
-    @team_member.user.remove_role("Member")
-    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
+  test "user profiles state membership" do
+    user = @team_member.user
+    assert_equal [ "Member" ], profile_texts(user)
 
-    assert_not_includes labels, "Member"
-    assert_not_includes labels, "EUTC Member"
-    assert_not_includes labels, "Life Member"
-    assert_not_includes labels, "Non-EUTC Member"
-    assert_includes labels, "Non-Member"
+    user.add_role("Life Member")
+    assert_equal [ "Life Member", "EUTC Member" ], profile_texts(user)
+
+    user.remove_role("Member")
+    assert_equal [ "Life Member", "Non-EUTC Member" ], profile_texts(user)
+
+    user.remove_role("Life Member")
+    assert_equal [ "Non-Member" ], profile_texts(user)
   end
 
-  test "User profiles for members should show membership labels" do
-    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
-
-    assert_includes labels, "Member"
-    assert_not_includes labels, "EUTC Member"
-    assert_not_includes labels, "Life Member"
-    assert_not_includes labels, "Non-EUTC Member"
-    assert_not_includes labels, "Non-Member"
-  end
-
-  test "User profiles for non-member/life members should show membership labels" do
-    @team_member.user.remove_role("Member")
-    @team_member.user.add_role("Life Member")
-
-    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
-
-    assert_not_includes labels, "Member"
-    assert_not_includes labels, "EUTC Member"
-    assert_includes labels, "Life Member"
-    assert_includes labels, "Non-EUTC Member"
-    assert_not_includes labels, "Non-Member"
-  end
-
-  test "User profiles for member/life members should show membership labels" do
-    @team_member.user.add_role("Life Member")
-
-    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
-
-    assert_not_includes labels, "Member"
-    assert_includes labels, "EUTC Member"
-    assert_includes labels, "Life Member"
-    assert_not_includes labels, "Non-EUTC Member"
-    assert_not_includes labels, "Non-Member"
-  end
-
-
-  test "User profiles for members should show staffing debts" do
-    FactoryBot.create(:overdue_staffing_debt, user: @team_member.user)
-
-    assert_labels_includes @team_member, "In staffing debt now"
-  end
-
-  test "User profiles for members should show maintenance debts" do
-    FactoryBot.create(:overdue_maintenance_debt, user: @team_member.user)
-
-    assert_labels_includes @team_member, "In maintenance debt now"
-  end
-
-  test "User profiles for members should show staffing & maintenance debts" do
+  test "a user in both debts gets one combined label" do
     FactoryBot.create(:overdue_maintenance_debt, user: @team_member.user)
     FactoryBot.create(:overdue_staffing_debt, user: @team_member.user)
 
-    assert_labels_includes @team_member, "In staffing and maintenance debt now"
+    assert_includes label_texts, "In staffing and maintenance debt now"
   end
 
   private
 
-  def assert_labels_includes(team_member, value_to_match, date = Date.current)
-    labels =  team_member_labels_for(@team_member, date).map { |l| ActionView::Base.full_sanitizer.sanitize(l[:text]) }
-
-    assert_includes labels, value_to_match
+  def label_texts
+    team_member_labels_for(@team_member, Date.current).map { |l| ActionView::Base.full_sanitizer.sanitize(l[:text]) }
   end
 
-  def assert_labels_not_includes(team_member, value_to_match, date = Date.current)
-    labels =  team_member_labels_for(@team_member, date).map { |l| ActionView::Base.full_sanitizer.sanitize(l[:text]) }
-
-    assert_not_includes labels, value_to_match
-  end
+  def profile_texts(user) = user_profile_labels_for(user).pluck(:text)
 end

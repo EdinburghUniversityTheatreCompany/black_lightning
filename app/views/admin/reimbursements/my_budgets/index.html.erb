@@ -1,15 +1,12 @@
 <p class="mb-4 text-gray-600">
   The shows and budgets you are responsible for.
-  <%# The owner meets "Left", "waiting" and "endorse" here and nowhere else,
-      so the glossary has to be reachable from this page rather than only from
-      the finance sidebar. %>
+  <%# The owner meets "Left", "waiting" and "endorse" only here, so the glossary must be reachable from this page. %>
   <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
 
 <%= render CardComponent.new(title: "Waiting for your sign-off") do %>
   <% if @pending.empty? %>
-    <%# Designed as the MAIN state, not an edge case: no claim has ever waited
-        on an owner in production, so this is what this card normally says. %>
+    <%# The usual state, not an edge case. %>
     <p class="text-gray-600">
       Nothing is waiting on you. When somebody claims against one of your budgets it appears
       here, and you'll be emailed a reminder until you endorse or reject it.
@@ -23,16 +20,16 @@
     <div class="flex flex-col gap-3">
       <% @pending.each do |expense| %>
         <% endorsement = @endorsements_by_expense[expense.record_id] %>
-        <% covered = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
+        <% covered = ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
         <% auto_bypassed = ::Reimbursements::OwnerReview.submitter_owns_budget?(expense) %>
         <div class="rounded border border-gray-200 p-3">
           <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span class="font-medium">#<%= expense.auto_number %>: <%= expense.effective_payee_name %></span>
             <span><strong><%= reimbursements_money(expense.amount) %></strong></span>
             <span class="text-sm text-gray-600"><%= expense.budget&.display_name %></span>
-            <span class="text-sm text-gray-500">
-              <%= reimbursements_waiting_for(expense.submitted_at) %>
-            </span>
+            <% if (waiting = reimbursements_waiting_for(expense.submitted_at)) %>
+              <span class="text-sm text-gray-500"><%= waiting %></span>
+            <% end %>
           </div>
 
           <% if expense.description.present? %>
@@ -41,12 +38,8 @@
 
           <div class="mt-2">
             <p class="text-xs font-medium text-gray-500">Receipt</p>
-            <%# Opened per claim, so a long list of claims to endorse stays
-                scannable and loads no receipts until one is asked for. %>
             <%= render "admin/reimbursements/shared/receipt_viewer",
-                       receipts: expense.receipts, key: "my-budgets-#{expense.record_id}",
-                       label: "expense ##{expense.auto_number}",
-                       group: "my-budgets-#{expense.record_id}" %>
+                       expense: expense, key: "my-budgets-#{expense.record_id}" %>
           </div>
 
           <div class="mt-3 flex flex-wrap items-start gap-2">
@@ -98,9 +91,7 @@
 <%= render CardComponent.new(title: "Your shows and budgets", html_class: "mt-4") do %>
   <% if @rows.empty? %>
     <p class="text-gray-600">
-      <%# An owner signs off claims and watches a show's spending, so the empty state says what
-          owning one means as well as who sets it. The Budgets page is finance-gated, so naming
-          it to anybody else — as text or as a link — points at a 403. %>
+      <%# The Budgets page is finance-gated, so naming it to anyone else, as text or link, points at a 403. %>
       You don't own any budgets yet. An owner signs off claims against their show before finance
       pays them, and can see what it has spent.
       <% if can?(:manage, :reimbursements_finance) %>
@@ -135,8 +126,7 @@
                     <%= row[:waiting_count] %> waiting
                   </span>
                 <% end %>
-                <%# Two production areas are both called "Tech", so every row
-                    says which pot and which year it belongs to. %>
+                <%# Two production areas are both called "Tech", so every row says which pot and year. %>
                 <div class="text-xs text-gray-500">
                   <%= [ row[:scope], row[:detail] ].reject(&:blank?).join(" · ") %>
                 </div>
@@ -153,15 +143,7 @@
               </td>
               <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.spent) %></td>
               <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.waiting) %></td>
-              <td class="px-3 py-2 text-right tabular-nums">
-                <% if figures.no_budget_set? %>
-                  <span class="text-gray-500">no budget set</span>
-                <% elsif figures.over? %>
-                  <span class="text-danger"><%= reimbursements_money(figures.over_by) %> over</span>
-                <% else %>
-                  <%= reimbursements_money(figures.left) %>
-                <% end %>
-              </td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_spend_left(figures) %></td>
               <td class="px-3 py-2 text-right whitespace-nowrap">
                 <%= link_to "Open", row[:path], class: btn_classes(:secondary, :sm) %>
               </td>

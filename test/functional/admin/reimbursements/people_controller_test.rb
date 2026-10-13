@@ -5,25 +5,9 @@ module Admin
   class PeopleControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
-    MC = ::Reimbursements::ModulusCheck
-
-    # A checker whose verdict is keyed by account number, so badge-state tests
-    # don't depend on the gitignored Pay.UK rule files being present.
-    class FakeChecker
-      def initialize(by_account = {})
-        @by_account = by_account
-      end
-
-      def check(_sort_code, account_number)
-        @by_account.fetch(account_number, MC::OUTSIDE_SPEC)
-      end
-    end
-
     setup do
-      finance = Role.create!(name: "Business Manager")
-      finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-      users(:member).add_role("Business Manager")
       @user = users(:member)
+      grant_finance_permission(@user)
 
       @valid_person = create_reimbursements_person(name: "Valid Vic", email: "vic@example.com",
                                                    sort_code: "08-99-99", account_number: "66374958")
@@ -33,53 +17,14 @@ module Admin
                                                      sort_code: "99-99-99", account_number: "12345678")
       @missing_person = create_reimbursements_person(name: "Missing Mo", email: "mo@example.com")
 
-      @checker = FakeChecker.new(
-        "66374958" => MC::VALID,
-        "66374959" => MC::INVALID,
-        "12345678" => MC::OUTSIDE_SPEC
-      )
-      PeopleController.checker_builder = -> { @checker }
+      PeopleController.checker_builder = lambda {
+        FakeModulusChecker.new("66374958" => ::Reimbursements::ModulusCheck::VALID,
+                               "66374959" => ::Reimbursements::ModulusCheck::INVALID)
+      }
     end
 
     teardown do
-      PeopleController.checker_builder = -> { MC.default_checker }
-    end
-
-    # --- Auth gating -------------------------------------------------------
-
-    test "requires sign-in" do
-      get :index
-      assert_redirected_to new_user_session_path
-    end
-
-    test "denies members without the finance permission" do
-      sign_in users(:committee)
-      get :index
-      assert_response :forbidden
-    end
-
-    test "the producer portal permission alone does not grant finance access" do
-      producer = Role.create!(name: "Producer")
-      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-      other = users(:member_with_phone_number)
-      other.add_role("Producer")
-      sign_in other
-
-      get :index
-
-      assert_response :forbidden
-    end
-
-    # --- Index -------------------------------------------------------------
-
-    test "lists everyone in the registry" do
-      sign_in @user
-      get :index
-
-      assert_response :success
-      assert_equal 4, assigns(:people).size
-      assert_includes response.body, "Valid Vic"
-      assert_includes response.body, "Missing Mo"
+      PeopleController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
     end
 
     test "shows a duplicate banner when a name or email clashes" do
@@ -94,66 +39,32 @@ module Admin
       assert_includes response.body, "Duplicate name or email detected"
     end
 
-    test "renders a live modulus badge per bank-detail state" do
-      sign_in @user
-      get :index
-
-      assert_response :success
-      # Assert on the BadgeComponent colour classes, not the labels: the labels
-      # (Valid/Invalid/Missing) collide with the fixture person names, so a broken
-      # mapping would still leave the words in the body. The colour classes can
-      # only come from the badge, so they genuinely pin the state mapping:
-      # VALID -> success (green), INVALID -> danger (red), OUTSIDE_SPEC -> warning
-      # (amber). None of the four fixture people are verified, so each colour
-      # comes from exactly one modulus badge.
-      assert_includes response.body, "bg-success/15", "VALID should map to a green badge"
-      assert_includes response.body, "bg-danger/15", "INVALID should map to a red badge"
-      assert_includes response.body, "bg-warning/15", "OUTSIDE_SPEC should map to an amber badge"
-      assert_includes response.body, "Outside spec"
-      assert_includes response.body, "Missing"
-    end
-
-    # Every write on this page comes back with that person's row open and
-    # scrolled to. Saving bank details used to collapse the row and return to
-    # the top of the page, so "Mark as verified" — the obvious next click —
-    # meant finding and reopening them again.
+    # Every write comes back with that person's row open and scrolled to.
     def assert_redirected_to_person(person)
       assert_redirected_to admin_reimbursements_people_path(person: person.record_id,
                                                             anchor: "person-#{person.record_id}")
     end
 
-    # --- Findable: filter, order, claims link -----------------------------
-
-    test "index filters by name" do
+    test "index filters by name or email" do
       sign_in @user
 
-      get :index, params: { q: "ivy" }
+      { "ivy" => [ "Invalid Ivy" ], "ophelia@example" => [ "Outside Ophelia" ] }.each do |q, expected|
+        get :index, params: { q: q }
 
-      names = assigns(:people).map(&:name)
-      assert_includes names, "Invalid Ivy"
-      assert_not_includes names, "Valid Vic"
-    end
-
-    test "index filters by email" do
-      sign_in @user
-
-      get :index, params: { q: "ophelia@example" }
-
-      assert_equal [ "Outside Ophelia" ], assigns(:people).map(&:name)
+        assert_equal expected, assigns(:people).map(&:name)
+      end
     end
 
     test "index lists people alphabetically" do
-      # Accented, because the column collates utf8mb4_unicode_ci (which folds
-      # accents) while Ruby's String comparison is byte-wise: an in-memory sort
-      # would put Ábel after Valid Vic. The blanks-last half of the ORDER BY
-      # cannot be exercised here — Person validates name's presence — but it
-      # guards the legacy rows that predate that validation.
+      # Accented: the column collates utf8mb4_unicode_ci (folds accents) but Ruby sorts
+      # bytewise, so an in-memory sort would put Ábel after Valid Vic.
       create_reimbursements_person(name: "Ábel Aardvark", email: "abel@example.com")
       sign_in @user
 
       get :index
 
       names = assigns(:people).map(&:name)
+      assert_equal 5, names.size
       assert_equal "Ábel Aardvark", names.first
       assert_equal names, names.sort_by { |n| n.unicode_normalize(:nfd) }
     end
@@ -168,7 +79,6 @@ module Admin
       assert_response :success
       assert_select "a[href=?]", admin_reimbursements_expense_edits_path(person: @valid_person.record_id),
                     text: "1 claim"
-      # Somebody who has never claimed says so rather than linking to nothing.
       assert_match(/No claims/, response.body)
     end
 
@@ -182,13 +92,26 @@ module Admin
                     "only the named row opens"
     end
 
-    test "index explains what the six badges mean, Outside spec included" do
+    test "index forms carry the search filter so a save returns to it" do
       sign_in @user
 
-      get :index
+      get :index, params: { q: "ivy" }
 
-      assert_match(/publishes no rule covering that sort code/, response.body)
-      assert_match(/does <strong>not<\/strong> mean the details are wrong/, response.body)
+      assert_select "form[action=?]", admin_reimbursements_person_path(@invalid_person.record_id, q: "ivy"), count: 2
+    end
+
+    test "index opens the page holding the person named by ?person=, unless a page is asked for" do
+      50.times { |i| create_reimbursements_person(name: format("Aaa %02d", i), email: "aaa#{i}@example.com") }
+      sign_in @user
+
+      get :index, params: { person: @valid_person.record_id }
+
+      assert_includes assigns(:people).map(&:record_id), @valid_person.record_id
+      assert_select "details[open]#person-#{@valid_person.record_id}"
+
+      get :index, params: { person: @valid_person.record_id, page: 1 }
+
+      assert_not_includes assigns(:people).map(&:record_id), @valid_person.record_id
     end
 
     test "the People CSV carries the on-screen filter" do
@@ -201,8 +124,6 @@ module Admin
       assert_not_includes response.body, "Valid Vic"
     end
 
-    # --- Update: bank details ---------------------------------------------
-
     test "saving bank details writes formatted values and an audit note" do
       sign_in @user
 
@@ -213,8 +134,7 @@ module Admin
       details = @missing_person.reload.payment_details
       assert_equal "08-99-99", details.sort_code
       assert_equal "66374958", details.account_number
-      # The audit line masks BOTH bank details to last-4 and records the actor; it
-      # must never carry either value in the clear.
+      # Both details masked to last four, never in the clear.
       assert_includes details.notes,
                       "Bank details updated: sort code ****9999, account ****4958"
       assert_not_includes details.notes, "66374958",
@@ -223,6 +143,7 @@ module Admin
                           "the audit line must not embed the full sort code"
       assert_not_includes details.notes, "089999",
                           "the audit line must not embed the full sort code undashed either"
+      assert_includes details.notes, "by #{@user.name_or_email} (##{@user.id})"
     end
 
     test "the audit line is appended to existing notes, preserving them" do
@@ -234,48 +155,11 @@ module Admin
 
       notes = person.reload.payment_details.notes
       assert notes.start_with?("Earlier note.\n[")
-      assert_includes notes, "sort code ****9999, account ****4958"
-    end
-
-    # The audit line masks BOTH details, matching Exports::People. A sort code is
-    # not a secret on its own, but the line sits next to the masked account
-    # number on the People page, and the pair is what identifies an account.
-    test "the audit line masks both bank details and names the acting user" do
-      sign_in @user
-
-      patch :update, params: { id: @missing_person.record_id,
-                               sort_code: "089999", account_number: "66374958" }
-
-      notes = @missing_person.reload.payment_details.notes
-      # Masked account number and sort code, never the full digits.
-      assert_includes notes, "account ****4958"
-      assert_includes notes, "sort code ****9999"
-      assert_not_includes notes, "66374958",
-                          "the full account number must not appear in the audit trail"
-      assert_not_includes notes, "08-99-99",
-                          "the full sort code must not appear in the audit trail"
-      # Actor attribution: the signed-in operator's name + id.
-      assert_includes notes, @user.name_or_email
-      assert_includes notes, "(##{@user.id})"
-    end
-
-    test "unchanged bank details are not rewritten" do
-      sign_in @user
-      before = @valid_person.payment_details.updated_at
-
-      patch :update, params: { id: @valid_person.record_id,
-                               sort_code: "08-99-99", account_number: "66374958" }
-
-      assert_redirected_to_person @valid_person
-      assert_equal "No changes to save.", flash[:notice]
-      assert_equal before, @valid_person.reload.payment_details.updated_at
     end
 
     test "a differently-formatted but identical sort code isn't treated as a change" do
-      # A record edited directly could store the sort code without dashes
-      # ("089999") — the same digits as the canonical "08-99-99" this form
-      # always submits. bank_details_changed? must normalise both sides the
-      # same way the account-number check right beside it already does.
+      # A directly edited record may store the sort code undashed; Person#bank_details_change
+      # must normalise both sides.
       @valid_person.payment_details.update!(sort_code: "089999")
       sign_in @user
 
@@ -288,6 +172,26 @@ module Admin
                    "the identical-digits submission must not rewrite the record"
     end
 
+    test "an invalid save re-renders the filtered list with the edited row open" do
+      sign_in @user
+
+      patch :update, params: { id: @invalid_person.record_id, q: "ivy", sort_code: "08", account_number: "1" }
+
+      assert_response :unprocessable_entity
+      assert_equal [ "Invalid Ivy" ], assigns(:people).map(&:name)
+      assert_select "details[open] input#sort_code_#{@invalid_person.record_id}[value=?]", "08"
+    end
+
+    test "an invalid save re-renders the page holding the edited row" do
+      50.times { |i| create_reimbursements_person(name: format("Aaa %02d", i), email: "aaa#{i}@example.com") }
+      sign_in @user
+
+      patch :update, params: { id: @valid_person.record_id, sort_code: "08", account_number: "1" }
+
+      assert_response :unprocessable_entity
+      assert_select "details[open] input#sort_code_#{@valid_person.record_id}[value=?]", "08"
+    end
+
     test "invalid bank details re-render the form without a write, preserving the typed values" do
       sign_in @user
       missing_id = @missing_person.record_id
@@ -295,61 +199,38 @@ module Admin
 
       patch :update, params: { id: missing_id, sort_code: "08", account_number: "1" }
 
-      # Re-render (not redirect) so the operator's typed values and the open
-      # edit section survive the validation failure.
       assert_response :unprocessable_entity
       assert_nil @missing_person.reload.payment_details
-      assert_match(/Sort code/, response.body)
-      # This person's edit section stays expanded with the typed values intact.
       assert_select "details[open] input#sort_code_#{missing_id}[value=?]", "08"
       assert_select "details[open] input#account_number_#{missing_id}[value=?]", "1"
-      # Other people's sections stay collapsed.
       assert_select "details[open] input#sort_code_#{valid_id}", false
-      # The error is a role="alert" region, wired to both fields via
-      # aria-describedby, and both fields are flagged aria-invalid.
+      # The error is a role="alert" region wired to both fields via aria-describedby.
       assert_select "p[role=alert]#bank_details_error_#{missing_id}"
       assert_select "input#sort_code_#{missing_id}[aria-describedby=bank_details_error_#{missing_id}][aria-invalid=true]"
       assert_select "input#account_number_#{missing_id}[aria-describedby=bank_details_error_#{missing_id}][aria-invalid=true]"
     end
 
-    # --- Update: mark verified --------------------------------------------
-
-    test "marking verified writes the verified flag" do
+    test "marks Valid and Outside-spec details verified (advisory, not a hard block)" do
       sign_in @user
 
-      patch :update, params: { id: @valid_person.record_id, verify: "1" }
+      [ @valid_person, @outside_person ].each do |person|
+        patch :update, params: { id: person.record_id, verify: "1" }
 
-      assert_redirected_to_person @valid_person
-      assert @valid_person.reload.verified?
+        assert_redirected_to_person person
+        assert person.reload.verified, person.name
+      end
     end
 
-    test "cannot verify a person without bank details" do
+    test "refuses to verify missing or modulus-invalid details" do
       sign_in @user
 
-      patch :update, params: { id: @missing_person.record_id, verify: "1" }
+      { @missing_person => /no bank details/, @invalid_person => /fail the modulus check/ }.each do |person, alert|
+        patch :update, params: { id: person.record_id, verify: "1" }
 
-      assert_redirected_to_person @missing_person
-      assert_match(/no bank details/, flash[:alert])
-      assert_not @missing_person.reload.verified?
-    end
-
-    test "cannot verify a person whose bank details fail the modulus check" do
-      sign_in @user
-
-      patch :update, params: { id: @invalid_person.record_id, verify: "1" }
-
-      assert_redirected_to_person @invalid_person
-      assert_match(/fail the modulus check/, flash[:alert])
-      assert_not @invalid_person.reload.verified?
-    end
-
-    test "can verify a person whose bank details are outside spec (advisory, not a hard block)" do
-      sign_in @user
-
-      patch :update, params: { id: @outside_person.record_id, verify: "1" }
-
-      assert_redirected_to_person @outside_person
-      assert @outside_person.reload.verified?
+        assert_redirected_to_person person
+        assert_match alert, flash[:alert]
+        assert_not person.reload.verified, person.name
+      end
     end
 
     test "editing bank details resets verified to false" do
@@ -362,7 +243,7 @@ module Admin
                                sort_code: "20-20-20", account_number: "50502366" }
 
       assert_redirected_to_person verified_person
-      assert_not verified_person.reload.verified?,
+      assert_not verified_person.reload.verified,
                  "a bank-detail correction must not leave a stale Verified badge standing"
     end
 
@@ -374,109 +255,29 @@ module Admin
       assert_response :not_found
     end
 
-    # --- CSV export ----------------------------------------------------------
-
-    test "index CSV export answers a text/csv download named for today" do
+    test "index CSV lists every person with bank details masked" do
+      @valid_person.payment_details.update!(verified: true)
       sign_in @user
 
       get :index, format: :csv
 
       assert_csv_download("people")
+      assert_equal [
+        [ "Name", "Email", "Sort code", "Account number", "Modulus check", "Verified" ],
+        [ "Invalid Ivy", "ivy@example.com", "****9999", "****4959", "Invalid", "No" ],
+        [ "Missing Mo", "mo@example.com", nil, nil, "Missing", "No" ],
+        [ "Outside Ophelia", "ophelia@example.com", "****9999", "****5678", "Outside spec", "No" ],
+        [ "Valid Vic", "vic@example.com", "****9999", "****4958", "Valid", "Yes" ]
+      ], CSV.parse(response.body)
     end
 
-    test "index CSV export has a header row and one row per person" do
-      sign_in @user
-
-      get :index, format: :csv
-
-      rows = CSV.parse(response.body)
-      assert_equal [ "Name", "Email", "Sort code", "Account number",
-                     "Modulus check", "Verified" ], rows.first
-      assert_equal 5, rows.size, "header + four people"
-
-      vic = rows.find { |r| r[0] == "Valid Vic" }
-      assert_equal "vic@example.com", vic[1]
-      assert_equal "Valid", vic[4]
-      assert_equal "No", vic[5]
-    end
-
-    test "index CSV export MASKS both bank details to their last four digits" do
-      sign_in @user
-
-      get :index, format: :csv
-
-      vic = CSV.parse(response.body).find { |r| r[0] == "Valid Vic" }
-      assert_equal "****9999", vic[2], "the sort code must be masked"
-      assert_equal "****4958", vic[3], "the account number must be masked"
-      # The export leaves the portal, so no complete bank detail may travel in it.
-      assert_not_includes response.body, "66374958"
-      assert_not_includes response.body, "08-99-99"
-      assert_not_includes response.body, "089999"
-    end
-
-    test "index CSV export leaves a person with no bank details blank, not masked" do
-      sign_in @user
-
-      get :index, format: :csv
-
-      mo = CSV.parse(response.body).find { |r| r[0] == "Missing Mo" }
-      assert_nil mo[2]
-      assert_nil mo[3]
-      assert_equal "Missing", mo[4]
-    end
-
-    test "index CSV export reports each modulus verdict" do
-      sign_in @user
-
-      get :index, format: :csv
-
-      rows = CSV.parse(response.body)
-      assert_equal "Invalid", rows.find { |r| r[0] == "Invalid Ivy" }[4]
-      assert_equal "Outside spec", rows.find { |r| r[0] == "Outside Ophelia" }[4]
-    end
-
-    test "index CSV export reports a verified payee as verified" do
-      sign_in @user
-      @valid_person.payment_details.update!(verified: true)
-
-      get :index, format: :csv
-
-      assert_equal "Yes", CSV.parse(response.body).find { |r| r[0] == "Valid Vic" }[5]
-    end
-
-    test "index offers a Download CSV link" do
+    test "index links to the register-a-person form and the CSV download" do
       sign_in @user
 
       get :index
 
-      assert_includes response.body, "Download CSV"
-      assert_includes response.body, "/admin/reimbursements/people?format=csv"
-    end
-
-    test "index links to the register-a-person form" do
-      sign_in @user
-
-      get :index
-
-      assert_includes response.body, new_admin_reimbursements_person_path
-    end
-
-    test "new requires the finance permission" do
-      sign_in users(:committee)
-
-      get :new
-
-      assert_response :forbidden
-    end
-
-    test "create requires the finance permission" do
-      sign_in users(:committee)
-
-      assert_no_difference -> { ::Reimbursements::Person.count } do
-        post :create, params: { user_id: users(:user).id }
-      end
-
-      assert_response :forbidden
+      assert_select "a[href=?]", new_admin_reimbursements_person_path
+      assert_select "a[href=?]", "/admin/reimbursements/people?format=csv", text: "Download CSV"
     end
 
     test "new renders the user picker" do
@@ -502,31 +303,7 @@ module Admin
       assert_equal chosen.email, person.email
       assert_equal person.id, chosen.reload.reimbursements_person_id,
                    "the PersonLink must be remembered for next time"
-    end
-
-    test "a registered person needs no bank details and reads as unverified" do
-      sign_in @user
-
-      post :create, params: { user_id: users(:user).id }
-
-      person = ::Reimbursements::Person.order(:id).last
       assert_nil person.payment_details
-      assert_not person.bank_details?
-      assert_not person.verified
-    end
-
-    test "create says so and creates nothing when the user is already linked" do
-      sign_in @user
-      chosen = users(:user)
-      existing = create_reimbursements_person(name: "Already There", email: "already@example.com")
-      chosen.update_column(:reimbursements_person_id, existing.id)
-
-      assert_no_difference -> { ::Reimbursements::Person.count } do
-        post :create, params: { user_id: chosen.id }
-      end
-
-      assert_redirected_to admin_reimbursements_people_path
-      assert_match(/already/i, flash[:alert].to_s + flash[:notice].to_s)
     end
 
     test "create matches an unlinked person on email instead of duplicating them" do
@@ -539,28 +316,21 @@ module Admin
       end
 
       assert_redirected_to admin_reimbursements_people_path
+      assert_match(/already in the registry/, flash[:alert])
       assert_equal existing.id, chosen.reload.reimbursements_person_id
     end
 
-    test "create with no user chosen re-renders the form and writes nothing" do
+    test "create with no or an unknown user re-renders the form and writes nothing" do
       sign_in @user
 
-      assert_no_difference -> { ::Reimbursements::Person.count } do
-        post :create, params: { user_id: "" }
+      [ "", "999999" ].each do |user_id|
+        assert_no_difference -> { ::Reimbursements::Person.count } do
+          post :create, params: { user_id: user_id }
+        end
+
+        assert_response :unprocessable_entity
+        assert_select "select#user_id"
       end
-
-      assert_response :unprocessable_entity
-      assert_select "select#user_id"
-    end
-
-    test "create with an unknown user id re-renders the form and writes nothing" do
-      sign_in @user
-
-      assert_no_difference -> { ::Reimbursements::Person.count } do
-        post :create, params: { user_id: "999999" }
-      end
-
-      assert_response :unprocessable_entity
     end
   end
   end

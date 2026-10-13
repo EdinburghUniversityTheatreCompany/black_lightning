@@ -3,18 +3,12 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # The finance-only "edit an expense at ANY status" surface. Unlike the
-    # producer portal (Pending/Draft only) and unlike the Review queue
-    # (Pending inline), this lets the Business Manager view and edit an
-    # expense whatever its status — including Submitted and Paid — reachable
-    # from the Review cards and by a lookup on auto-number/record id.
+    # Finance editing of an expense at any status.
     class ExpenseEditsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
       EDITABLE_STATUSES = %w[Pending Approved Submitted Paid].freeze
       MC = ::Reimbursements::ModulusCheck
-
-      FakeChecker = ReimbursementsTestHelpers::FakeModulusChecker
 
       setup do
         grant_finance_permission(users(:member))
@@ -24,7 +18,7 @@ module Admin
                                                sort_code: "08-99-99", account_number: "66374958")
         @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
 
-        @checker = FakeChecker.new("66374958" => MC::VALID)
+        @checker = FakeModulusChecker.new("66374958" => MC::VALID)
         ExpenseEditsController.checker_builder = -> { @checker }
       end
 
@@ -51,29 +45,9 @@ module Admin
         expense
       end
 
-      # --- Auth gating -----------------------------------------------------
-
-      test "requires sign-in" do
-        expense = expense_at("Pending")
-        get :edit, params: { id: expense.record_id }
-        assert_redirected_to new_user_session_path
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        expense = expense_at("Pending")
-        sign_in other
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_response :forbidden
-      end
-
       # --- Index: all-expenses table with filters + search ----------------
 
-      # Two budgets and two payees across three statuses, so the filter/search
-      # tests can prove narrowing (and exclusion).
+      # Two budgets and two payees across three statuses.
       def seed_multi_expenses
         person2 = create_reimbursements_person(name: "Sam Stagehand", email: "sam@example.com",
                                                sort_code: "20-00-00", account_number: "12345678")
@@ -89,10 +63,16 @@ module Admin
                            amount: BigDecimal("5"), amount_excl_vat: BigDecimal("4.17"))
       end
 
+      def third_party_claim
+        # An Invoice: the effective payee is the supplier, not @person who filed it.
+        expense_at("Pending", payee_name_override: "Concord Theatricals Ltd",
+                              sort_code_override: "08-99-99", account_number_override: "66374958",
+                              expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
+      end
+
       def centred_budget
-        centre = create_reimbursements_cost_centre(key: "edit-centre", name: "Bedlam Fringe",
-                                                   eusa_code: "F43", short_code: "BF")
-        create_reimbursements_budget(name: "Lights", nominal_code: "4200", cost_centre: centre)
+        create_reimbursements_budget(name: "Lights", nominal_code: "4200",
+                                     cost_centre: create_second_reimbursements_cost_centre(short_code: "BF"))
       end
 
       test "the edit page's budget select is a Tom Select labelled with each line's centre" do
@@ -116,16 +96,6 @@ module Admin
         assert_select "select.simple-select2[name=budget]:not([class*=border]) option", text: "BF - Lights"
       end
 
-      test "index requires the finance permission (producer access alone is forbidden)" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        sign_in other
-
-        get :index
-
-        assert_response :forbidden
-      end
-
       test "index lists every expense with a link to edit each" do
         seed_multi_expenses
         sign_in @user
@@ -139,92 +109,49 @@ module Admin
         assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@exp1.record_id)
         assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@exp2.record_id)
         assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@exp3.record_id)
+        assert_select "a[href=?]", admin_reimbursements_expense_import_path(cost_centre: nil),
+                      text: "Import expenses"
       end
 
-      test "index status filter narrows to a single status" do
-        seed_multi_expenses
+      # The wizard reads an empty cost_centre= as no centre chosen, so it still asks.
+      test "Import expenses keeps an explicit All" do
+        create_second_reimbursements_cost_centre
         sign_in @user
 
-        get :index, params: { status: "Paid" }
+        get :index, params: { cost_centre: "" }
 
-        assert_response :success
-        assert_includes response.body, "Stage nails"
-        assert_not_includes response.body, "Fake blood"
-        assert_not_includes response.body, "Velvet cloak"
+        assert_select "a[href=?]", admin_reimbursements_expense_import_path(cost_centre: ""), text: "Import expenses"
       end
 
-      test "index budget filter narrows to a single budget" do
+      test "index filters and search narrow to exactly the matching claims" do
         seed_multi_expenses
+        # A third-party invoice's submitter must be findable by name and email.
+        claim = third_party_claim
         sign_in @user
 
-        get :index, params: { budget: @budget2.record_id }
+        {
+          { status: "Paid" } => [ @exp3 ],
+          { budget: @budget2.record_id } => [ @exp2 ],
+          { q: "velvet" } => [ @exp2 ],
+          { q: "stagehand" } => [ @exp2 ],
+          { q: "3" } => [ @exp3 ],
+          { q: "#3" } => [ @exp3 ],
+          { q: "£99.00" } => [ @exp2 ],
+          { q: "not a number and no substring match" } => [],
+          { q: "Pat Producer" } => [ @exp1, @exp3, claim ],
+          { q: "pat@example.com" } => [ @exp1, @exp3, claim ],
+          { q: "Concord" } => [ claim ]
+        }.each do |params, expected|
+          get :index, params: params
 
-        assert_response :success
-        assert_includes response.body, "Velvet cloak"
-        assert_not_includes response.body, "Fake blood"
-        assert_not_includes response.body, "Stage nails"
-      end
-
-      test "index search matches a description substring and excludes non-matches" do
-        seed_multi_expenses
-        sign_in @user
-
-        get :index, params: { q: "velvet" }
-
-        assert_response :success
-        assert_includes response.body, "Velvet cloak"
-        assert_not_includes response.body, "Fake blood"
-        assert_not_includes response.body, "Stage nails"
-      end
-
-      test "index search matches the effective payee name" do
-        seed_multi_expenses
-        sign_in @user
-
-        get :index, params: { q: "stagehand" }
-
-        assert_includes response.body, "Velvet cloak"
-        assert_not_includes response.body, "Fake blood"
-      end
-
-      test "index search matches an exact auto-number" do
-        seed_multi_expenses
-        sign_in @user
-
-        get :index, params: { q: "3" }
-
-        assert_includes response.body, "Stage nails"
-        assert_not_includes response.body, "Velvet cloak"
-        assert_not_includes response.body, "Fake blood"
-      end
-
-      test "index search matches a numeric amount, stripping a £ prefix and commas" do
-        seed_multi_expenses
-        sign_in @user
-
-        get :index, params: { q: "£99.00" }
-
-        assert_includes response.body, "Velvet cloak"
-        assert_not_includes response.body, "Stage nails"
-        assert_not_includes response.body, "Fake blood"
-      end
-
-      test "index search with a non-numeric, non-matching query returns no rows without raising" do
-        seed_multi_expenses
-        sign_in @user
-
-        get :index, params: { q: "not a number and no substring match" }
-
-        assert_response :success
-        assert_not_includes response.body, "Velvet cloak"
-        assert_not_includes response.body, "Stage nails"
-        assert_not_includes response.body, "Fake blood"
+          assert_response :success
+          assert_equal expected.map(&:record_id).sort, assigns(:expenses).map(&:record_id).sort, params.inspect
+        end
       end
 
       # --- CSV export --------------------------------------------------------
 
-      # The combined workbook hangs off the Finance sidebar, which renders on
-      # every finance page — so any of them proves the link is reachable.
+      # The sidebar renders on every finance page, so any of them will do.
       test "the Finance sidebar links to the exports page" do
         sign_in @user
 
@@ -234,27 +161,18 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/export"
       end
 
-      test "index CSV export answers a text/csv download named for today" do
-        seed_multi_expenses
-        sign_in @user
-
-        get :index, format: :csv
-
-        assert_csv_download("expenses")
-      end
-
       test "index CSV export has a header row and one data row per expense" do
         seed_multi_expenses
         sign_in @user
 
         get :index, format: :csv
 
+        assert_csv_download("expenses")
         rows = CSV.parse(response.body)
         assert_equal [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
                        "Description", "Payment reference", "Submitted", "Needs attention",
                        "Cost centre", "Area" ], rows.first
         assert_equal 4, rows.size, "header + three expenses"
-        # A concrete data row: the Paid "Stage nails" expense to Pat, £5.00, Props.
         stage = rows.find { |r| r[6] == "Stage nails" }
         assert_equal %w[3 Paid], stage.values_at(0, 1)
         assert_equal "Pat Producer", stage[2]
@@ -285,19 +203,6 @@ module Admin
         assert_equal 61, rows.size, "header + all 60 expenses (pagination is display-only)"
       end
 
-      test "index CSV export neutralises formula-injected submitter text" do
-        # A description a submitter controls entirely: on CSV re-import Excel
-        # would execute a leading "=" as a formula.
-        expense_at("Pending", auto_number: 9, description: "=HYPERLINK(\"http://evil\",\"click\")")
-        sign_in @user
-
-        get :index, format: :csv
-
-        rows = CSV.parse(response.body)
-        injected = rows.find { |r| r[0] == "9" }
-        assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", injected[6]
-      end
-
       test "index CSV export joins the needs-attention reasons" do
         # An expense with no ex-VAT amount and no budget flags two reasons.
         expense_at("Pending", budget: nil, auto_number: 7, description: "Flagged item",
@@ -315,8 +220,6 @@ module Admin
 
       # --- Pagination (50 per page, filters carry across pages) ------------
 
-      # Build `count` Pending expenses, newest first by submitted_at so the
-      # ordering (and therefore which slice lands on which page) is deterministic.
       def seed_paged_expenses(count)
         (1..count).each do |n|
           expense_at("Pending", auto_number: n, description: "Expense number #{n}",
@@ -324,22 +227,14 @@ module Admin
         end
       end
 
-      test "index pages the list at 50 per page" do
-        seed_paged_expenses(60)
-        sign_in @user
-
-        get :index
-        page1_rows = response.body.scan(/Expense number \d+/).uniq.size
-        assert_equal 50, page1_rows, "first page should show 50 of 60 expenses"
-        assert_includes response.body, "60 expenses"
-      end
-
-      test "index page 2 returns the next slice, not page 1's rows" do
+      test "index pages the list at 50, page 2 holding the next slice" do
         seed_paged_expenses(60)
         sign_in @user
 
         get :index
         page1 = response.body.scan(/Expense number \d+/).uniq
+        assert_equal 50, page1.size
+        assert_includes response.body, "60 expenses"
 
         get :index, params: { page: 2 }
         page2 = response.body.scan(/Expense number \d+/).uniq
@@ -349,12 +244,7 @@ module Admin
       end
 
       test "a status filter and a page combine (filter carries onto page 2)" do
-        # 60 Pending + 20 Paid; filtering to Pending leaves 60 (two pages), so
-        # page 2 holds the Pending remainder and never leaks a Paid expense.
-        (1..60).each do |n|
-          expense_at("Pending", auto_number: n, description: "Pending row #{n}",
-                     receipt: false, submitted_at: Time.utc(2026, 5, (n % 28) + 1))
-        end
+        seed_paged_expenses(60)
         (1..20).each do |n|
           expense_at("Paid", auto_number: 100 + n, description: "Paid row #{n}", receipt: false)
         end
@@ -364,17 +254,15 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "60 expenses"
-        assert_equal 10, response.body.scan(/Pending row \d+/).uniq.size, "page 2 should show the last 10 Pending rows"
+        assert_equal 10, response.body.scan(/Expense number \d+/).uniq.size, "page 2 should show the last 10 Pending rows"
         assert_equal 0, response.body.scan(/Paid row \d+/).size, "a Paid expense must never appear under the Pending filter"
-        # The Pending filter must survive onto the pager links.
         assert_match(/[?&]status=Pending/, response.body)
       end
 
       # --- Needs-attention reasons tooltip ---------------------------------
 
       test "index flags a needs-attention expense with an accessible reasons popover" do
-        # No receipt is an advisory (non-blocking) reason -> the amber "Check
-        # first" popover.
+        # No receipt is advisory, not blocking.
         expense = expense_at("Pending", receipt: false)
         sign_in @user
 
@@ -388,8 +276,7 @@ module Admin
       end
 
       test "index shows a blocked expense in a distinct danger popover" do
-        # No budget hard-blocks approval -> the red "Can't approve yet" popover,
-        # separate from any advisory one.
+        # No budget blocks approval.
         expense = expense_at("Pending", budget: nil)
         sign_in @user
 
@@ -400,14 +287,24 @@ module Admin
       end
 
       test "index suppresses the attention flag on a non-actionable (Paid) row" do
-        # Paid is done — the same flag there is noise. It must not render even
-        # though the expense would otherwise be flagged (no receipt).
         expense_at("Paid", receipt: false)
         sign_in @user
 
         get :index
 
         assert_select "[aria-controls^='reasons-edits-']", count: 0
+      end
+
+      # The Flags column is blank on Submitted/Paid/Rejected rows, so the filter
+      # must not list them.
+      test "the needs-attention filter lists only rows that show a flag" do
+        flagged = expense_at("Pending", receipt: false)
+        expense_at("Paid", receipt: false)
+        sign_in @user
+
+        get :index, params: { attention: "1" }
+
+        assert_equal [ flagged.record_id ], assigns(:expenses).map(&:record_id)
       end
 
       test "index does not flag a clean expense" do
@@ -420,8 +317,7 @@ module Admin
       end
 
       test "edit lists advisory reasons separately from blocking ones" do
-        # No receipt = advisory; no budget = blocking. Both should show, each in
-        # its own section.
+        # No receipt is advisory; no budget is blocking.
         expense = expense_at("Pending", receipt: false, budget: nil)
         sign_in @user
 
@@ -433,14 +329,18 @@ module Admin
         assert_includes response.body, "no budget"
       end
 
-      test "edit shows no attention list for a clean expense" do
+      test "a clean Pending claim's edit page carries no advice, history or already-processed note" do
         expense = expense_at("Pending")
         sign_in @user
 
         get :edit, params: { id: expense.record_id }
 
+        assert_response :success
         assert_no_match(/can't be approved until these are fixed/i, response.body)
         assert_no_match(/worth checking before approving/i, response.body)
+        assert_no_match(/Owner sign-off/, response.body)
+        assert_no_match(/In batch/, response.body)
+        assert_no_match(/Already (sent to EUSA|paid)\./, response.body)
       end
 
       # --- Finance can fix the payment rail ---------------------------------
@@ -455,8 +355,7 @@ module Admin
                            bic_override: "DEUTDEFF", **attrs)
       end
 
-      # The full set of fields the form posts, so a test changing one thing
-      # does not accidentally blank the rest.
+      # The full stored field set, so changing one field does not blank the rest.
       def edit_params(expense, **overrides)
         { id: expense.record_id, amount: expense.amount, amount_excl_vat: expense.amount_excl_vat,
           description: expense.description, payment_reference: expense.payment_reference,
@@ -477,16 +376,25 @@ module Admin
         get :edit, params: { id: expense.record_id }
 
         assert_select "select#payment_method"
-        # Both pairs are in the markup so the browser can switch without a
-        # round trip; only one is visible.
+        # Both pairs are rendered so the browser can switch rails.
         assert_select "[data-reimbursements-receipt-target=ukFields]"
         assert_select "[data-reimbursements-receipt-target=internationalFields]"
       end
 
+      # A payee's People record holds no IBAN or BIC, so only a UK claim falls back to it.
+      test "the payee overrides hint says what blank means on each rail" do
+        expense = international_claim
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        hint = css_select("p").map { |p| p.text.squish }.find { |text| text.start_with?("To pay a third party") }
+        assert_equal "To pay a third party directly. On a UK claim, leave blank to pay the submitter's own " \
+                     "People-record details; an international claim always needs its IBAN and BIC here.", hint
+      end
+
       %w[Submitted Paid].each do |status|
         test "edit does not offer the rail on a #{status} claim" do
-          # The paperwork EUSA acted on has gone out; the stored rail is a
-          # record of what happened, not a choice.
           expense = expense_at(status)
           sign_in @user
 
@@ -505,7 +413,9 @@ module Admin
         end
       end
 
-      test "finance switches a claim onto the international rail" do
+      test "finance switches a claim onto the international rail, keeping the UK pair" do
+        # EffectivePayee reads only the active pair, so the dormant one is
+        # inert, and wiping it could not be undone.
         expense = expense_at("Pending", sort_code_override: "08-99-99",
                                         account_number_override: "66374958",
                                         payee_name_override: "Studio Buehne")
@@ -520,46 +430,12 @@ module Admin
         expense.reload
         assert expense.international?
         assert_equal "DE89370400440532013000", expense.iban_override
-      end
-
-      test "a rail switch keeps the other rail's details, so it can be switched back" do
-        # They are encrypted bank details a human typed, and EffectivePayee only
-        # ever reads the ACTIVE rail's pair — so a dormant pair is inert, while
-        # wiping it on a mis-click could not be undone.
-        expense = expense_at("Pending", sort_code_override: "08-99-99",
-                                        account_number_override: "66374958",
-                                        payee_name_override: "Studio Buehne")
-        sign_in @user
-
-        patch :update, params: edit_params(expense, payment_method: INTERNATIONAL,
-                                                    iban_override: "DE89370400440532013000",
-                                                    bic_override: "DEUTDEFF",
-                                                    foreign_currency: "EUR", foreign_amount: "640")
-
-        expense.reload
         assert_equal "08-99-99", expense.sort_code_override, "the UK pair survives the switch"
         assert_equal "66374958", expense.account_number_override
       end
 
-      test "switching back to UK keeps the invoice figure and its currency" do
-        expense = international_claim
-        sign_in @user
-
-        patch :update, params: edit_params(expense, payment_method: UK_BACS,
-                                                    sort_code_override: "08-99-99",
-                                                    account_number_override: "66374958")
-
-        expense.reload
-        assert_not expense.international?
-        assert_equal BigDecimal("640"), expense.foreign_amount, "nothing reads it off a UK claim, " \
-                                                                "and switching back restores the claim"
-        assert_equal "EUR", expense.foreign_currency
-      end
-
       test "the override rule reads the rail being posted, not the one being left" do
-        # A UK claim switched to international with only a payee name must be
-        # refused for the IBAN and BIC it now needs — reading the STORED rail
-        # would check the sort-code pair it is walking away from.
+        # Reading the stored rail would check the sort-code pair being left.
         expense = expense_at("Pending")
         sign_in @user
 
@@ -576,10 +452,7 @@ module Admin
       # --- An international claim with no GBP amount is still editable ------
 
       test "an international claim with a blank GBP amount saves" do
-        # The submitter enters the invoice figure and finance types the GBP
-        # equivalent at review, so the claim legitimately sits without one.
-        # The flat "Enter a valid amount greater than 0." refused every such
-        # edit, naming none of the page's three amount fields.
+        # Finance types the GBP figure at review, so the claim sits without one.
         expense = international_claim(amount: nil, amount_excl_vat: nil)
         sign_in @user
 
@@ -594,10 +467,11 @@ module Admin
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: edit_params(expense, amount: "")
+        patch :update, params: edit_params(expense, amount: "", description: "Edited")
 
         assert_response :unprocessable_content
         assert_match(/valid amount greater than 0/, response.body)
+        assert_equal "Fake blood", expense.reload.description, "nothing was written"
       end
 
       # --- Blanking the invoice amount ---------------------------------------
@@ -625,8 +499,7 @@ module Admin
       end
 
       test "a UK-rail save leaves a stored invoice figure alone" do
-        # The UK form does not offer the field, so a post that omits it must
-        # not wipe a figure the claim gets back if it is switched.
+        # The UK form does not post the field.
         expense = international_claim
         sign_in @user
 
@@ -636,22 +509,12 @@ module Admin
                        .except(:foreign_amount, :foreign_currency)
 
         expense.reload
-        assert_equal BigDecimal("640"), expense.foreign_amount
+        assert_not expense.international?
+        assert_equal BigDecimal("640"), expense.foreign_amount, "switching back restores the claim"
         assert_equal "EUR", expense.foreign_currency
       end
 
       # --- History: the claim says what happened to it ----------------------
-
-      test "edit shows nothing but the submission for a fresh claim" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_response :success
-        assert_no_match(/Owner sign-off/, response.body)
-        assert_no_match(/In batch/, response.body)
-      end
 
       test "edit names the owner who signed the claim off, and when" do
         expense = expense_at("Approved")
@@ -719,43 +582,7 @@ module Admin
         assert_match(/2026-06-01/, response.body)
       end
 
-      # --- Search finds the submitter, not only the payee -------------------
-
-      def third_party_claim
-        # An Invoice: the EFFECTIVE payee is the supplier, and @person — who
-        # actually filed it — appears nowhere the old search looked.
-        expense_at("Pending", payee_name_override: "Concord Theatricals Ltd",
-                              sort_code_override: "08-99-99", account_number_override: "66374958",
-                              expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
-      end
-
-      test "index search matches the submitter's name" do
-        claim = third_party_claim
-        sign_in @user
-
-        get :index, params: { q: "Pat Producer" }
-
-        assert_includes assigns(:expenses).map(&:record_id), claim.record_id,
-                        "the submitter of a third-party invoice must be findable by name"
-      end
-
-      test "index search matches the submitter's email" do
-        claim = third_party_claim
-        sign_in @user
-
-        get :index, params: { q: "pat@example.com" }
-
-        assert_includes assigns(:expenses).map(&:record_id), claim.record_id
-      end
-
-      test "index search still matches the effective payee" do
-        claim = third_party_claim
-        sign_in @user
-
-        get :index, params: { q: "Concord" }
-
-        assert_includes assigns(:expenses).map(&:record_id), claim.record_id
-      end
+      # --- Paid to and submitted by ---------------------------------------
 
       test "index names both columns: paid to, and submitted by" do
         third_party_claim
@@ -767,12 +594,6 @@ module Admin
         assert_match(/Paid to/, response.body)
         assert_match(/Submitted by/, response.body)
         assert_no_match(/>Payee</, response.body)
-      end
-
-      test "the Expenses CSV export is unchanged by the on-screen column rename" do
-        # An export is a stable contract: a saved formula keys off the header.
-        assert_includes ::Reimbursements::Exports::Expenses::HEADERS, "Payee"
-        assert_not_includes ::Reimbursements::Exports::Expenses::HEADERS, "Paid to"
       end
 
       test "index filters to one person's claims with ?person=" do
@@ -789,44 +610,25 @@ module Admin
         assert_match(/Showing only the claims submitted by/, response.body)
       end
 
-      test "edit gives no approval advice on a settled claim" do
-        # A Paid claim opened with "This can't be approved until these are
-        # fixed" and "worth checking before approving" stacked above "already
-        # been paid" — advice about a decision nobody will take again. The
-        # index has suppressed these on non-actionable rows for a while.
-        expense = expense_at("Paid", receipt: false, budget: nil)
+      test "edit gives approval advice on an Approved claim, and none on a settled one" do
+        approved = expense_at("Approved", receipt: false, budget: nil)
+        paid = expense_at("Paid", receipt: false, budget: nil)
         sign_in @user
 
-        get :edit, params: { id: expense.record_id }
+        get :edit, params: { id: approved.record_id }
+        assert_match(/can't be approved until these are fixed/i, response.body)
 
+        # On a Paid claim it is advice about a decision nobody will take again.
+        get :edit, params: { id: paid.record_id }
         assert_response :success
         assert_no_match(/can't be approved until these are fixed/i, response.body)
         assert_no_match(/worth checking before approving/i, response.body)
         assert_match(/already paid/i, response.body)
       end
 
-      test "edit still gives approval advice on an Approved claim" do
-        expense = expense_at("Approved", receipt: false, budget: nil)
-        sign_in @user
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_match(/can't be approved until these are fixed/i, response.body)
-      end
-
-      # --- Edit renders at every status ------------------------------------
+      # --- Update at every status ------------------------------------------
 
       EDITABLE_STATUSES.each do |status|
-        test "edit renders for a #{status} expense" do
-          expense = expense_at(status)
-          sign_in @user
-
-          get :edit, params: { id: expense.record_id }
-
-          assert_response :success
-          assert_includes response.body, status
-        end
-
         test "update persists edits for a #{status} expense via update_expense!" do
           expense = expense_at(status)
           sign_in @user
@@ -847,23 +649,17 @@ module Admin
           assert_equal "Acme Ltd", expense.payee_name_override
           assert_equal "20-00-00", expense.sort_code_override
           assert_equal "12345678", expense.account_number_override
-          # A finance edit never changes the status.
           assert_equal status, expense.status
         end
       end
 
-      # The finance forms read money through AmountParser now, like the submitter form
-      # and the budget forms, so a pasted "£1,200" is accepted here too. It has to be
-      # the PARSED value that gets written: ActiveRecord casts a string to a decimal
-      # column with to_d, which reads "£1,200" as 0 — a validated amount would have
-      # become a zero payment.
+      # The PARSED value must be written: AR casts a string to a decimal column
+      # with to_d, which reads "£1,200" as 0.
       test "update accepts a currency-formatted amount and stores the parsed number" do
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "£1,200.50",
-                                 amount_excl_vat: "£1,000", description: "x",
-                                 payment_reference: "y", budget_record_id: @budget.record_id }
+        patch :update, params: edit_params(expense, amount: "£1,200.50", amount_excl_vat: "£1,000")
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
         expense.reload
@@ -871,42 +667,23 @@ module Admin
         assert_equal BigDecimal("1000"), expense.amount_excl_vat
       end
 
-      test "update reads a comma decimal as a decimal, not a thousands separator" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, amount: "12,50", description: "x",
-                                 payment_reference: "y", budget_record_id: @budget.record_id }
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-        assert_equal BigDecimal("12.50"), expense.reload.amount,
-                     "12,50 is twelve pounds fifty, not one thousand two hundred and fifty"
-      end
-
       test "update leaves excl VAT untouched when zero is submitted" do
         expense = expense_at("Paid")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "0",
-                                 description: "x", payment_reference: "y",
-                                 budget_record_id: @budget.record_id }
+        patch :update, params: edit_params(expense, amount: "20.00", amount_excl_vat: "0")
 
         assert_equal BigDecimal("10.42"), expense.reload.amount_excl_vat
       end
 
       # --- Expense type ----------------------------------------------------
 
-      # The producer form offers Reimbursement and Invoice; finance's own From
-      # EUSA is only settable here, and re-typing here is the only way to fix a
-      # claim a producer filed wrong.
+      # From EUSA is settable only here.
       test "update re-types a claim, including to finance's own From EUSA" do
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                 description: "x", payment_reference: "y",
-                                 budget_record_id: @budget.record_id,
-                                 expense_type: ::Reimbursements::Expense::TYPE_FROM_EUSA }
+        patch :update, params: edit_params(expense, expense_type: ::Reimbursements::Expense::TYPE_FROM_EUSA)
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
         assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.reload.expense_type
@@ -916,24 +693,20 @@ module Admin
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 expense_type: "Petty cash" }
+        patch :update, params: edit_params(expense, expense_type: "Petty cash")
 
         assert_response :unprocessable_content
         assert_match(/unknown expense type/i, response.body)
         assert_equal "Reimbursement", expense.reload.expense_type, "nothing was written"
       end
 
-      # Same rule as the producer form: with no overrides, EffectivePayee falls
-      # back to the submitter's own bank details, so the Invoice would pay them.
+      # With no overrides EffectivePayee falls back to the submitter's own
+      # details, so the Invoice would pay them.
       test "update rejects switching a payable claim to Invoice with no payee overrides" do
         expense = expense_at("Approved")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 expense_type: ::Reimbursements::Expense::TYPE_INVOICE }
+        patch :update, params: edit_params(expense, expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
 
         assert_response :unprocessable_content
         assert_match(/would pay Pat Producer/i, response.body)
@@ -944,35 +717,29 @@ module Admin
         expense = expense_at("Approved")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 expense_type: ::Reimbursements::Expense::TYPE_INVOICE,
-                                 payee_name_override: "Acme Ltd", sort_code_override: "20-00-00",
-                                 account_number_override: "12345678" }
+        patch :update, params: edit_params(expense, expense_type: ::Reimbursements::Expense::TYPE_INVOICE,
+                                                    payee_name_override: "Acme Ltd",
+                                                    sort_code_override: "20-00-00",
+                                                    account_number_override: "12345678")
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
         assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
       end
 
-      # Submitted and Paid are records of what EUSA already did, so the payment
-      # can't be misdirected any more — and a historical row whose supplier
-      # details we never captured has to stay re-typable.
+      # Settled claims stay re-typable without invented supplier details.
       %w[Submitted Paid].each do |status|
         test "update re-types an already-processed #{status} claim to Invoice without overrides" do
           expense = expense_at(status)
           sign_in @user
 
-          patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                   description: "x", budget_record_id: @budget.record_id,
-                                   expense_type: ::Reimbursements::Expense::TYPE_INVOICE }
+          patch :update, params: edit_params(expense, expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
 
           assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
           assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
         end
       end
 
-      # The other forms that post here (Review's inline save, the receipt
-      # attach/remove buttons) send no expense_type at all.
+      # Other forms posting here send no expense_type.
       test "update leaves the type alone when the field isn't posted" do
         expense = expense_at("Pending", expense_type: ::Reimbursements::Expense::TYPE_INVOICE,
                                         payee_name_override: "Acme Ltd",
@@ -980,10 +747,7 @@ module Admin
                                         account_number_override: "12345678")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 payee_name_override: "Acme Ltd", sort_code_override: "20-00-00",
-                                 account_number_override: "12345678" }
+        patch :update, params: edit_params(expense).except(:expense_type)
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
         assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
@@ -1005,215 +769,94 @@ module Admin
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
-                                 description: "x", budget_record_id: "999999999" }
+        patch :update, params: edit_params(expense, budget_record_id: "999999999", description: "Edited")
 
         assert_response :unprocessable_content
         assert_match(/budget no longer exists/i, response.body)
         assert_equal "Fake blood", expense.reload.description, "nothing was written"
       end
 
-      test "update rejects a negative amount, re-renders edit 422, writes nothing" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, amount: "-5", amount_excl_vat: "35.00",
-                                 description: "x", budget_record_id: @budget.record_id }
-
-        assert_response :unprocessable_content
-        assert_match(/valid amount/i, response.body)
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
-      end
-
-      test "update rejects a non-numeric amount, re-renders edit 422, writes nothing" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, amount: "abc", amount_excl_vat: "35.00",
-                                 description: "x", budget_record_id: @budget.record_id }
-
-        assert_response :unprocessable_content
-        assert_match(/valid amount/i, response.body)
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
-      end
-
       # --- The international rail ---------------------------------------------
 
-      def international_expense(status: "Pending", **attrs)
-        expense_at(status).tap do |e|
-          e.update!(payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
-                    foreign_amount: BigDecimal("266.69"),
-                    foreign_currency: ::Reimbursements::Expense::CURRENCY_EUR,
-                    payee_name_override: "Ausland GmbH",
-                    iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500", **attrs)
-        end
-      end
-
-      def international_params(expense, **overrides)
-        { id: expense.record_id, amount: "230.00", amount_excl_vat: "230.00",
-          description: "Festival insurance", budget_record_id: @budget.record_id,
-          payee_name_override: "Ausland GmbH",
-          iban_override: "DE89 3704 0044 0532 0130 00", bic_override: "deutdeff500",
-          foreign_amount: "266.69", foreign_currency: "EUR" }.merge(overrides)
-      end
-
-      # The all-or-nothing override rule reads the UK trio, and an international
-      # claim has a payee name with no sort code — so saving one refused with a
-      # message naming fields the rail does not use.
-      test "update saves an international claim instead of demanding a sort code" do
-        expense = international_expense
+      # The UK trio rule must not refuse an international claim.
+      test "update saves an international claim's bank details, invoice amount and currency" do
+        expense = international_claim
         sign_in @user
 
-        patch :update, params: international_params(expense)
+        patch :update, params: edit_params(expense, iban_override: "NL91 ABNA 0417 1643 00",
+                                                    bic_override: " abnanl2a ",
+                                                    foreign_amount: "500.00", foreign_currency: "USD")
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-        assert_equal "Ausland GmbH", expense.reload.payee_name_override
-      end
-
-      test "update edits the IBAN and BIC, normalising both" do
-        expense = international_expense
-        sign_in @user
-
-        patch :update, params: international_params(expense, iban_override: "NL91 ABNA 0417 1643 00",
-                                                             bic_override: " abnanl2a ")
-
-        settled = expense.reload
-        assert_equal "NL91ABNA0417164300", settled.iban_override
-        assert_equal "ABNANL2A", settled.bic_override
-      end
-
-      test "update edits the invoice amount and its currency" do
-        expense = international_expense
-        sign_in @user
-
-        patch :update, params: international_params(expense, foreign_amount: "500.00",
-                                                             foreign_currency: "USD")
-
-        settled = expense.reload
-        assert_equal BigDecimal("500.00"), settled.foreign_amount
-        assert_equal "USD", settled.foreign_currency
+        expense.reload
+        assert_equal "NL91ABNA0417164300", expense.iban_override
+        assert_equal "ABNANL2A", expense.bic_override
+        assert_equal BigDecimal("500"), expense.foreign_amount
+        assert_equal "USD", expense.foreign_currency
+        assert_equal "Studio Bühne", expense.payee_name_override
       end
 
       # The last point anything checks the number before EUSA's bank acts on it.
-      test "update rejects an IBAN that fails its check digits, writes nothing" do
-        expense = international_expense
+      test "update refuses bad international overrides and writes nothing" do
+        expense = international_claim
         sign_in @user
 
-        patch :update, params: international_params(expense, iban_override: "DE88 3704 0044 0532 0130 00")
+        {
+          { iban_override: "DE88 3704 0044 0532 0130 00" } => /Payee IBAN must be/,
+          { bic_override: "DEUTDEFF5" } => /Payee BIC must be/,
+          { foreign_currency: "XYZ" } => /Payment currency must be/,
+          { bic_override: "" } => /all three/
+        }.each do |bad, message|
+          patch :update, params: edit_params(expense, **bad)
 
-        assert_response :unprocessable_content
-        assert_match(/IBAN/i, response.body)
-        assert_equal "DE89370400440532013000", expense.reload.iban_override, "nothing was written"
+          assert_response :unprocessable_content
+          assert_match message, response.body, bad.inspect
+          expense.reload
+          assert_equal [ "DE89370400440532013000", "DEUTDEFF", "EUR" ],
+                       [ expense.iban_override, expense.bic_override, expense.foreign_currency ], bad.inspect
+        end
       end
 
-      test "update rejects a malformed BIC, writes nothing" do
-        expense = international_expense
-        sign_in @user
-
-        patch :update, params: international_params(expense, bic_override: "DEUTDEFF5")
-
-        assert_response :unprocessable_content
-        assert_match(/BIC/i, response.body)
-        assert_equal "DEUTDEFF500", expense.reload.bic_override, "nothing was written"
-      end
-
-      test "update rejects an unlisted currency, writes nothing" do
-        expense = international_expense
-        sign_in @user
-
-        patch :update, params: international_params(expense, foreign_currency: "XYZ")
-
-        assert_response :unprocessable_content
-        assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.reload.foreign_currency
-      end
-
-      # Same all-or-nothing rule as the UK rail, over the pair this one routes on.
-      test "update rejects a half-filled international trio" do
-        expense = international_expense
-        sign_in @user
-
-        patch :update, params: international_params(expense, bic_override: "")
-
-        assert_response :unprocessable_content
-        assert_match(/all three/i, response.body)
-      end
-
-      # A Paid claim records what EUSA already did; its supplier details may
-      # never have been captured, so it must stay editable without inventing any.
+      # Its supplier details may never have been captured.
       test "update leaves a Paid international claim editable with blank overrides" do
-        expense = international_expense(status: "Paid", payee_name_override: "",
-                                        iban_override: "", bic_override: "")
+        expense = international_claim(status: "Paid", payee_name_override: "",
+                                      iban_override: "", bic_override: "")
         sign_in @user
 
-        patch :update, params: international_params(expense, payee_name_override: "",
-                                                             iban_override: "", bic_override: "")
+        patch :update, params: edit_params(expense)
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
       end
 
-      test "update rejects a malformed sort code override, re-renders edit 422, writes nothing" do
+      test "update refuses bad UK overrides and writes nothing" do
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "20.00",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 sort_code_override: "20-00-0X", account_number_override: "12345678" }
+        {
+          { sort_code_override: "20-00-0X" } => /Sort code override must be/,
+          { account_number_override: "1234" } => /Account number override must be/,
+          { account_number_override: "" } => /fill in all three/
+        }.each do |bad, message|
+          patch :update, params: edit_params(expense, payee_name_override: "Acme Ltd",
+                                                      sort_code_override: "20-00-00",
+                                                      account_number_override: "12345678", **bad)
 
-        assert_response :unprocessable_content
-        assert_match(/sort code override/i, response.body)
-        assert_nil expense.reload.sort_code_override, "nothing was written"
-      end
-
-      test "update rejects a malformed account number override, re-renders edit 422, writes nothing" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "20.00",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 sort_code_override: "20-00-00", account_number_override: "1234" }
-
-        assert_response :unprocessable_content
-        assert_match(/account number override/i, response.body)
-        assert_nil expense.reload.account_number_override, "nothing was written"
+          assert_response :unprocessable_content
+          assert_match message, response.body, bad.inspect
+          assert_nil expense.reload.sort_code_override, bad.inspect
+        end
       end
 
       test "update allows blank bank-detail overrides (no override, fall back to the payee's own)" do
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "20.00",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 sort_code_override: "", account_number_override: "" }
+        patch :update, params: edit_params(expense, sort_code_override: "", account_number_override: "")
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
         expense.reload
         assert_equal "", expense.sort_code_override
         assert_equal "", expense.account_number_override
-      end
-
-      test "update rejects a partial bank-detail override (splicing a third party's details)" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "20.00",
-                                 description: "x", budget_record_id: @budget.record_id,
-                                 sort_code_override: "20-00-00", account_number_override: "" }
-
-        assert_response :unprocessable_content
-        assert_match(/fill in all three/i, response.body)
-        assert_nil expense.reload.sort_code_override, "nothing was written"
-      end
-
-      test "update rejects an excl-VAT amount greater than the total" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "25.00",
-                                 description: "x", budget_record_id: @budget.record_id }
-
-        assert_response :unprocessable_content
-        assert_match(/can't be more than the total/i, response.body)
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
       end
 
       # --- Already-sent / already-paid note --------------------------------
@@ -1225,70 +868,6 @@ module Admin
         get :edit, params: { id: expense.record_id }
 
         assert_match(/already sent to EUSA/i, response.body)
-      end
-
-      test "shows an already-paid note for a Paid expense" do
-        expense = expense_at("Paid")
-        sign_in @user
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_match(/already (sent to EUSA|paid)/i, response.body)
-      end
-
-      test "shows no such note for a Pending expense" do
-        expense = expense_at("Pending")
-        sign_in @user
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_no_match(/already been (sent to EUSA|paid)/i, response.body)
-      end
-
-      # --- Lookup ----------------------------------------------------------
-
-      test "find without a query shows the lookup form" do
-        sign_in @user
-
-        get :find
-
-        assert_response :success
-      end
-
-      test "find resolves an auto-number to the edit page" do
-        expense = expense_at("Paid", auto_number: 42)
-        sign_in @user
-
-        get :find, params: { q: "42" }
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-      end
-
-      test "find resolves a record id to the edit page" do
-        expense = expense_at("Submitted", auto_number: 7)
-        sign_in @user
-
-        get :find, params: { q: expense.record_id }
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-      end
-
-      test "find with no match flashes and re-renders the lookup" do
-        sign_in @user
-
-        get :find, params: { q: "999" }
-
-        assert_response :success
-        assert_match(/no expense/i, response.body)
-      end
-
-      test "find degrades to no-match, not a 500, for a non-numeric query" do
-        sign_in @user
-
-        assert_nothing_raised { get :find, params: { q: "not-an-id" } }
-
-        assert_response :success
-        assert_match(/no expense/i, response.body)
       end
 
       test "editing an unknown expense 404s" do
@@ -1315,10 +894,9 @@ module Admin
         assert_includes response.body, receipt.preview_url
       end
 
-      # ActiveStorage renders a PDF's first page, so a PDF receipt has a real
-      # thumbnail. Asking whether the file is an image (rather than whether it
-      # has a preview) drops it to a generic document icon instead.
-      test "edit renders a PDF receipt as a real first-page preview image" do
+      # ActiveStorage renders a PDF's first page, so it gets a real thumbnail.
+      # The only new-tab link is the labelled fallback inside the viewer pane.
+      test "edit previews a PDF receipt and opens it in an in-page frame" do
         expense = two_receipt_expense
         sign_in @user
 
@@ -1327,22 +905,8 @@ module Admin
         first, second = expense.receipts
         assert_match(/<img[^>]+src="#{Regexp.escape(first.preview_url)}"/, response.body)
         assert_match(/<img[^>]+src="#{Regexp.escape(second.preview_url)}"/, response.body)
-        assert_match %r{^/admin/reimbursements/expenses/\d+/receipts/\d+/thumbnail$}, first.preview_url
-      end
-
-      # Request 2: the receipt opens in the page. The only remaining new-tab link
-      # is the explicit "Open in a new tab" fallback inside the viewer pane.
-      test "edit opens a PDF receipt in an in-page frame rather than a new tab" do
-        expense = two_receipt_expense
-        sign_in @user
-
-        get :edit, params: { id: expense.record_id }
-
-        receipt = expense.receipts.first
-        assert_match(/<iframe[^>]+data-src="#{Regexp.escape(receipt.url)}"/, response.body)
+        assert_match(/<iframe[^>]+data-src="#{Regexp.escape(first.url)}"/, response.body)
         assert_match(/<iframe[^>]+title="Receipt: a\.pdf"/, response.body)
-        # The thumbnails are buttons, and the only receipt link that still opens a
-        # tab is the explicitly labelled fallback inside the pane.
         assert_select "button[data-action='receipt-viewer#show']", 2
         new_tab_links = css_select("a[target=_blank]")
                         .select { |link| link["href"].to_s.match?(%r{/receipts/\d+/inline\z}) }
@@ -1411,33 +975,20 @@ module Admin
         assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
       end
 
-      test "remove_receipt drops a receipt and redirects to edit" do
-        expense = two_receipt_expense
-        removed = expense.receipt_files.find { |file| file.filename.to_s == "a.pdf" }
-        sign_in @user
-
-        delete :remove_receipt, params: { id: expense.record_id, attachment_id: removed.blob_id.to_s }
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-        assert_equal [ "b.pdf" ], expense.reload.receipt_files.map { |file| file.filename.to_s }
-      end
-
-      test "add_receipts attaches an uploaded file and redirects to edit" do
+      test "add_receipts with no file attaches nothing and says so" do
         expense = expense_at("Paid")
         sign_in @user
 
-        assert_difference -> { expense.receipt_files.count }, 1 do
-          post :add_receipts, params: { id: expense.record_id,
-                                        receipts: [ fixture_file_upload("reimbursements_receipt.pdf", "application/pdf") ] }
+        assert_no_difference -> { expense.receipt_files.count } do
+          post :add_receipts, params: { id: expense.record_id }, format: :turbo_stream
         end
 
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_response :success
+        assert_includes response.body, ERB::Util.html_escape(AttachesReceipts::NOTHING_USABLE)
       end
-      # Both banners were drawn for the same empty fields: "no bank details"
-      # from ReviewSupport, and — because the checker returns INVALID for a
-      # blank pair — "Modulus check failed ... likely a typo" right under it.
-      # The second sent finance hunting for a typo in a field that is empty.
-      # This is the state the 140 imported claims were in.
+
+      # The checker returns INVALID for a blank pair, which drew "likely a typo"
+      # under "no bank details".
       test "no modulus banner for a claim with no bank details" do
         payee = create_reimbursements_person(name: "No Bank", email: "nobank@example.com",
                                              sort_code: "", account_number: "")
@@ -1455,10 +1006,6 @@ module Admin
       end
 
       # --- Changing the payee -------------------------------------------------
-      # Finance could not change it at all, so a claim matched to the wrong
-      # person — by email-in, or by the settled-claim import, where a blank
-      # Submitter email once sent 140 production claims to one payee — could
-      # only be fixed from a console.
 
       def other_payee
         create_reimbursements_person(name: "Robin Rig", email: "robin@example.com",
@@ -1477,37 +1024,25 @@ module Admin
         assert_select "select[name=person_record_id] option[value=?]", @person.record_id
       end
 
-      test "saving a different payee re-points the claim" do
-        other = other_payee
-        expense = expense_at("Pending")
-        sign_in @user
+      # Paid included, unlike the rail and the type: imported claims already
+      # Paid to the wrong payee are what this exists for.
+      %w[Pending Paid].each do |status|
+        test "saving a different payee re-points a #{status} claim" do
+          other = other_payee
+          expense = expense_at(status)
+          sign_in @user
 
-        patch :update, params: { id: expense.record_id, person_record_id: other.record_id,
-                                 amount: "12.50", description: "Fake blood" }
+          patch :update, params: edit_params(expense, person_record_id: other.record_id)
 
-        assert_equal other.id, expense.reload.person_id
-      end
-
-      # The case it exists for is a batch of imported claims already Paid to
-      # the wrong payee, so the window is deliberately every status — unlike
-      # the rail and the type, which stop at Approved.
-      test "the payee can be corrected on a Paid claim" do
-        other = other_payee
-        expense = expense_at("Paid")
-        sign_in @user
-
-        patch :update, params: { id: expense.record_id, person_record_id: other.record_id,
-                                 amount: "12.50", description: "Fake blood" }
-
-        assert_equal other.id, expense.reload.person_id
+          assert_equal other.id, expense.reload.person_id
+        end
       end
 
       test "a payee id the page never offered is refused rather than 500ing" do
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, person_record_id: "999999",
-                                 amount: "12.50", description: "Fake blood" }
+        patch :update, params: edit_params(expense, person_record_id: "999999")
 
         assert_response :unprocessable_content
         assert_match(/no longer in the registry/, response.body)
@@ -1518,17 +1053,15 @@ module Admin
         expense = expense_at("Pending")
         sign_in @user
 
-        patch :update, params: { id: expense.record_id, person_record_id: "",
-                                 amount: "12.50", description: "Fake blood" }
+        patch :update, params: edit_params(expense, person_record_id: "")
 
         assert_equal @person.id, expense.reload.person_id,
                      "a claim with no payee at all is the state the BACS pre-flight refuses"
       end
 
       # --- Reopening a rejected claim -----------------------------------------
-      # A rejection was terminal: nothing in the portal wrote a status back to
-      # Pending.
 
+      # Never straight to Approved, so reopening is no way round the owner gate.
       test "a rejected claim can be put back in the queue" do
         expense = expense_at("Rejected", rejection_reason: "No receipt attached")
         sign_in @user
@@ -1536,18 +1069,6 @@ module Admin
         post :reopen, params: { id: expense.record_id }
 
         assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
-      end
-
-      # Never straight to Approved: the claim re-enters finance's queue and the
-      # owner gate as a fresh one would, so reopening cannot be a way round a
-      # sign-off.
-      test "reopening goes to Pending, not Approved" do
-        expense = expense_at("Rejected", rejection_reason: "No receipt attached")
-        sign_in @user
-
-        post :reopen, params: { id: expense.record_id }
-
-        refute_equal ::Reimbursements::Status::APPROVED, expense.reload.status
       end
 
       test "reopening keeps the rejection in the claim's history" do

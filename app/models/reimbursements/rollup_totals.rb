@@ -1,15 +1,8 @@
 module Reimbursements
   ##
-  # The arithmetic the budget overview's two rollups share: each column is the
-  # sum of a group of budgets, with a budget's nil figure counting as zero so a
-  # partly-planned group still totals cleanly.
-  #
-  # The two groupings are different axes over the SAME budgets — EUSA's nominal
-  # code and Bedlam's areas — so the columns have to be summed identically or
-  # the two cards on one page would disagree about the same money.
-  #
-  # An includer supplies +budgets+, +budget_type+ and a private #with_budgets
-  # building a sibling rollup for one type.
+  # The sums the overview's nominal-code and area rollups share, so the two
+  # cards cannot disagree about the same money. A nil figure counts as zero.
+  # An includer supplies +budgets+, +budget_type+ and a private #with_budgets.
   module RollupTotals
     def initial     = sum_of(&:initial_budget)
     def projected   = sum_of(&:projected_amount)
@@ -18,24 +11,16 @@ module Reimbursements
     def paid_portal = sum_of(&:paid_portal_amount)
     def eusa_actual = sum_of(&:eusa_actual_amount)
 
-    # The two health columns, summed like every other one — a line answering
-    # nil (nobody set a figure; an income line with no forecast) counting as
-    # zero, so a partly-planned group still totals rather than going blank.
     def remaining = sum_of(&:remaining)
     def variance  = sum_of(&:variance)
 
-    # Blank for an income subtotal, mirroring Budget#expected_outturn: "the
-    # greater of the projection and what's already been spent" is a worst-case
-    # cost, and the same max over income lines reads as best-case income — the
-    # opposite direction from what the column's tooltip promises.
+    # Blank for an income subtotal, as Budget#expected_outturn is.
     def expected = income? ? nil : sum_of(&:expected_outturn)
 
     def income? = budget_type == "Income"
 
-    # This group split into one subtotal per budget type present, in
-    # Budget::TYPES order. A type with no budgets in the group is omitted rather
-    # than shown as a row of zeroes. Expense and Income are never added
-    # together: £10k of spend plus £8k of income is not £18k of anything.
+    # One subtotal per type present, in Budget::TYPES order. Expense and
+    # Income are never added together.
     def by_type
       Budget::TYPES.filter_map do |type|
         of_type = budgets.select { |budget| budget.budget_type == type }
@@ -43,9 +28,7 @@ module Reimbursements
       end
     end
 
-    # The group's budgets in the order the rows are LABELLED (see
-    # Budget#display_name). Inside one area's group the bare and qualified
-    # orders agree, every row there sharing the area.
+    # Ordered by the label the rows print (Budget#display_name).
     def rows = budgets.sort_by { |budget| budget.display_name.to_s.downcase }
 
     private

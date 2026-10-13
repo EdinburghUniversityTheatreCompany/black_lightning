@@ -5,8 +5,6 @@ module Reimbursements
   class ActualsAttributionTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
-
     setup do
       @fringe = reimbursements_cost_centres(:fringe)
       @termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
@@ -21,7 +19,7 @@ module Reimbursements
 
     def parse(*cost_centres)
       Reconciliation.parse_actuals_rows(
-        ([ HEADER ] + cost_centres.each_with_index.map { |cc, i| row_text(cc, narrative: "Row #{i}") })
+        ([ ACTUALS_HEADER ] + cost_centres.each_with_index.map { |cc, i| row_text(cc, narrative: "Row #{i}") })
           .join("\n")
       )
     end
@@ -35,8 +33,7 @@ module Reimbursements
       result = attribute(parse("F40", "BED", "F40"))
 
       assert_equal [ @fringe, @termtime, @fringe ], result.attributed.map(&:cost_centre)
-      assert_equal [ "Row 0", "Row 1", "Row 2" ], result.rows.map(&:narrative)
-      assert_empty result.dropped_rows
+      assert_equal [ "Row 0", "Row 1", "Row 2" ], result.attributed.map { |entry| entry.row.narrative }
     end
 
     test "matching a code is case- and whitespace-insensitive" do
@@ -54,9 +51,8 @@ module Reimbursements
                    "the preview has to say WHICH codes were dropped, not just how many rows"
     end
 
-    # Even with a single cost centre configured, a blank code is never inferred.
-    # "It must be the only one" is exactly the guess that files real spend under
-    # the wrong pot the day a second pot exists.
+    # A blank code is never inferred, even with one centre: "it must be the only one" files spend
+    # under the wrong pot the day a second exists.
     test "blank-code rows are held back until the operator chooses, even with one centre" do
       single = ActualsAttribution.new(cost_centres: [ @fringe ])
       result = single.call(parse("F40", ""), blank_choice: nil)
@@ -74,9 +70,8 @@ module Reimbursements
       refute_predicate result, :blank_choice_required?
     end
 
-    # "Not ours" is a real answer to a mandatory question — without it an
-    # operator facing another society's blank rows has no honest way past the
-    # gate except to park them under whichever centre is nearest to hand.
+    # "Not ours" is a real answer to the mandatory question; without it the operator must park
+    # another society's rows under the nearest centre.
     test "the skip choice drops the blank rows without blocking the rest" do
       result = attribute(parse("F40", ""), blank_choice: ActualsAttribution::SKIP)
 
@@ -90,19 +85,6 @@ module Reimbursements
 
       assert_empty result.attributed
       assert result.blank_choice_required?, "a bogus id must not silently import the rows anywhere"
-    end
-
-    test "cost_centre_keys identify the attributed centre, not the exported code" do
-      result = attribute(parse("F40", ""), blank_choice: @fringe.id.to_s)
-
-      assert_equal [ @fringe.id.to_s, @fringe.id.to_s ], result.cost_centre_keys,
-                   "an assigned blank row is in the pot the operator chose, not in 'blank'"
-    end
-
-    test "dropped_rows collects every row the paste will not import" do
-      result = attribute(parse("F40", "G12", ""), blank_choice: nil)
-
-      assert_equal 2, result.dropped_rows.size
     end
   end
 end

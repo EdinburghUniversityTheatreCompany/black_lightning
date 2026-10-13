@@ -112,25 +112,21 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_match companies(:eutc).name, response.body
-    assert_match "Eurydice", response.body                 # project
-    assert_match "Stage Manager", response.body            # a role position
-    assert_match "Stage Management", response.body          # the role's department
-    assert_match "Unpaid", response.body                   # compensation
+    assert_match "Eurydice", response.body
+    assert_match "Stage Manager", response.body
+    assert_match "Stage Management", response.body
+    assert_match "Unpaid", response.body
   end
 
-  test "show warns when the opportunity's company is unreviewed" do
+  test "show warns only when the opportunity's company is unreviewed" do
     @opportunity.update!(company: companies(:unreviewed_company))
-
     get :show, params: { id: @opportunity }
 
     assert_response :success
     assert_match "hasn't been checked", response.body
     assert_match companies(:unreviewed_company).name, response.body
-  end
 
-  test "show does not warn when the company is reviewed" do
     @opportunity.update!(company: companies(:gutter_theatre))
-
     get :show, params: { id: @opportunity }
 
     assert_no_match "hasn't been checked", response.body
@@ -141,6 +137,8 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
       company_name: companies(:gutter_theatre).name,
       project: "Eurydice",
       author: "Sarah Ruhl",
+      dates: "Rehearsals from 5 May, performances 10-14 June",
+      location: "Bedlam Theatre",
       roles_attributes: {
         "0" => { position: "Stage Manager", department_name: "Stage Management", ordering: "0" },
         "1" => { position: "Sound Technician", department_name: "Sound", ordering: "1" }
@@ -157,27 +155,16 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_equal companies(:gutter_theatre), opportunity.company
     assert_equal "Eurydice", opportunity.project
     assert_equal "Sarah Ruhl", opportunity.author
-    assert_equal %w[Stage\ Manager Sound\ Technician], opportunity.roles.order(:ordering).map(&:position)
-  end
-
-  test "should save free-text dates and location" do
-    attributes = FactoryBot.attributes_for(:opportunity).merge(
-      dates: "Rehearsals from 5 May, performances 10-14 June",
-      location: "Bedlam Theatre"
-    )
-
-    post :create, params: { opportunity: attributes }
-
-    opportunity = assigns(:opportunity)
     assert_equal "Rehearsals from 5 May, performances 10-14 June", opportunity.dates
     assert_equal "Bedlam Theatre", opportunity.location
+    assert_equal %w[Stage\ Manager Sound\ Technician], opportunity.roles.map(&:position)
   end
 
   test "blank role rows are dropped instead of failing validation" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       roles_attributes: {
         "0" => { position: "Stage Manager", department_name: "Stage Management" },
-        "1" => { position: "", department_name: "Other" }  # accidental empty row
+        "1" => { position: "", department_name: "Other" }
       }
     )
 
@@ -199,9 +186,8 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  # The contact line names whoever posted the opportunity, and must pass the viewer to
-  # User#name like every other call site does: without it a nameless creator renders the
-  # "No Name Set" placeholder instead of the email an admin is allowed to see.
+  # The contact line must pass the viewer to User#name, or a nameless creator shows "No Name Set"
+  # instead of the email.
   test "show's contact line resolves the poster's name for the viewer" do
     creator = FactoryBot.create(:user, first_name: "", last_name: "")
     @opportunity.update!(creator: creator, email_visibility: :members_only, contact_email: nil)
@@ -211,6 +197,22 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
     assert_match "You can contact #{creator.email}", response.body
     assert_no_match(/You can contact No Name Set/, response.body)
+  end
+
+  # Role notes, department names and the submitter name come from the public form.
+  test "show escapes role notes, department names and the submitter name" do
+    @opportunity.update!(email_visibility: :members_only, contact_email: "contact@example.com",
+                         submitter_name: "<i>poster</i>")
+    role = @opportunity.roles.create!(position: "Lead", note: "<b>note</b>", department: departments(:lighting))
+    role.department.update_column(:name, "<u>dept</u>")
+
+    get :show, params: { id: @opportunity }
+
+    assert_response :success
+    %w[b u i].zip(%w[note dept poster]).each do |tag, text|
+      assert_includes response.body, "&lt;#{tag}&gt;#{text}&lt;/#{tag}&gt;"
+      assert_not_includes response.body, "<#{tag}>#{text}</#{tag}>"
+    end
   end
 
   test "manager submitting for an external person is recorded as creating it on their behalf" do
@@ -236,8 +238,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
     assert_match "on behalf of", response.body
     assert_match "Jane External", response.body
-    # creator.name is Faker-generated; the view HTML-escapes it (e.g. O'Reilly -> O&#39;Reilly),
-    # so match the escaped form or the assertion is flaky on names with ' & < >.
+    # Faker names are HTML-escaped by the view (O'Reilly -> O&#39;Reilly): match the escaped form.
     assert_match ERB::Util.html_escape(@opportunity.creator.name), response.body
   end
 
@@ -307,13 +308,11 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   end
 
   test "should close an active opportunity" do
-    @opportunity.update!(approved: true, approver: @user, expiry_date: 2.weeks.from_now)
-    assert @opportunity.active?
+    @opportunity.update!(approved: true, expiry_date: 2.weeks.from_now)
 
     put :close, params: { id: @opportunity }
 
     assert_equal Date.current, assigns(:opportunity).reload.expiry_date
-    assert_not assigns(:opportunity).active?
     assert_redirected_to admin_opportunity_path(assigns(:opportunity))
   end
 

@@ -1,9 +1,8 @@
 module Admin
   module Climate
     ##
-    # The crypt climate monitor, part of the members' backend. Viewing needs the
-    # grid permission "View the climate monitor" (`:read, :climate`) on top of
-    # backend access; configuring sensors needs `:manage, :climate`.
+    # Base for the crypt climate monitor: `:read, :climate` to view, `:manage,
+    # :climate` to configure sensors.
     class BaseController < AdminController
       before_action :authorize_climate_read!
 

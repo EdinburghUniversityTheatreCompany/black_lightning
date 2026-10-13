@@ -1,18 +1,10 @@
-<% show_remove = current_user.can?(:remove_user, @role) %>
-<% remove_url_lambda = ->(user_id) { remove_user_admin_role_path(@role, user_id) } %>
-
-<%= turbo_stream.replace dom_id(@role, :users) do %>
-  <div id="<%= dom_id(@role, :users) %>">
-    <%= render(UsersTableComponent.new(users: @users, url: admin_role_url(@role), q: @q,
-      show_remove_buttons: show_remove, remove_url_helper: remove_url_lambda)) %>
-  </div>
-<% end %>
+<%= turbo_stream.replace dom_id(@role, :users), partial: "admin/roles/users_table" %>
 
 <% if flash[:success].present? %>
-  <turbo-stream action="toast" type="success" message="<%= j flash[:success].first %>"></turbo-stream>
+  <turbo-stream action="toast" type="success" message="<%= flash[:success].first %>"></turbo-stream>
   <% flash.discard(:success) %><%# herb:disable erb-no-unused-expressions %>
 <% end %>
 <% if flash[:error].present? %>
-  <turbo-stream action="toast" type="error" message="<%= j flash[:error].first %>"></turbo-stream>
+  <turbo-stream action="toast" type="error" message="<%= flash[:error].first %>"></turbo-stream>
   <% flash.discard(:error) %><%# herb:disable erb-no-unused-expressions %>
 <% end %>

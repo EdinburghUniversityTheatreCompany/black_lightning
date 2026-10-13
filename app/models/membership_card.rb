@@ -14,7 +14,6 @@
 #  index_membership_cards_on_user_id  (user_id)
 #
 class MembershipCard < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :card_number, length: { maximum: 255 }
   before_create :set_card_number
 

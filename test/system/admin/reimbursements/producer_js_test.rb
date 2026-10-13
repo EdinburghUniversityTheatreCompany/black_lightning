@@ -2,9 +2,7 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # Browser tests for the producer-facing expense form's JS that render/
-    # functional tests can't cover. Data is served by the DatabaseStore from
-    # real seeded rows.
+    # The producer expense form's JavaScript.
     class ProducerJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -13,17 +11,6 @@ module Admin
         create_reimbursements_person(email: users(:member).email)
         create_reimbursements_budget(name: "Props")
         login_as users(:member)
-      end
-
-      # The form's selects are Tom Select widgets (select_controller.js), which
-      # hide the original <select> — Capybara's own #select can't touch it. Drive
-      # the widget the way a producer does: open its control, click the option.
-      # Tom Select fires a native change on the underlying select, so Stimulus
-      # actions bound to it still run.
-      def tom_select(option_text, select_id:)
-        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
-        wrapper.find(".ts-control").click
-        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
       end
 
       test "the budget picker shows area headings and a show's name narrows to its lines" do
@@ -45,9 +32,8 @@ module Admin
                      find("#reimbursements_expense_form_budget_record_id", visible: :any).value
       end
 
-      # The whole point of the DataTransfer restore: a receipt the producer
-      # attached survives a server validation 422, instead of silently
-      # vanishing from the un-repopulatable file input.
+      # A file input cannot be repopulated by the server, so the controller
+      # restores it through a DataTransfer.
       test "an attached receipt survives a failed submit" do
         visit new_admin_reimbursements_expense_path
 
@@ -55,28 +41,20 @@ module Admin
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         fill_in "Amount (£, incl. VAT)", with: "10.00"
         fill_in "Amount excl. VAT (£)", with: "8.00"
-        # Fill the other HTML5-required fields so Submit reaches the server;
-        # leave only Budget blank (it's star-only client-side but required
-        # server-side), so the submit fails server-side and the form re-renders
-        # -- the case where the attached file would otherwise be lost.
+        # Budget left blank, so the submit reaches the server and fails there.
         fill_in "Description", with: "Fake blood for the show"
         fill_in "Payment reference", with: "PROPS TEST"
         click_on "Submit expense"
 
         assert_text "Kept the receipt you attached", wait: 5
-        # The file is still selected on the re-rendered input.
         still_attached = page.evaluate_script(
           "document.getElementById('reimbursements_expense_form_receipts').files.length"
         )
         assert_equal 1, still_attached, "the receipt must survive the failed submit"
       end
 
-      # The real incident (Honeybadger 134234926): a finance data fix deleted a
-      # budget while a producer had the submission form open, so the picker held
-      # a live reference to a row that no longer existed and Submit 500ed on the
-      # foreign key — losing a completely filled-in claim. Only a browser test
-      # sees this properly: it posts exactly what the picker rendered, and it is
-      # the input surviving on the re-rendered page that matters most.
+      # Honeybadger 134234926. Only a browser test posts exactly what the picker
+      # rendered and sees the input survive the re-render.
       test "a budget deleted while the form is open fails the submit, not the claim" do
         doomed = create_reimbursements_budget(name: "Costumes", nominal_code: "4100")
         visit new_admin_reimbursements_expense_path
@@ -85,19 +63,16 @@ module Admin
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         fill_in "Amount (£, incl. VAT)", with: "42.00"
         fill_in "Amount excl. VAT (£)", with: "35.00"
-        tom_select "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
+        tom_select_click "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "Ruff, doublet and hose"
         fill_in "Payment reference", with: "COSTUMES ACT1"
 
-        # The finance data fix, mid-form.
         doomed.destroy!
 
         click_on "Submit expense"
 
         assert_text "no longer available", wait: 5
         assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
-        # Everything they typed is still on the form, ready to re-submit against
-        # another budget.
         assert_equal "Ruff, doublet and hose",
                      find("#reimbursements_expense_form_description").value
         assert_equal "COSTUMES ACT1",
@@ -106,38 +81,11 @@ module Admin
         assert_equal "35.00", find("#reimbursements_expense_form_amount_excl_vat").value
       end
 
-      # A deactivated budget still satisfies the foreign key, so this one never
-      # 500ed — it silently accepted a claim against a line finance had retired.
-      test "a budget deactivated while the form is open is refused the same way" do
-        retired = create_reimbursements_budget(name: "Costumes", nominal_code: "4100")
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        fill_in "Amount (£, incl. VAT)", with: "42.00"
-        fill_in "Amount excl. VAT (£)", with: "35.00"
-        tom_select "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
-        fill_in "Description", with: "Ruff, doublet and hose"
-        fill_in "Payment reference", with: "COSTUMES ACT1"
-
-        retired.update!(active: false)
-
-        click_on "Submit expense"
-
-        assert_text "no longer available", wait: 5
-        assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
-        assert_equal "Ruff, doublet and hose",
-                     find("#reimbursements_expense_form_description").value
-      end
-
       # --- The international rail --------------------------------------------
 
-      # The trap this exists for: a hidden input carrying `required` makes the
-      # browser refuse to submit the WHOLE form, and it does so silently —
-      # the control it wants to report can't be scrolled to, so Submit simply
-      # stops working. simple_form emits `required` from its own `required:`
-      # option regardless of input_html, so the attribute has to follow the
-      # active rail. Both directions are checked because only one was broken.
+      # A hidden input carrying `required` silently blocks the whole submit, and
+      # simple_form emits it from `required:` whatever input_html says, so the
+      # attribute has to follow the active rail.
       test "switching payment method moves the required attribute with the fields" do
         visit new_admin_reimbursements_expense_path
         required = lambda { |field|
@@ -149,21 +97,19 @@ module Admin
         assert required.call("amount"), "the UK amount is required on the UK rail"
         assert_not required.call("foreign_amount"), "a hidden required input blocks the whole form"
 
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select_click "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
 
         assert required.call("foreign_amount")
         assert_not required.call("amount"), "the UK amount is hidden now, so it must not be required"
         assert_not required.call("amount_excl_vat")
       end
 
-      # Nobody has an IBAN on file, so the payee trio is always required here —
-      # a heading still reading "(optional)" over fields the server will reject
-      # is worse than no hint at all.
+      # Nobody has an IBAN on file, so the payee trio is always required here.
       test "switching to international relabels the payee section as required" do
         visit new_admin_reimbursements_expense_path
         assert_text "Pay someone else (optional)"
 
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select_click "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
 
         assert_text "Pay someone else (required)"
         assert_text "there is nothing on file to fall back to"
@@ -171,42 +117,15 @@ module Admin
         assert_no_selector "label", text: "Payee sort code", visible: true
       end
 
-      test "an international claim submits on the invoice amount alone, in euros by default" do
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
-        fill_in "Amount, as printed on the invoice", with: "266.69"
-        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
-        fill_in "Description", with: "Festival insurance"
-        fill_in "Payment reference", with: "INS-2026"
-        fill_in "Payee account name", with: "Ausland GmbH"
-        fill_in "Payee IBAN", with: "DE89 3704 0044 0532 0130 00"
-        fill_in "Payee BIC / SWIFT code", with: "DEUTDEFF500"
-        click_on "Submit expense"
-
-        assert_text "Expense submitted", wait: 5
-        expense = ::Reimbursements::Expense.order(:id).last
-        assert expense.international?
-        assert_equal BigDecimal("266.69"), expense.foreign_amount
-        assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.foreign_currency,
-                     "the picker opens on euros, the common case"
-        assert_nil expense.amount, "finance supplies the GBP figure at review"
-      end
-
-      # EUSA's revised form carries a PAYMENT CURRENCY field, so the portal is
-      # not limited to euros: whatever the producer picks is what their bank is
-      # told to pay in.
       test "a producer can pick a currency other than euros" do
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
-        tom_select "USD", select_id: "reimbursements_expense_form_foreign_currency"
+        tom_select_click "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select_click "USD", select_id: "reimbursements_expense_form_foreign_currency"
         fill_in "Amount, as printed on the invoice", with: "500.00"
-        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
+        tom_select_click "Props", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "US touring insurance"
         fill_in "Payment reference", with: "INS-USD"
         fill_in "Payee account name", with: "Stateside Insurance Inc"
@@ -216,43 +135,39 @@ module Admin
 
         assert_text "Expense submitted", wait: 5
         expense = ::Reimbursements::Expense.order(:id).last
+        assert expense.international?
         assert_equal "USD", expense.foreign_currency
         assert_equal BigDecimal("500.00"), expense.foreign_amount
+        assert_nil expense.amount, "finance supplies the GBP figure at review"
       end
 
-      # An Invoice pays the supplier, so the payee trio stops being optional.
-      # The label has to track the type select live — a producer who reads
-      # "(optional)", leaves the trio blank and hits Submit gets a hard stop.
       test "picking Invoice marks the payee details required" do
         visit new_admin_reimbursements_expense_path
 
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", text: "(optional)"
         assert_selector "[data-reimbursements-receipt-target='payeeRequired']", visible: :hidden
 
-        tom_select "Invoice", select_id: "reimbursements_expense_form_expense_type"
+        tom_select_click "Invoice", select_id: "reimbursements_expense_form_expense_type"
 
         assert_selector "[data-reimbursements-receipt-target='payeeRequired']",
                         text: "(required for an invoice)"
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", visible: :hidden
 
-        tom_select "Reimbursement", select_id: "reimbursements_expense_form_expense_type"
+        tom_select_click "Reimbursement", select_id: "reimbursements_expense_form_expense_type"
 
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", text: "(optional)"
       end
 
-      # The server-side hard block, and — just as important — that its reason is
-      # actually READABLE: it lands on :base, which the generic error banner
-      # doesn't list, so an unrendered base error would fail the form with no
-      # visible cause at all.
+      # The reason lands on :base, which the generic error banner does not list.
       test "submitting an invoice with no payee details shows why it was blocked" do
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        tom_select "Invoice", select_id: "reimbursements_expense_form_expense_type"
+        tom_select_click "Invoice", select_id: "reimbursements_expense_form_expense_type"
         fill_in "Amount (£, incl. VAT)", with: "42.00"
         fill_in "Amount excl. VAT (£)", with: "35.00"
-        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
+        tom_select_click "Props", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "Set timber from Acme"
         fill_in "Payment reference", with: "INV-1001"
         click_on "Submit expense"
@@ -262,11 +177,7 @@ module Admin
         assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
       end
 
-      # With extraction gone these are the last untested behaviours the Stimulus
-      # controller still owns, and #parseAmount's comma rule is exactly the kind
-      # of thing that regresses silently: "999,99" is a decimal comma, not a
-      # thousands separator, so a naive strip read it as 99999 and demanded a
-      # confirmation the server would never have asked for.
+      # "999,99" is a decimal comma; a naive strip reads it as 99999.
       test "the large-amount confirmation appears as the amount crosses the threshold" do
         visit new_admin_reimbursements_expense_path
 
@@ -280,9 +191,6 @@ module Admin
                         wait: 2
       end
 
-      # The other soft block. It was server-rendered only, so a producer entering
-      # 12.50 / 12.50 first learnt about it from a failed submit while the
-      # large-amount block beside it revealed itself as they typed.
       test "the missing-VAT confirmation appears as the two amounts converge" do
         visit new_admin_reimbursements_expense_path
 

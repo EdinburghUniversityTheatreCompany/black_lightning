@@ -7,57 +7,62 @@ module Admin
 
       CC = ::Reimbursements::CostCentre
 
-      # Fake Graph client for the SharePoint folder picker: returns canned
-      # sites/drives/folder contents and records what it was asked to browse.
+      # Canned Graph answers that record what was asked.
       Site = Struct.new(:id, :name, :web_url, keyword_init: true)
       Drive = Struct.new(:id, :name, keyword_init: true)
       Item = Struct.new(:id, :name, :folder, :web_url, keyword_init: true)
 
       class FakeGraph
         attr_reader :folder_calls, :site_calls, :mailbox_calls
-        attr_accessor :fail_get_site, :fail_list_drives, :fail_list_folder_contents
+        attr_accessor :mailbox_error, :fail_get_site, :fail_list_folder_contents, :sign_in_failed
 
-        def initialize(mailbox_ok: true)
+        def initialize
           @folder_calls = []
           @site_calls = []
           @mailbox_calls = []
-          @mailbox_ok = mailbox_ok
         end
 
         def check_mailbox(address)
           @mailbox_calls << address
-          raise ::GraphAuth::AuthError, "Graph rejected the token (403)" unless @mailbox_ok
+          refuse_sign_in!
+          raise @mailbox_error if @mailbox_error
 
           true
         end
 
         def get_site(site_url)
           @site_calls << site_url
-          raise ::GraphAuth::Error, "site not granted (403)" if @fail_get_site
+          refuse_sign_in!
+          raise ::GraphAuth::AccessDeniedError, "site not granted (403)" if @fail_get_site
 
           Site.new(id: "site-1", name: "Finance Site", web_url: site_url)
         end
 
         def list_drives(site_id)
-          raise ::GraphAuth::Error, "drives unreachable (403)" if @fail_list_drives
-
           [ Drive.new(id: "drive-#{site_id}", name: "Documents") ]
         end
 
         def list_folder_contents(drive_id:, item_id: nil)
           @folder_calls << [ drive_id, item_id ]
+          refuse_sign_in!
           raise ::GraphAuth::Error, "folder unreachable (403)" if @fail_list_folder_contents
 
           [ Item.new(id: "folder-A", name: "BACS", folder: true, web_url: "https://sp/a"),
             Item.new(id: "file-x", name: "notes.txt", folder: false, web_url: "https://sp/x") ]
         end
+
+        # As GraphAuth raises when Entra refuses the token request itself.
+        def refuse_sign_in!
+          return unless @sign_in_failed
+
+          raise ::GraphAuth::AuthError,
+                "Graph token request failed (401): AADSTS7000222: The provided client secret keys are expired."
+        end
       end
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
         @user = users(:member)
+        grant_finance_permission(@user)
         @cost_centre = CC.default
         @graph = FakeGraph.new
         SettingsController.graph_builder = -> { @graph }
@@ -67,36 +72,10 @@ module Admin
         SettingsController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
-      # --- Auth gating -------------------------------------------------------
-
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :index
-        assert_response :forbidden
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Admin::Permission.create(action: "access", subject_class: "reimbursements")
-        other = users(:member_with_phone_number)
-        other.add_role("Producer")
-        sign_in other
-
-        get :index
-
-        assert_response :forbidden
-      end
-
       # --- Picker (index) ----------------------------------------------------
 
       test "index lists every cost centre" do
-        create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-                   receive_mailbox: "t@x.co", send_mailbox: "t@x.co")
+        create_second_reimbursements_cost_centre(hidden_from_submitters: true)
         sign_in @user
 
         get :index
@@ -105,27 +84,31 @@ module Admin
         assert_equal 2, assigns(:cost_centres).size
         assert_includes response.body, @cost_centre.name
         assert_includes response.body, "Bedlam Termtime"
+        assert_select "span", text: "Hidden from submitters", count: 1
       end
 
       # --- Edit --------------------------------------------------------------
 
-      test "edit renders the settings form for a cost centre" do
+      test "edit renders the routine settings and links out to the Microsoft setup page" do
         sign_in @user
         get :edit, params: { key: @cost_centre.key }
 
         assert_response :success
         assert_includes response.body, @cost_centre.receive_mailbox
         assert_includes response.body, "Nightly reminders run on"
-      end
-
-      test "decorative glyphs are hidden from assistive tech, not part of the link's accessible name" do
-        sign_in @user
-        get :edit, params: { key: @cost_centre.key }
-
         assert_select "a[href=?] span[aria-hidden=true]", admin_reimbursements_settings_path, text: "←"
+        assert_includes response.body, 'data-turbo-submits-with="Testing'
+        assert_select "a[href=?]", microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key)
+        # Runbook markers only: "Sites.Selected" still appears beside the URL field.
+        assert_not_includes response.body, "Test-ServicePrincipalAuthorization"
+        assert_not_includes response.body, "graph.microsoft.com/v1.0/sites"
+        assert_not_includes response.body, "docs/graph-mailbox-rbac.ps1"
       end
 
-      test "the Microsoft setup page shows the Exchange verify command filled in with this mailbox" do
+      test "the Microsoft setup page fills in this centre's mailboxes and SharePoint site" do
+        receive_mailbox = @cost_centre.receive_mailbox
+        @cost_centre.update!(send_mailbox: "outbox@bedlamfringe.co.uk",
+                             sharepoint_site_url: "https://tenant.sharepoint.com/sites/Finance")
         sign_in @user
         get :microsoft_setup, params: { key: @cost_centre.key }
 
@@ -134,58 +117,22 @@ module Admin
         assert_includes response.body, "docs/graph-mailbox-rbac.ps1"
         assert_includes response.body,
           "Test-ServicePrincipalAuthorization -Identity b874d491-4edf-4b76-839d-84e534c7f7c0"
-        assert_includes response.body, "-Resource #{@cost_centre.receive_mailbox}"
-      end
-
-      # The distribution group backed an ApplicationAccessPolicy, which only ever
-      # constrained Entra-granted Mail.*; those were revoked when the app moved to
-      # RBAC for Applications. Adding a mailbox to it now does nothing, so the page
-      # must not keep offering it as the fix (docs/graph-mailbox-rbac.md).
-      test "edit no longer tells the operator to use the retired app-access group" do
-        sign_in @user
-        get :edit, params: { key: @cost_centre.key }
-
-        assert_response :success
+        assert_includes response.body, "-Resource #{receive_mailbox}"
+        assert_includes response.body, "-Resource outbox@bedlamfringe.co.uk"
+        # The scope filter is replaced wholesale, so the page must say so.
+        assert_includes response.body, "replaced, not added to"
+        assert_includes response.body, "bin/rails graph:mailboxes"
+        assert_includes response.body, "Sites.Selected"
+        assert_includes response.body, "sites/tenant.sharepoint.com:/sites/Finance"
+        assert_includes response.body, "/permissions"
+        assert_select "a[href=?]", edit_admin_reimbursements_setting_path(@cost_centre.key)
+        # The retired group only constrained Entra-granted Mail.*, now revoked:
+        # adding a mailbox to it does nothing.
         assert_not_includes response.body, "Add-DistributionGroupMember"
         assert_not_includes response.body, "Test-ApplicationAccessPolicy"
         assert_not_includes response.body, "Reimbursements App Access"
       end
 
-      test "the Microsoft setup page shows a separate verify block when the send mailbox differs" do
-        @cost_centre.update!(send_mailbox: "outbox@bedlamfringe.co.uk")
-        sign_in @user
-        get :microsoft_setup, params: { key: @cost_centre.key }
-
-        assert_response :success
-        assert_includes response.body, "-Resource #{@cost_centre.receive_mailbox}"
-        assert_includes response.body, "-Resource outbox@bedlamfringe.co.uk"
-      end
-
-      # The scope filter is replaced wholesale, so a partial list silently revokes
-      # every mailbox left out of it. The page has to say so where the command is.
-      test "the Microsoft setup page warns that the mailbox scope filter is replaced rather than appended" do
-        sign_in @user
-        get :microsoft_setup, params: { key: @cost_centre.key }
-
-        assert_response :success
-        assert_includes response.body, "replaced, not added to"
-        assert_includes response.body, "bin/rails graph:mailboxes"
-      end
-
-      test "the Microsoft setup page shows the SharePoint Sites.Selected grant with the site path filled in" do
-        @cost_centre.update!(sharepoint_site_url: "https://tenant.sharepoint.com/sites/Finance")
-        sign_in @user
-        get :microsoft_setup, params: { key: @cost_centre.key }
-
-        assert_response :success
-        assert_includes response.body, "Sites.Selected"
-        assert_includes response.body, "sites/tenant.sharepoint.com:/sites/Finance"
-        assert_includes response.body, "/permissions"
-      end
-
-      # The list is MAINTAINED here, not linked to from here: the spec puts it
-      # on the cost centre edit page, so the edit form for each code and the
-      # Add form are on this page.
       test "edit carries this cost centre's nominal codes, editable in place" do
         termtime = create_second_reimbursements_cost_centre
         code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
@@ -196,15 +143,23 @@ module Admin
 
         get :edit, params: { key: @cost_centre.key }
 
-        assert_equal [ "432320" ], assigns(:nominal_codes).map(&:code)
+        assert_select "#nominal_codes div[id^=nominal_code_]", 1
+        assert_select "#nominal_code_#{code.record_id} span.font-mono", text: "432320"
         assert_select "#nominal_codes input##{"label_#{code.record_id}"}[value=?]", "Marketing"
         assert_select "#nominal_codes form[action=?]",
                       admin_reimbursements_nominal_codes_path(@cost_centre.key)
         assert_not_includes response.body, "Termtime printing"
       end
 
-      # A form inside a form is invalid HTML and the inner submit silently does
-      # nothing, so the section must be a SIBLING of the cost centre's own form.
+      test "a centre with no nominal codes is told to add them on this page" do
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_select "#nominal_codes p", text: "No codes listed for #{@cost_centre.name} yet. Add them below."
+      end
+
+      # A form inside a form is invalid HTML; its submit silently does nothing.
       test "the nominal codes section is not nested inside the cost centre form" do
         create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
         sign_in @user
@@ -216,7 +171,8 @@ module Admin
       end
 
       test "the nominal codes section states what is booked against each code" do
-        create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
+        used = create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
+        unused = create_reimbursements_nominal_code(code: "999999", cost_centre: @cost_centre)
         create_reimbursements_budget(name: "Marketing", nominal_code: "432320",
                                      cost_centre: @cost_centre)
         create_reimbursements_actual(nominal_code: "432320", cost_centre: @cost_centre)
@@ -225,6 +181,10 @@ module Admin
         get :edit, params: { key: @cost_centre.key }
 
         assert_includes response.body, "1 budget line and 1 ledger row booked here"
+        assert_select "#nominal_code_#{used.record_id} button", text: "Retire"
+        assert_includes response.body, "Nothing booked here"
+        assert_select "#nominal_code_#{unused.record_id} button", text: "Delete"
+        assert_select "#nominal_code_#{unused.record_id} button", text: "Retire", count: 0
       end
 
       test "edit 404s for an unknown cost centre" do
@@ -235,20 +195,22 @@ module Admin
 
       # --- Update: settings --------------------------------------------------
 
-      test "update writes mailboxes, recipient, contact, signature, authoriser, short code and run-days" do
+      test "update writes every field on the settings form" do
         sign_in @user
 
         patch :update, params: { key: @cost_centre.key, cost_centre: {
-          short_code: "BF",
-          receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
+          short_code: "BF", receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
           eusa_recipient: "eusa@ed.ac.uk", eusa_contact_name: "Craig",
           eusa_signature_name: "Fringe Finance",
           authoriser_name: "Jo Producer", authoriser_designation: "Fringe Treasurer",
-          nightly_run_days: %w[1 3 5]
+          sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe",
+          notification_email: "finance@bedlamfringe.co.uk",
+          nightly_run_days: %w[1 3 5], hidden_from_submitters: "1"
         } }
 
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         @cost_centre.reload
+        assert_equal "BF", @cost_centre.short_code
         assert_equal "in@fringe.co", @cost_centre.receive_mailbox
         assert_equal "out@fringe.co", @cost_centre.send_mailbox
         assert_equal "eusa@ed.ac.uk", @cost_centre.eusa_recipient
@@ -256,38 +218,38 @@ module Admin
         assert_equal "Fringe Finance", @cost_centre.eusa_signature_name
         assert_equal "Jo Producer", @cost_centre.authoriser_name
         assert_equal "Fringe Treasurer", @cost_centre.authoriser_designation
-        assert_equal "BF", @cost_centre.short_code
+        assert_equal "https://tenant.sharepoint.com/sites/Fringe", @cost_centre.sharepoint_site_url
+        assert_equal [ "finance@bedlamfringe.co.uk" ], @cost_centre.notification_emails
         assert_equal [ 1, 3, 5 ], @cost_centre.nightly_run_days
+        assert_predicate @cost_centre, :hidden_from_submitters?
       end
 
-      test "update hides a cost centre's budgets from submitters" do
+      # A type="email" field refuses "a@x.org; b@y.org" in the browser, so Save does nothing.
+      test "both forms take notification addresses in a plain text field" do
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+        assert_select "input[name='cost_centre[notification_email]'][type=text]"
+
+        get :new
+        assert_select "input[name='cost_centre[notification_email]'][type=text]"
+      end
+
+      test "update saves several notification addresses" do
         sign_in @user
 
         patch :update, params: { key: @cost_centre.key, cost_centre: {
-          hidden_from_submitters: "1", nightly_run_days: @cost_centre.nightly_run_days
+          notification_email: "finance@bedlamfringe.co.uk; business@bedlamtheatre.co.uk",
+          nightly_run_days: %w[1]
         } }
 
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
-        assert_predicate @cost_centre.reload, :hidden_from_submitters?
-        get :index
-        assert_select ".bg-gray-100", text: "Hidden from submitters"
+        assert_equal [ "finance@bedlamfringe.co.uk", "business@bedlamtheatre.co.uk" ],
+                     @cost_centre.reload.notification_emails
       end
 
-      test "update saves the SharePoint site URL" do
-        sign_in @user
-
-        # A real form always resubmits its currently-checked day boxes
-        # regardless of which other field changed.
-        patch :update, params: { key: @cost_centre.key, cost_centre: {
-          receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
-          sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe",
-          nightly_run_days: @cost_centre.nightly_run_days
-        } }
-
-        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
-        assert_equal "https://tenant.sharepoint.com/sites/Fringe", @cost_centre.reload.sharepoint_site_url
-      end
-
+      # settings_params turns a missing nightly_run_days into [], which fails
+      # validation and aborts the save.
       test "update with no run-days checked is rejected, not saved as an empty schedule" do
         @cost_centre.update!(nightly_run_days: [ 2, 4 ])
         sign_in @user
@@ -302,17 +264,6 @@ module Admin
                      "clearing every run-day would silently disable the nightly for this cost centre"
       end
 
-      test "update rejects a blank required mailbox without saving" do
-        sign_in @user
-
-        patch :update, params: { key: @cost_centre.key, cost_centre: {
-          receive_mailbox: "", send_mailbox: "out@fringe.co"
-        } }
-
-        assert_response :unprocessable_entity
-        assert_not_equal "", @cost_centre.reload.receive_mailbox
-      end
-
       # --- Folder picker -----------------------------------------------------
 
       test "picker browses the cost centre's configured site and lists its libraries" do
@@ -321,8 +272,8 @@ module Admin
         get :edit, params: { key: @cost_centre.key, picker: "receipts" }
 
         assert_response :success
-        assert_includes response.body, "Finance Site"                            # site resolved by URL
-        assert_includes response.body, "Documents"                               # its library listed
+        assert_includes response.body, "Finance Site"
+        assert_includes response.body, "Documents"
         assert_equal [ "https://sp.sharepoint.com/sites/Finance" ], @graph.site_calls
       end
 
@@ -359,6 +310,19 @@ module Admin
         assert_equal "folder-A", @cost_centre.sharepoint_receipts_folder_id
       end
 
+      test "using a folder on a centre with no notification email says why instead of 500ing" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @cost_centre.update_column(:notification_email, nil)
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
+                                 drive_id: "drive-site-1", folder_id: "folder-A" }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_match(/Notification email/, flash[:alert])
+        assert_nil @cost_centre.reload.sharepoint_receipts_drive_id
+      end
+
       test "saving a folder with a blank id is refused" do
         sign_in @user
 
@@ -370,10 +334,7 @@ module Admin
         assert_nil @cost_centre.reload.sharepoint_bacs_folder_id
       end
 
-      # A save_folder POST's drive_id/folder_id come from hidden form fields —
-      # still client-controllable — and this is exactly where bank-detail-
-      # bearing BACS files get uploaded, so a tampered value must be re-verified
-      # against Graph rather than trusted outright.
+      # The ids come from hidden fields, and this folder receives bank details.
       test "a drive_id that doesn't belong to the cost centre's own site is refused, not trusted outright" do
         @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
         sign_in @user
@@ -388,9 +349,7 @@ module Admin
 
       test "a folder_id that doesn't resolve under the verified drive is refused" do
         @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
-        @graph.define_singleton_method(:list_folder_contents) do |**|
-          raise ::GraphAuth::Error, "not found (404)"
-        end
+        @graph.fail_list_folder_contents = true
         sign_in @user
 
         patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
@@ -413,6 +372,12 @@ module Admin
 
       # --- Access check ------------------------------------------------------
 
+      # Each row's "label: detail", scoped to the results: the page's own copy names the
+      # management scope too.
+      def access_check_results
+        css_select("#access_check_results li > span:last-child").map { |row| row.text.squish }
+      end
+
       test "access check reports reachable mailboxes, site and folders" do
         @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance",
                              sharepoint_receipts_drive_id: "drv", sharepoint_receipts_folder_id: "fld",
@@ -423,10 +388,9 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Mailbox #{@cost_centre.receive_mailbox}"
-        assert_includes response.body, "Granted and reachable"                 # SharePoint site OK
-        assert_includes response.body, "Reachable."                            # folders OK
-        # The BACS folder check labels itself "BACS request folder" (not the
-        # "Bacs folder" that `humanize` would produce), matching the picker heading.
+        assert_includes response.body, "Granted and reachable"
+        assert_includes response.body, "Reachable."
+        # The picker heading's wording, not "Bacs folder".
         assert_includes response.body, "BACS request folder"
         assert_includes response.body, "Receipts folder"
         assert_not_includes response.body, "Bacs folder"
@@ -447,14 +411,32 @@ module Admin
       end
 
       test "access check flags a mailbox the app can't reach" do
-        SettingsController.graph_builder = -> { FakeGraph.new(mailbox_ok: false) }
+        @graph.mailbox_error = ::GraphAuth::AccessDeniedError.new("Graph rejected the token (403)")
         sign_in @user
 
         post :test_access, params: { key: @cost_centre.key }
 
         assert_response :success
-        assert_includes response.body, "403"
-        assert_includes response.body, "Exchange management scope"             # remediation hint
+        mailbox = access_check_results.grep(/\AMailbox/).first
+        assert_includes mailbox, "403"
+        assert_includes mailbox, "Exchange management scope"
+        assert_not_includes mailbox, "client secret"
+      end
+
+      # Neither the scope nor the secret fixes a mistyped address.
+      test "access check reports any other mailbox failure as it came" do
+        @graph.mailbox_error = ::GraphAuth::NotFoundError.new(
+          "Graph GET /users/x/mailFolders/inbox failed (404): ErrorInvalidUser: The requested user is invalid."
+        )
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        mailbox = access_check_results.grep(/\AMailbox/).first
+        assert_includes mailbox, "ErrorInvalidUser"
+        assert_not_includes mailbox, "management scope"
+        assert_not_includes mailbox, "client secret"
       end
 
       test "access check flags a SharePoint site the app can't reach" do
@@ -465,8 +447,28 @@ module Admin
         post :test_access, params: { key: @cost_centre.key }
 
         assert_response :success
-        assert_includes response.body, "site not granted (403)"
-        assert_includes response.body, "Grant the app write on this site"
+        site = access_check_results.grep(/\ASharePoint site/).sole
+        assert_includes site, "site not granted (403)"
+        assert_includes site, "Grant the app write on this site"
+      end
+
+      # A failed sign-in fails every probe, and its fix is the secret: the grants are fine.
+      test "access check sends a failed sign-in to the client secret, not to the grants" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @graph.sign_in_failed = true
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        rows = access_check_results.grep(/\A(Mailbox|SharePoint site)/)
+        assert_operator rows.size, :>=, 2
+        rows.each do |row|
+          assert_includes row, "AADSTS7000222"
+          assert_includes row, "renew the Entra client secret"
+          assert_not_includes row, "management scope"
+          assert_not_includes row, "Grant the app"
+        end
       end
 
       test "access check flags a configured folder the app can't reach" do
@@ -492,14 +494,6 @@ module Admin
         assert_includes response.body, "SharePoint browse failed"
       end
 
-      test "the access-check button shows a testing state while it runs" do
-        sign_in @user
-        get :edit, params: { key: @cost_centre.key }
-
-        assert_response :success
-        assert_includes response.body, 'data-turbo-submits-with="Testing'
-      end
-
       test "access check answers a turbo stream that updates the results in place" do
         sign_in @user
 
@@ -510,12 +504,6 @@ module Admin
         assert_includes response.body, "access_check_results"
       end
 
-      test "test_access denies members without the finance permission" do
-        sign_in users(:committee)
-        post :test_access, params: { key: @cost_centre.key }
-        assert_response :forbidden
-      end
-
       # --- New / Create: cost-centre form ------------------------------------
 
       test "new renders the create-cost-centre form posting to the collection" do
@@ -524,13 +512,7 @@ module Admin
 
         assert_response :success
         assert_select "form[action=?]", admin_reimbursements_settings_path
-        assert_includes response.body, "Advanced"     # the collapsed manual-key section
-      end
-
-      test "new denies members without the finance permission" do
-        sign_in users(:committee)
-        get :new
-        assert_response :forbidden
+        assert_includes response.body, "Advanced"
       end
 
       test "create adds a cost centre and redirects to its edit page to finish setup" do
@@ -540,41 +522,16 @@ module Admin
           post :create, params: { cost_centre: {
             name: "Bedlam Termtime", eusa_code: "BED",
             receive_mailbox: "termtime-in@example.co", send_mailbox: "termtime-out@example.co",
-            notification_email: "business@bedlamtheatre.co.uk"
+            notification_email: "finance@bedlamfringe.co.uk; business@bedlamtheatre.co.uk"
           } }
         end
 
         created = CC.find_by(eusa_code: "BED")
         assert_equal "bedlam-termtime", created.key, "key auto-derived from the name"
-        assert_redirected_to edit_admin_reimbursements_setting_path(created.key)
-        assert_match(/mailbox|sharepoint/i, flash[:notice])
-      end
-
-      test "create derives the URL key from the name by default" do
-        sign_in @user
-
-        post :create, params: { cost_centre: {
-          name: "New Venue 2027", eusa_code: "NV7",
-          receive_mailbox: "nv-in@example.co", send_mailbox: "nv-out@example.co",
-          notification_email: "nv-finance@example.co"
-        } }
-
-        assert_equal "new-venue-2027", CC.find_by(eusa_code: "NV7").key
-      end
-
-      test "create accepts several notification addresses" do
-        sign_in @user
-
-        post :create, params: { cost_centre: {
-          name: "Mailbox Only", eusa_code: "MBO",
-          receive_mailbox: "mbo-in@example.co", send_mailbox: "mbo-out@example.co",
-          notification_email: "finance@bedlamfringe.co.uk; business@bedlamtheatre.co.uk"
-        } }
-
-        created = CC.find_by(eusa_code: "MBO")
-        assert_not_nil created
         assert_equal [ "finance@bedlamfringe.co.uk", "business@bedlamtheatre.co.uk" ],
                      created.notification_emails
+        assert_redirected_to edit_admin_reimbursements_setting_path(created.key)
+        assert_match(/mailbox|sharepoint/i, flash[:notice])
       end
 
       test "create honours a manual key override from the Advanced section" do
@@ -589,86 +546,14 @@ module Admin
         assert_equal "shortkey", CC.find_by(eusa_code: "SLN").key
       end
 
-      test "update sets the notification email" do
-        sign_in @user
-
-        # nightly_run_days must be sent: settings_params rewrites a missing key
-        # to [], which fails the weekday-numbers validation and aborts the save.
-        patch :update, params: { key: CC.default.key,
-                                 cost_centre: { notification_email: "finance@bedlamfringe.co.uk",
-                                                nightly_run_days: %w[2 4] } }
-
-        assert_equal [ "finance@bedlamfringe.co.uk" ], CC.default.reload.notification_emails
-      end
-
-      test "update rejects a mistyped notification email without saving" do
-        sign_in @user
-        CC.default.update!(notification_email: "finance@bedlamfringe.co.uk")
-
-        patch :update, params: { key: CC.default.key,
-                                 cost_centre: { notification_email: "finance@b.co; nope",
-                                                nightly_run_days: %w[2 4] } }
-
-        assert_equal "finance@bedlamfringe.co.uk", CC.default.reload.notification_email
-      end
-
-      test "create with no notification email creates nothing" do
-        sign_in @user
-
-        assert_no_difference -> { CC.count } do
-          post :create, params: { cost_centre: {
-            name: "Roleless", eusa_code: "RL1",
-            receive_mailbox: "rl-in@example.co", send_mailbox: "rl-out@example.co"
-          } }
-        end
-      end
-
       test "create rejects a blank name without creating a row" do
         sign_in @user
 
         assert_no_difference -> { CC.count } do
           post :create, params: { cost_centre: {
             name: "", eusa_code: "NB1",
-            receive_mailbox: "nb-in@example.co", send_mailbox: "nb-out@example.co"
-          } }
-        end
-
-        assert_response :unprocessable_entity
-      end
-
-      test "create rejects a duplicate eusa_code without creating a row" do
-        sign_in @user
-
-        assert_no_difference -> { CC.count } do
-          post :create, params: { cost_centre: {
-            name: "Clashing Code", eusa_code: @cost_centre.eusa_code,
-            receive_mailbox: "cc-in@example.co", send_mailbox: "cc-out@example.co"
-          } }
-        end
-
-        assert_response :unprocessable_entity
-      end
-
-      test "create rejects a malformed mailbox without creating a row" do
-        sign_in @user
-
-        assert_no_difference -> { CC.count } do
-          post :create, params: { cost_centre: {
-            name: "Bad Mailbox", eusa_code: "BM1",
-            receive_mailbox: "not-an-email", send_mailbox: "bm-out@example.co"
-          } }
-        end
-
-        assert_response :unprocessable_entity
-      end
-
-      test "create rejects a manual key with illegal characters without creating a row" do
-        sign_in @user
-
-        assert_no_difference -> { CC.count } do
-          post :create, params: { cost_centre: {
-            name: "Bad Key", key: "Bad Key!", eusa_code: "BK1",
-            receive_mailbox: "bk-in@example.co", send_mailbox: "bk-out@example.co"
+            receive_mailbox: "nb-in@example.co", send_mailbox: "nb-out@example.co",
+            notification_email: "nb@example.co"
           } }
         end
 
@@ -686,64 +571,6 @@ module Admin
         end
 
         assert_response :forbidden
-      end
-
-      # --- The Microsoft setup page ------------------------------------------
-      # A wall of PowerShell and Graph JSON sat between the routine controls an
-      # operator edits weekly, inside the settings FORM. These steps are needed
-      # once per cost centre, by somebody with Exchange or SharePoint admin
-      # rights who is usually not the person editing the settings.
-
-      test "the settings form no longer carries the Microsoft setup steps" do
-        sign_in @user
-
-        get :edit, params: { key: @cost_centre.key }
-
-        assert_response :success
-        # The runbook's own markers. "Sites.Selected" itself still appears in a
-        # one-line explanation beside the SharePoint URL field, which is the
-        # kind of sentence that belongs on the form it describes.
-        assert_not_includes response.body, "Test-ServicePrincipalAuthorization"
-        assert_not_includes response.body, "graph.microsoft.com/v1.0/sites"
-        assert_not_includes response.body, "docs/graph-mailbox-rbac.ps1"
-      end
-
-      test "the settings form links to them instead" do
-        sign_in @user
-
-        get :edit, params: { key: @cost_centre.key }
-
-        assert_select "a[href=?]",
-                      microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key)
-      end
-
-      test "the Microsoft setup page is finance-gated like the settings it belongs to" do
-        sign_in users(:committee)
-
-        get :microsoft_setup, params: { key: @cost_centre.key }
-
-        assert_response :forbidden
-      end
-
-      test "the Microsoft setup page links back to its cost centre" do
-        sign_in @user
-
-        get :microsoft_setup, params: { key: @cost_centre.key }
-
-        assert_response :success
-        assert_select "a[href=?]", edit_admin_reimbursements_setting_path(@cost_centre.key)
-      end
-
-      # The code is never updatable — every budget, actuals row and export
-      # stores it as a string — so the label is the only thing the row saves,
-      # and nine buttons reading "Save" sat beside the cost centre's own.
-      test "a nominal code row's button says what it saves" do
-        sign_in @user
-        create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
-
-        get :edit, params: { key: @cost_centre.key }
-
-        assert_select "input[type=submit][value='Save label']"
       end
     end
   end

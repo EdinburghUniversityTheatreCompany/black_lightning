@@ -8,8 +8,7 @@ class Public::CarouselComponentPreview < ViewComponent::Preview
   def with_aspect_ratio
     render Public::CarouselComponent.new(
       carousel_items: sample_items,
-      aspect_ratio: "16/9",
-      fit_mode: "cover"
+      aspect_ratio: "16/9"
     )
   end
 

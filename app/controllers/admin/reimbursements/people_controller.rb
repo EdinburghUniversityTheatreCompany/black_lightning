@@ -1,27 +1,19 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-team management of the People registry (payee names,
-    # emails, bank details): a duplicate
-    # name/email banner, a live modulus badge on each person's bank details,
-    # inline editing of sort code / account number (with a timestamped audit
-    # line appended to notes), a Mark-verified action, and a form that
-    # registers an existing user account as a payee.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`),
-    # distinct from the producer portal's `:access, :reimbursements`.
+    # Finance-team management of the People registry: duplicate banner, live
+    # modulus badge, inline bank-detail editing with an audit line in the notes,
+    # Mark verified, and registering an existing user as a payee.
     class PeopleController < FinanceController
+      before_action -> { @query = params[:q].to_s.strip }, only: %i[index update]
+
       def index
-        @title = "Reimbursements People"
-        @query = params[:q].to_s.strip
         respond_to do |format|
           format.html { load_registry }
-          # The on-screen filter carries through, as every other per-view CSV
-          # in this portal does. Bank details are masked to their last four
-          # digits (Exports::People), which is unchanged.
+          # The on-screen filter carries through; bank details are masked (Exports::People).
           format.csv do
             send_export ::Reimbursements::Exports::People,
-                        filtered_people(store.people_in_name_order)
+                        filtered_people(store.people)
           end
         end
       end
@@ -30,17 +22,18 @@ module Admin
         @title = "Register a person"
       end
 
-      # No bank details are collected: a budget owner may never claim a penny,
-      # and before this form a Person only came into being when a producer saved
-      # bank details or filed a claim — so finance could not name an owner who
-      # had done neither.
+      # No bank details are collected: a budget owner may never claim, and
+      # finance must be able to name one who has never saved details.
       def create
         user = ::User.find_by(id: params[:user_id])
-        return render_new_error("Pick a user account to register.") if user.nil?
+        if user.nil?
+          @title = "Register a person"
+          @error = "Pick a user account to register."
+          return render :new, status: :unprocessable_entity
+        end
 
-        # Asked rather than reimplemented: PersonLink resolves by stored link
-        # THEN email, so this also catches someone the registry already holds
-        # under their address but has never linked.
+        # PersonLink resolves by stored link THEN email, so this also catches
+        # someone held under their address but never linked.
         existing = person_link.person_for(user)
         return redirect_to_existing(user, existing) if existing
 
@@ -58,41 +51,36 @@ module Admin
 
       private
 
-      # Name the record they resolved to, rather than minting a duplicate the
-      # index would then have to flag (PeopleSupport.find_duplicate_people).
+      # Names the record they resolved to rather than minting a duplicate.
       def redirect_to_existing(user, person)
         redirect_to admin_reimbursements_people_path,
                     alert: "#{user.name_or_email} is already in the registry as " \
                            "#{person.name.presence || person.email}."
       end
 
-      def render_new_error(message)
-        @title = "Register a person"
-        @error = message
-        render :new, status: :unprocessable_entity
-      end
-
       def load_registry
-        # Also reached from #update's invalid-save re-render, which never ran
-        # #index and so has not read the filter the operator was working in.
-        @query = params[:q].to_s.strip
-        # Alphabetical, blanks last — the registry used to come back in
-        # insertion order, 50 to a page, so a newly registered person landed at
-        # the bottom of the last page with no way to look them up.
-        people = store.people_in_name_order
-        # Duplicate detection runs over the WHOLE registry, not just one page,
-        # and over the WHOLE registry rather than the filtered view: a filter
-        # that hid one half of a duplicate pair would hide the warning too.
+        @title = "Reimbursements People"
+        people = store.people
+        # Over the WHOLE registry, not the filtered page: a filter hiding one
+        # half of a pair would hide the warning too.
         @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(people)
         @claim_counts = store.expense_counts_by_person_id
-        # Which row to open and scroll to: the one just saved (redirected back
-        # with ?person=), or one linked to from a Review card.
+        # The row to open: the one just saved, or linked to from a Review card.
         @open_person_id = @edit_person_id || params[:person].to_s.presence
-        @people = paginate(filtered_people(people))
+        filtered = filtered_people(people)
+        @people = paginate(filtered, page: registry_page(filtered))
       end
 
-      # Name or email, case-insensitive substring. Filtered in Ruby over the
-      # store's one memoized list, as the expenses index does.
+      # The page holding the open row, so it is on screen when it sits past the
+      # first page; an explicit ?page= wins.
+      def registry_page(filtered)
+        return params[:page] if params[:page].present? || @open_person_id.blank?
+
+        position = filtered.index { |person| person.record_id == @open_person_id }
+        position ? (position / PAGE_SIZE) + 1 : params[:page]
+      end
+
+      # Name or email, case-insensitive substring, over the store's memoized list.
       def filtered_people(people)
         return people if @query.blank?
 
@@ -103,9 +91,6 @@ module Admin
       end
 
       # Back to the registry with this person's row open and scrolled to.
-      # Saving bank details used to collapse the row and return to the top of
-      # the page, so "Mark as verified" — the obvious next click — meant
-      # finding and reopening them again.
       def redirect_to_person(person, flash)
         redirect_to admin_reimbursements_people_path(person: person.record_id, q: params[:q].presence,
                                                      anchor: "person-#{person.record_id}"),
@@ -118,11 +103,8 @@ module Admin
           return
         end
 
-        # bank_details? is pure presence — it says nothing about whether the
-        # sort code/account number are actually mathematically consistent.
-        # Gate on the same modulus check the page's own live badge renders
-        # right next to this button, so "Verified" can't contradict what the
-        # operator can see on the same screen.
+        # bank_details? is presence only. Gate on the same modulus check the
+        # live badge shows, so "Verified" can't contradict the screen.
         if modulus_checker.check(@person.sort_code, @person.account_number) == ::Reimbursements::ModulusCheck::INVALID
           redirect_to_person(@person,
                              alert: "#{@person.name}'s bank details fail the modulus check. Fix them " \
@@ -150,64 +132,29 @@ module Admin
         formatted_sort = ::Reimbursements::BankDetails.format_sort_code(sort_code)
         normalized_account = ::Reimbursements::BankDetails.normalize_account_number(account_number)
 
-        unless bank_details_changed?(formatted_sort, normalized_account)
+        change = @person.bank_details_change(formatted_sort, normalized_account, actor: current_user)
+        if change.nil?
           redirect_to_person(@person, notice: "No changes to save.")
           return
         end
 
-        store.update_person!(@person.record_id,
-                             sort_code: formatted_sort,
-                             account_number: normalized_account,
-                             # The "Verified" badge is a trust signal that's only ever meaningful
-                             # for the bank details it was checked against — a correction (typo
-                             # fix, bank switch) must not leave a stale "Verified" claim standing
-                             # over details nobody has actually re-checked.
-                             verified: false,
-                             notes: appended_notes(formatted_sort, normalized_account))
+        store.update_person!(@person.record_id, **change)
         redirect_to_person(@person, notice: "Bank details saved for #{@person.name}.")
       end
 
-      # Re-render the registry with this person's edit section expanded, the
-      # operator's typed (invalid) values still in the fields, and the error
-      # shown inline — rather than redirecting, which would collapse the
-      # <details> and discard what they typed.
+      # Re-renders (not redirects) so the row stays open with the typed values.
       def render_bank_details_error(sort_code, account_number, message)
-        @title = "Reimbursements People"
-        load_registry
         @edit_person_id = @person.record_id
         @edit_sort_code = sort_code
         @edit_account_number = account_number
         @edit_error = message
+        load_registry
         render :index, status: :unprocessable_entity
       end
 
       def valid_bank_details?(sort_code, account_number)
         ::Reimbursements::BankDetails.valid_sort_code?(sort_code) &&
           ::Reimbursements::BankDetails.valid_account_number?(account_number)
-      end
-
-      def bank_details_changed?(formatted_sort, normalized_account)
-        ::Reimbursements::BankDetails.normalize_sort_code(formatted_sort) !=
-          ::Reimbursements::BankDetails.normalize_sort_code(@person.sort_code) ||
-          normalized_account != ::Reimbursements::BankDetails.normalize_account_number(@person.account_number)
-      end
-
-      # Timestamped audit line appended to the person's notes on every bank
-      # detail change: existing notes are preserved, one line per change.
-      #
-      # BOTH the sort code and the account number are masked to their last 4
-      # digits, matching Exports::People. The audit trail is a RECORD of a
-      # change, not a value anything pays from, and it renders on the People page
-      # right beside the masked account number, where the pair is what identifies
-      # an account. (The `notes` column is encrypted at rest, but the visible
-      # copy has to stay masked too.)
-      def appended_notes(sort_code, account_number)
-        actor = "#{current_user.name_or_email} (##{current_user.id})"
-        ::Reimbursements::PaymentDetails.append_note(
-          @person.notes,
-          "Bank details updated: sort code #{::Reimbursements::BankDetails.mask(sort_code)}, " \
-          "account #{::Reimbursements::BankDetails.mask(account_number)} by #{actor}"
-        )
       end
     end
   end

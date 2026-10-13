@@ -22,11 +22,9 @@
 #
 module Reimbursements
   ##
-  # Area <-> People ownership (many-to-many).
-  # Owners are payees, not user accounts — an area owner may never log in.
+  # Area <-> People ownership. Owners are payees, not user accounts: an owner may
+  # never log in.
   class AreaOwner < ApplicationRecord
-    self.table_name = "reimbursements_area_owners"
-
     belongs_to :area, class_name: "Reimbursements::Area", inverse_of: :area_ownerships
     belongs_to :person, class_name: "Reimbursements::Person"
 

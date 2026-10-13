@@ -15,7 +15,7 @@ module GenericController
 
     instance_variable_set("@#{resource_name.pluralize}", resources)
 
-    response.headers["X-Total-Count"] = resources.count.to_s
+    response.headers["X-Total-Count"] = (resources.respond_to?(:total_count) ? resources.total_count : resources.size).to_s
 
     @editable_block_name = index_editable_block_name
 
@@ -23,17 +23,10 @@ module GenericController
       format.html { render index_filename }
       format.json { render json: resources } if json_enabled_for_index?
       format.turbo_stream do
-        if params[:q].blank?
-          # Not a live search. A Turbo form-submission redirect (e.g. after #destroy, which
-          # redirects to :index) follows the 302 with the same turbo_stream Accept header but no q
-          # params; answering it with the #index-results fragment would silently do nothing when the
-          # redirect lands somewhere without that element (e.g. a show page) and the flash would
-          # never show. Serve the full HTML page so Turbo performs a real navigation.
-          render index_filename, formats: :html, content_type: "text/html"
-        elsif lookup_context.exists?(index_results_partial, [], true)
-          render "shared/pages/index"
-        else
+        if params[:q].present? && !lookup_context.exists?(index_results_partial, [], true)
           head :ok
+        else
+          render_index_stream_or_full(fragment: "shared/pages/index", full: index_filename)
         end
       end
     end
@@ -101,8 +94,8 @@ module GenericController
           # format.json { render json: get_resource.errors, status: :unprocessable_entity }
         end
       rescue ActiveRecord::RecordNotUnique => e
-        # Safety net: catch database constraint violations
-        # The model validation should prevent this, but this handles race conditions
+        # Two saves adding the same person at once both pass validation, and the
+        # unique index stops the second. A new record cannot race, so create needs none.
         if e.message.include?("team_members") && e.message.include?("teamwork_and_user")
           get_resource.errors.add(:base, "Cannot add the same person as a team member more than once.")
           @title = edit_title

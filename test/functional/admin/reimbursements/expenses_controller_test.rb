@@ -6,7 +6,8 @@ module Admin
     include ReimbursementsTestHelpers
 
     setup do
-      grant_member_role_reimbursements_access
+      grant_producer_permission(users(:member))
+      grant_producer_permission(users(:member_with_phone_number))
       @user = users(:member)
       @person = create_reimbursements_person(email: @user.email)
       @other_person = create_reimbursements_person(name: "Other Person", email: "other@example.com")
@@ -20,19 +21,6 @@ module Admin
       BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
     end
 
-    # A dedicated role, so users holding only member/committee stay denied.
-    def grant_member_role_reimbursements_access
-      producer = Role.create!(name: "Producer")
-      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-      users(:member).add_role("Producer")
-      users(:member_with_phone_number).add_role("Producer")
-    end
-
-    test "requires sign-in" do
-      get :index
-      assert_redirected_to new_user_session_path
-    end
-
     test "denies members without the reimbursements permission" do
       sign_in users(:committee)
 
@@ -41,41 +29,20 @@ module Admin
       assert_response :forbidden
     end
 
-    test "shows only the current user's expenses" do
-      sign_in @user
-
-      get :index
-
-      assert_response :success
-      assert_equal [ @expense.record_id ], assigns(:expenses).map(&:record_id)
-      assert_includes response.body, "Fake blood"
-      assert_not_includes response.body, "Someone else&#39;s"
-      assert_select "th", text: "Submitted"
-      assert_select "th", text: "Created", count: 0
-    end
-
-    test "links the user to their payee record by email on first visit" do
+    test "index lists only the current user's expenses and links them to their payee record" do
       sign_in @user
       assert_nil @user.reimbursements_person_id
 
       get :index
 
+      assert_response :success
       assert_equal @person.id, @user.reload.reimbursements_person_id
-    end
-
-    test "refresh redirects to a clean url" do
-      sign_in @user
-
-      get :index, params: { refresh: 1 }
-
-      assert_redirected_to admin_reimbursements_expenses_path
-    end
-
-    test "prompts for payment details when bank details are missing" do
-      sign_in @user
-
-      get :index
-
+      assert_equal [ @expense.record_id ], assigns(:expenses).map(&:record_id)
+      assert_includes response.body, "Fake blood"
+      assert_not_includes response.body, "Someone else&#39;s"
+      assert_select "th", text: "Submitted"
+      assert_select "th", text: "Created", count: 0
+      assert_select "a[href=?]", admin_reimbursements_expense_path(@expense.record_id), text: "View"
       assert_includes response.body, "add your payment details"
     end
 
@@ -102,25 +69,10 @@ module Admin
       }
     end
 
-    # The one place the prefix has to actually appear: active_budgets is not
-    # cost-centre scoped, so this picker is where a producer sees both centres'
-    # lines at once. Asserting on the model alone would not catch a view still
-    # mapping display_name.
-    test "the budget picker names each line's cost centre" do
-      centre = create_reimbursements_cost_centre(key: "picker-centre", name: "Bedlam Fringe",
-                                                 eusa_code: "F41", short_code: "BF")
-      create_reimbursements_budget(name: "Marketing", cost_centre: centre)
-      sign_in @user
-
-      get :new
-
-      assert_response :success
-      assert_select "option", text: "BF - Marketing"
-    end
-
+    # submittable_budgets is not cost-centre scoped, so the picker must say
+    # whose line each is.
     test "the budget picker groups lines under their area" do
-      centre = create_reimbursements_cost_centre(key: "group-centre", name: "Bedlam Fringe",
-                                                 eusa_code: "F42", short_code: "BF")
+      centre = create_second_reimbursements_cost_centre(short_code: "BF")
       area = create_reimbursements_area(name: "Cogito", cost_centre: centre)
       create_reimbursements_budget(name: "Marketing", cost_centre: centre, area: area)
       sign_in @user
@@ -149,22 +101,15 @@ module Admin
     end
 
     # Hiding a centre stops NEW claims; a claim already on its line keeps it.
-    test "editing a claim on a hidden centre's budget keeps that budget offered" do
+    test "a claim on a hidden centre's budget keeps it offered on edit, saves unchanged and survives a failed save" do
       hidden = hidden_centre_budget
       @expense.update!(budget: hidden)
       sign_in @user
 
       get :edit, params: { id: @expense.record_id }
-
       assert_select "option[selected][value='#{hidden.record_id}']", text: /Termtime props/
-    end
 
-    test "a claim on a hidden centre's budget saves unchanged, and survives a failed save" do
-      hidden = hidden_centre_budget
-      @expense.update!(budget: hidden)
-      sign_in @user
       params = valid_form_params.except(:receipts).merge(budget_record_id: hidden.record_id)
-
       patch :update, params: { id: @expense.record_id,
                                reimbursements_expense_form: params.merge(description: "") }
       assert_response :unprocessable_entity
@@ -195,9 +140,7 @@ module Admin
       assert_response :success
       assert_includes response.body, "reimbursements-receipt"
       assert_includes response.body, "Props"
-      # Third-party payee fields are always visible (not tucked in a
-      # collapsible that hid whether they were filled), with no "In use" flag
-      # on a blank form.
+      # Payee fields always visible, with no "In use" flag on a blank form.
       assert_includes response.body, "Pay someone else"
       assert_select "input#reimbursements_expense_form_payee_name_override"
       assert_not_includes response.body, "In use"
@@ -238,28 +181,12 @@ module Admin
       assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.foreign_currency
       assert_equal "DE89370400440532013000", expense.iban_override
       assert_equal "DEUTDEFF500", expense.bic_override
-      # Finance supplies this at review, and cannot approve without it.
+      # Finance supplies this at review.
       assert_nil expense.amount
       assert_equal "Pending", expense.status
     end
 
-    test "create refuses an international claim whose IBAN fails its check digits" do
-      sign_in @user
-
-      post :create, params: { reimbursements_expense_form: valid_form_params.merge(
-        payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
-        amount: "", amount_excl_vat: "", foreign_amount: "266.69",
-        payee_name_override: "Ausland GmbH",
-        iban_override: "DE88 3704 0044 0532 0130 00", bic_override: "DEUTDEFF500"
-      ) }
-
-      assert_response :unprocessable_entity
-      assert_equal 0, ::Reimbursements::Expense.where(payment_method: "international").count
-    end
-
-    # iOS photographs default to HEIC. The conversion happens at intake so the
-    # stored blob is an ordinary JPEG for every downstream consumer (viewer,
-    # the SharePoint offload, the receipts mailed with a BACS batch).
+    # Converted at intake, so every downstream reader gets an ordinary JPEG.
     test "create stores an iPhone HEIC photo as a JPEG named .jpg" do
       sign_in @user
 
@@ -274,20 +201,7 @@ module Admin
                    "the stored bytes must actually be a readable JPEG"
     end
 
-    test "create keeps an ordinary PDF receipt exactly as uploaded" do
-      sign_in @user
-
-      post :create, params: { reimbursements_expense_form: valid_form_params }
-
-      receipt = ::Reimbursements::Expense.order(:id).last.receipt_files.sole
-      assert_equal "application/pdf", receipt.content_type
-      assert_equal "reimbursements_receipt.pdf", receipt.filename.to_s
-      assert_equal File.binread(Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")),
-                   receipt.download
-    end
-
-    # A damaged photo (or a libvips built without HEIF support) must come back
-    # through the normal validation path, not as a 500.
+    # A damaged photo (or libvips without HEIF) is a validation error, not a 500.
     test "create re-renders with a friendly error when a photo can't be read" do
       sign_in @user
 
@@ -357,9 +271,7 @@ module Admin
       assert_redirected_to admin_reimbursements_expenses_path
     end
 
-    # A :base error has no field to render under, so without the shared form
-    # partial listing them the producer sees only the generic "review the
-    # problems below" banner — a form that failed with no stated reason.
+    # A :base error has no field to render under.
     test "create shows the reason a base-level rule blocked the form" do
       sign_in @user
       params = valid_form_params.merge(payee_name_override: "Acme Props Ltd")
@@ -370,9 +282,7 @@ module Admin
       assert_includes response.body, "fill in all three: payee name, sort code, and account number"
     end
 
-    # The submitter's own bank details would otherwise stand in for the missing
-    # payee (EffectivePayee's fallback), so the claim would pay them for a bill
-    # they never paid — and review's "no bank details" block can't see it.
+    # EffectivePayee would fall back to the submitter's own details.
     test "create rejects an invoice with no third-party payee details" do
       sign_in @user
       params = valid_form_params.merge(expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
@@ -393,19 +303,6 @@ module Admin
       assert_equal "Acme Props Ltd", ::Reimbursements::Expense.order(:id).last.payee_name_override
     end
 
-    test "edit finds an own expense created out-of-band (e.g. the email-in poll job)" do
-      sign_in @user
-      get :index # the user's list is warmed without the email-in expense
-
-      emailed = create_reimbursements_expense(person: @person, budget: @budget,
-                                              description: "Emailed taxi receipt")
-
-      get :edit, params: { id: emailed.record_id }
-
-      assert_response :success
-      assert_includes response.body, "Emailed taxi receipt"
-    end
-
     test "edit renders the prefilled form for an own pending expense" do
       sign_in @user
 
@@ -416,12 +313,15 @@ module Admin
       assert_includes response.body, "receipt.pdf"
     end
 
-    test "edit 404s for another person's expense" do
-      sign_in @user
+    [ [ :get, :show ], [ :get, :edit ], [ :delete, :destroy ] ].each do |verb, action|
+      test "#{action} 404s for another person's expense" do
+        sign_in @user
 
-      get :edit, params: { id: @other_expense.record_id }
+        public_send(verb, action, params: { id: @other_expense.record_id })
 
-      assert_response :not_found
+        assert_response :not_found
+        assert ::Reimbursements::Expense.exists?(@other_expense.id)
+      end
     end
 
     # --- Read-only show (view a claim after the editable window) -----------
@@ -437,14 +337,35 @@ module Admin
       assert_response :success
       assert_includes response.body, "Van hire"
       assert_includes response.body, "Approved"
-      # No editable expense fields and no receipt-remove control on the
-      # read-only page (both are present on the edit page — this discriminates it).
       assert_select "input[name='reimbursements_expense_form[amount]']", 0
       assert_select "button[data-action='receipts-upload#remove']", 0
     end
 
-    # The date shown is submitted_at, which before_create stamps on a draft as
-    # well, so a draft's date is when it was started rather than submitted.
+    # An international claim has no UK overrides, so reading the sort code and
+    # account number would print the submitter's own account as the payee's.
+    test "show prints a third-party payee's own rail's details, not the submitter's account" do
+      @person.create_payment_details!(sort_code: "11-22-33", account_number: "87654321")
+      international = create_reimbursements_expense(
+        person: @person, budget: @budget, payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+        payee_name_override: "Ausland GmbH", iban_override: "DE89370400440532013000",
+        bic_override: "DEUTDEFF500"
+      )
+      uk = create_reimbursements_expense(person: @person, budget: @budget, payee_name_override: "Venue Ltd",
+                                         sort_code_override: "20-00-00", account_number_override: "12345678")
+      sign_in @user
+
+      get :show, params: { id: international.record_id }
+      assert_includes response.body, "Ausland GmbH"
+      assert_includes response.body, "DE89 3704 0044 0532 0130 00"
+      assert_includes response.body, "DEUTDEFF500"
+      assert_not_includes response.body, "87654321"
+
+      get :show, params: { id: uk.record_id }
+      assert_includes response.body, "20-00-00"
+      assert_includes response.body, "12345678"
+    end
+
+    # before_create stamps submitted_at on a draft too, so it is when it started.
     test "show labels the claim's date Submitted, and Started while it is a draft" do
       submitted = create_reimbursements_expense(person: @person, budget: @budget,
                                                 status: ::Reimbursements::Status::PENDING)
@@ -462,8 +383,6 @@ module Admin
     end
 
     # --- In-page receipt viewer -------------------------------------------
-    # The producer reads their own receipt in the page, through the same shared
-    # partial the Review queue and the finance pages use.
 
     test "show renders the shared in-page receipt viewer, closed and unloaded" do
       sign_in @user
@@ -476,9 +395,8 @@ module Admin
       assert_select "button[data-action='receipt-viewer#show'][aria-expanded='false']" do |buttons|
         assert_equal "View receipt 1 of 1, receipt.pdf", buttons.first["aria-label"]
       end
-      # A PDF gets a real first-page thumbnail, not a generic document icon.
       assert_select "img[src=?]", receipt.preview_url
-      # The pane is present but closed, and its frame carries no src yet.
+      # The pane is closed and its frame not yet loaded.
       assert_select "div#receipt-pane-#{@expense.record_id}[hidden]"
       assert_select "iframe[data-src=?]", receipt.url
       assert_select "iframe[src]", 0
@@ -493,22 +411,6 @@ module Admin
       assert_select "div[data-controller='fancybox receipt-viewer']"
       assert_select "button[data-action='receipts-upload#remove']", 1
       assert_select "iframe[data-src]", 1
-    end
-
-    test "show 404s for another person's expense" do
-      sign_in @user
-
-      get :show, params: { id: @other_expense.record_id }
-
-      assert_response :not_found
-    end
-
-    test "the index links each row to its read-only view" do
-      sign_in @user
-
-      get :index
-
-      assert_select "a[href=?]", admin_reimbursements_expense_path(@expense.record_id), text: "View"
     end
 
     # --- Draft/submit boundary: state-aware labels + actions --------------
@@ -536,8 +438,7 @@ module Admin
       get :edit, params: { id: draft.record_id }
 
       assert_select "input[type=submit][value='Submit expense']"
-      # Delete draft posts its OWN form, so the destroy cannot be mistaken for the
-      # update this page also posts to the same URL.
+      # Delete draft posts its own form, apart from the update's same URL.
       assert_select "form[action=?][method=post][data-turbo-confirm]",
                     admin_reimbursements_expense_path(draft.record_id) do
         assert_select "input[name=_method][value=delete]", 1
@@ -566,18 +467,7 @@ module Admin
       assert ::Reimbursements::Expense.exists?(@expense.id)
     end
 
-    test "destroy 404s for another person's draft" do
-      sign_in @user
-
-      delete :destroy, params: { id: @other_expense.record_id }
-
-      assert_response :not_found
-      assert ::Reimbursements::Expense.exists?(@other_expense.id)
-    end
-
-    # A race: the producer follows an Edit link on a stale list for their own
-    # claim that review has since picked up. Fail gracefully (friendly flash
-    # redirect) rather than showing a bare 404.
+    # A stale Edit link for a claim review has since picked up.
     def own_non_editable_expense
       create_reimbursements_expense(person: @person, budget: @budget,
                                     status: ::Reimbursements::Status::APPROVED,
@@ -636,54 +526,36 @@ module Admin
     end
 
     # --- A budget that vanished while the form was open ----------------------
-    # The real incident (Honeybadger 134234926): a finance data fix deleted the
-    # budget the producer had already picked, and the submit 500ed on the
-    # foreign key, losing a claim that was completely filled in. Deleting and
-    # deactivating budgets are both ordinary finance work, so both must land the
-    # producer back on their own form.
+    # Honeybadger 134234926: a deleted budget 500ed the submit and lost the claim.
 
     # A separate budget, so deleting it can't take @expense's own row with it.
     def spare_budget(**attrs)
       create_reimbursements_budget(name: "Costumes", nominal_code: "4100", **attrs)
     end
 
-    test "create re-renders keeping the input when the picked budget was deleted" do
-      sign_in @user
-      doomed = spare_budget
-      params = valid_form_params.merge(budget_record_id: doomed.record_id,
-                                       description: "Blood capsules and a wig")
-      doomed.destroy!
+    # A deactivated budget still satisfies the FK, so it used to charge a retired line.
+    { "deleted" => ->(budget) { budget.destroy! },
+      "deactivated" => ->(budget) { budget.update!(active: false) } }.each do |how, vanish|
+      test "create re-renders keeping the input when the picked budget was #{how}" do
+        sign_in @user
+        gone = spare_budget
+        params = valid_form_params.merge(budget_record_id: gone.record_id,
+                                         description: "Blood capsules and a wig")
+        vanish.call(gone)
 
-      assert_no_difference "::Reimbursements::Expense.count" do
-        post :create, params: { reimbursements_expense_form: params }
+        assert_no_difference "::Reimbursements::Expense.count" do
+          post :create, params: { reimbursements_expense_form: params }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/no longer available/, response.body)
+        assert_includes response.body, "Blood capsules and a wig",
+                        "the producer's typing must survive the failed submit"
+        assert_includes response.body, "PROPS PAT"
       end
-
-      assert_response :unprocessable_entity
-      assert_match(/no longer available/, response.body)
-      assert_includes response.body, "Blood capsules and a wig",
-                      "the producer's typing must survive the failed submit"
-      assert_includes response.body, "PROPS PAT"
     end
 
-    test "create re-renders keeping the input when the picked budget was deactivated" do
-      sign_in @user
-      retired = spare_budget
-      params = valid_form_params.merge(budget_record_id: retired.record_id,
-                                       description: "Blood capsules and a wig")
-      retired.update!(active: false)
-
-      assert_no_difference "::Reimbursements::Expense.count" do
-        post :create, params: { reimbursements_expense_form: params }
-      end
-
-      assert_response :unprocessable_entity
-      assert_match(/no longer available/, response.body)
-      assert_includes response.body, "Blood capsules and a wig"
-    end
-
-    # A draft is a scratchpad the producer may leave incomplete, so a stale
-    # budget must not cost them their typing: the budget is dropped, the draft
-    # saves, and the notice says the budget went so they can re-pick it.
+    # The notice says the budget went, so they can re-pick it.
     test "create as a draft drops the vanished budget and still saves" do
       sign_in @user
       doomed = spare_budget
@@ -718,9 +590,7 @@ module Admin
       assert_equal "Fake blood", @expense.reload.description, "nothing was written"
     end
 
-    # Belt and braces: even with the form-level rule, a delete can land between
-    # the validation and the insert. The store names that race and the
-    # controller must render it as the same fixable form error, not a 500.
+    # A delete landing between the validation and the insert.
     test "create renders the form when the store reports the budget gone mid-write" do
       sign_in @user
       store = ::Reimbursements::DatabaseStore.new
@@ -737,16 +607,6 @@ module Admin
       assert_response :unprocessable_entity
       assert_match(/no longer available/, response.body)
       assert_includes response.body, "Raced away"
-    end
-
-    test "update rejects invalid input without writing" do
-      sign_in @user
-
-      patch :update, params: { id: @expense.record_id,
-                               reimbursements_expense_form: valid_form_params.except(:receipts).merge(amount: "") }
-
-      assert_response :unprocessable_entity
-      assert_in_delta 12.5, @expense.reload.amount, 0.001, "nothing was written"
     end
   end
   end

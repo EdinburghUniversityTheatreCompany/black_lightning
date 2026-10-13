@@ -89,4 +89,16 @@ Rails.application.configure do
   config.solid_queue.connects_to = { database: { writing: :queue } }
 
   config.view_component.previews.controller = "ComponentPreviewsController"
+
+  # Throwaway fallbacks: an encrypted attribute needs a key on write even when blank, so
+  # without them every Expense.create! raises. Published in the repo, they protect nothing;
+  # never reuse them.
+  config.active_record.encryption.primary_key =
+    ENV["REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY"].presence || "dev-only-insecure-primary-key"
+  config.active_record.encryption.deterministic_key =
+    ENV["REIMBURSEMENTS_AR_ENCRYPTION_DETERMINISTIC_KEY"].presence ||
+    "dev-only-insecure-deterministic-key"
+  config.active_record.encryption.key_derivation_salt =
+    ENV["REIMBURSEMENTS_AR_ENCRYPTION_KEY_DERIVATION_SALT"].presence ||
+    "dev-only-insecure-key-derivation-salt"
 end

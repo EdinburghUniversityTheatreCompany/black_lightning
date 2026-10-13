@@ -71,11 +71,6 @@ can_manage_users:
   action: manage
   subject_class: User
 
-can_create_opportunity:
-  id: 14
-  action: create
-  subject_class: Opportunity
-
 # The committee resources page (admin/static#committee). Given to committee so the
 # fixture role keeps the access the production role is migrated to.
 access_committee:

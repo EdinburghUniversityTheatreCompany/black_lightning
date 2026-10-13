@@ -43,44 +43,30 @@ class AcademicYearHelperTest < ActionView::TestCase
     assert_equal "23/24", academic_year_shorthand
   end
 
-  # date_to_academic_year tests
-  test "date_to_academic_year returns correct year for September onwards" do
-    assert_equal 2023, date_to_academic_year(Date.new(2023, 9, 1))
-    assert_equal 2023, date_to_academic_year(Date.new(2023, 10, 15))
-    assert_equal 2023, date_to_academic_year(Date.new(2023, 12, 25))
+  test "date_to_academic_year" do
+    { Date.new(2023, 9, 1) => 2023, Date.new(2023, 12, 25) => 2023,
+      Date.new(2023, 1, 1) => 2022, Date.new(2023, 8, 31) => 2022 }.each do |date, year|
+      assert_equal year, date_to_academic_year(date), date
+    end
   end
 
-  test "date_to_academic_year returns previous year for before September" do
-    assert_equal 2022, date_to_academic_year(Date.new(2023, 1, 1))
-    assert_equal 2022, date_to_academic_year(Date.new(2023, 8, 31))
-  end
-
-  # format_academic_year tests
   test "format_academic_year formats year correctly" do
     assert_equal "23/24", format_academic_year(2023)
     assert_equal "99/00", format_academic_year(1999)
     assert_equal "09/10", format_academic_year(2009)
   end
 
-  test "format_years_active_label with no years" do
-    assert_equal "no activity on record", format_years_active_label([])
-    assert_equal "no activity on record", format_years_active_label(nil)
-  end
-
-  test "format_years_active_label with single year" do
-    assert_equal "active 23/24", format_years_active_label([ 2023 ])
-  end
-
-  test "format_years_active_label with consecutive years" do
-    assert_equal "active 19/20-21/22", format_years_active_label([ 2019, 2020, 2021 ])
-  end
-
-  test "format_years_active_label with gap in years" do
-    assert_equal "active 17/18-19/20, 22/23-23/24", format_years_active_label([ 2017, 2018, 2019, 2022, 2023 ])
-  end
-
-  test "format_years_active_label with multiple gaps" do
-    assert_equal "active 15/16, 18/19-19/20, 23/24", format_years_active_label([ 2015, 2018, 2019, 2023 ])
+  test "format_years_active_label" do
+    {
+      [] => "no activity on record",
+      nil => "no activity on record",
+      [ 2023 ] => "active 23/24",
+      [ 2019, 2020, 2021 ] => "active 19/20-21/22",
+      [ 2017, 2018, 2019, 2022, 2023 ] => "active 17/18-19/20, 22/23-23/24",
+      [ 2015, 2018, 2019, 2023 ] => "active 15/16, 18/19-19/20, 23/24"
+    }.each do |years, label|
+      assert_equal label, format_years_active_label(years), years.inspect
+    end
   end
 
   private

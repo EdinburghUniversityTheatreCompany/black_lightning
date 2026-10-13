@@ -6,7 +6,7 @@ def seed_user(email, first_name, last_name, roles: [], **attrs)
       last_name: last_name,
       password: "Passw0rd",
       password_confirmation: "Passw0rd",
-      consented: 1.year.ago,
+      consented: Date.current,
       profile_completed_at: 1.year.ago,
       **attrs
     )
@@ -62,14 +62,5 @@ seed_user("life@bedlamtheatre.co.uk", "Leslie", "Oldmember",
   roles: [ :"life member" ])
 
 # Claude Code dev testing user
-claude_user = User.find_or_initialize_by(email: "unknown_claude@bedlamtheatre.co.uk")
-if claude_user.new_record?
-  claude_user.assign_attributes(
-    password: SecureRandom.hex(20),
-    first_name: "Claude", last_name: "Dev",
-    consented: Time.current, profile_completed_at: Time.current
-  )
-  claude_user.save!
-  claude_user.add_role(:admin)
-  seed_puts "Created unknown_claude@bedlamtheatre.co.uk"
-end
+seed_user("unknown_claude@bedlamtheatre.co.uk", "Claude", "Dev", roles: [ :admin ],
+  password: (pw = SecureRandom.hex(20)), password_confirmation: pw)

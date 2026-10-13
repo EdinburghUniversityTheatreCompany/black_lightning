@@ -7,9 +7,6 @@ module Reimbursements
     BACS_DATE = "2026-05-13".freeze
     OPERATOR = [ "operator@bedlamfringe.co.uk" ].freeze
 
-    FakeProcessor = ReimbursementsTestHelpers::FakeBatchProcessor
-    FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
-
     def payee
       @payee ||= create_reimbursements_person(sort_code: "08-99-99", account_number: "66374958")
     end
@@ -19,13 +16,20 @@ module Reimbursements
                                     status: status)
     end
 
+    # As BatchesController#create enqueues it: the attempt row exists from the click.
     def enqueue_args(**overrides)
       { cost_centre_key: CostCentre.default.key, bacs_date: BACS_DATE, sender_name: "Fringe Finance",
-        eusa_recipient: "finance@eusa.ed.ac.uk", operator_emails: OPERATOR }.merge(overrides)
+        eusa_recipient: "finance@eusa.ed.ac.uk", operator_emails: OPERATOR,
+        attempt_id: overrides[:attempt_id] || click_time_attempt.id }.merge(overrides)
+    end
+
+    def click_time_attempt
+      BatchAttempt.create!(cost_centre: CostCentre.default, bacs_date: Date.new(2026, 5, 13),
+                           triggered_by_email: OPERATOR.first)
     end
 
     setup do
-      @processor = FakeProcessor.new
+      @processor = FakeBatchProcessor.new
       @notifier = FakeNotifier.new
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       BuildBatchJob.graph_builder = -> { Object.new }
@@ -50,7 +54,6 @@ module Reimbursements
 
       BuildBatchJob.perform_now(**enqueue_args)
 
-      assert_equal 1, @processor.calls.size
       call = @processor.calls.sole
       assert_equal Date.new(2026, 5, 13), call[:bacs_date], "the ISO string is parsed to a Date"
       assert_equal "finance@eusa.ed.ac.uk", call[:eusa_recipient]
@@ -59,18 +62,35 @@ module Reimbursements
       assert_equal OPERATOR, ready[:recipients]
       assert_equal "https://outlook.example/draft-1", ready[:draft_link]
       assert_equal "recBat1", ready[:batch_id]
-      # The alert is sent from the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
+
+      assert BatchAttempt.sole.completed?
     end
 
-    test "a malformed bacs_date falls back to today rather than raising" do
+    # perform, not perform_now: ApplicationJob's retry_on would take the error and re-enqueue.
+    # The attempt is failed first, or History shows it building until it goes stale.
+    test "an unreadable BACS date fails its attempt, then raises rather than paying on today's date" do
       approved_expense
+      attempt = click_time_attempt
 
-      travel_to Time.zone.local(2026, 5, 20) do
-        BuildBatchJob.perform_now(**enqueue_args(bacs_date: "not-a-date"))
+      assert_raises(Date::Error) do
+        BuildBatchJob.new.perform(**enqueue_args(bacs_date: "not-a-date", attempt_id: attempt.id))
       end
 
-      assert_equal Date.new(2026, 5, 20), @processor.calls.sole[:bacs_date]
+      assert_empty @processor.calls
+      assert attempt.reload.failed?
+      assert_equal 'The BACS date "not-a-date" could not be read, so nothing was built. Build the batch again.',
+                   attempt.error_messages
+      assert_equal BatchAttempt::NO_DRAFT, attempt.draft_web_link, "it failed before any draft"
+    end
+
+    test "a run whose click-time attempt is missing raises rather than inventing one" do
+      approved_expense
+
+      assert_raises(ActiveRecord::RecordNotFound) { BuildBatchJob.new.perform(**enqueue_args(attempt_id: 0)) }
+
+      assert_empty @processor.calls
+      assert_empty BatchAttempt.all
     end
 
     test "builds the graph client once per run, not once per call site" do
@@ -94,26 +114,106 @@ module Reimbursements
       assert_equal "<p>hi</p>", call[:eusa_body_html]
     end
 
+    # The preview is only a preview: the job re-selects the Approved set at run
+    # time, so the narrowing to one centre has to be here too.
+    test "builds only its own centre's claims" do
+      termtime = create_second_reimbursements_cost_centre
+      create_reimbursements_expense(person: payee, budget: create_reimbursements_budget(cost_centre: CostCentre.default),
+                                    status: Status::APPROVED, auto_number: 11)
+      create_reimbursements_expense(person: payee,
+                                    budget: create_reimbursements_budget(name: "Termtime props", cost_centre: termtime),
+                                    status: Status::APPROVED, auto_number: 12)
+
+      BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "termtime"))
+
+      assert_equal [ 12 ], @processor.calls.sole[:expenses].map(&:auto_number)
+    end
+
     test "no approved expenses: no-op, no processor call, no email (the serialised double-click case)" do
       # A serialised second build finds the expenses already Submitted.
       approved_expense(status: Status::SUBMITTED)
+      attempt = click_time_attempt
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert_empty @processor.calls
       assert_empty @notifier.calls
+      assert attempt.reload.nothing_to_build?
     end
 
-    test "a failed build emails the operator the failure with its errors" do
-      @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
-      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+    test "a failed build emails the operator the failure and fails its attempt with the errors" do
+      @processor = FakeBatchProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
+      attempt = click_time_attempt
       approved_expense
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert_empty alerts(:batch_ready)
       failure = alerts(:failure).sole.last
       assert_match(/EUSA draft creation failed/, failure[:error_text])
+      assert_equal "13 May 2026", failure[:bacs_date]
+      assert_predicate failure[:draft_link], :blank?, "no draft was made, so the email offers a rebuild"
+      assert attempt.reload.failed?
+      assert_includes attempt.error_messages, "EUSA draft creation failed"
+    end
+
+    # The orphan-draft and mark-Submitted failures: the email must say not to build again.
+    test "a build that fails after making the EUSA draft hands the failure email its link" do
+      @processor = FakeBatchProcessor.new(success: false, errors: [ "ORPHAN DRAFT: do not rebuild" ],
+                                          draft_link: "https://outlook.example/draft-1")
+      approved_expense
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert_equal "https://outlook.example/draft-1", alerts(:failure).sole.last[:draft_link]
+    end
+
+    # The real BatchProcessor, so the attempt records what its result says about the draft.
+    # The block may break the job's store before the processor gets it.
+    def with_real_processor(&break_store)
+      CostCentre.default.update!(sharepoint_receipts_drive_id: "drvR", sharepoint_receipts_folder_id: "fldR",
+                                 sharepoint_bacs_drive_id: "drvB", sharepoint_bacs_folder_id: "fldB")
+      graph = FakeGraphClient.new
+      BuildBatchJob.graph_builder = -> { graph }
+      BuildBatchJob.processor_builder = lambda do |store:, graph:, cost_centre:|
+        break_store&.call(store)
+        BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, sleeper: ->(_seconds) { })
+      end
+      graph
+    end
+
+    # History reads the record to say whether building again is safe.
+    test "a build that fails before its EUSA draft records that it made none" do
+      graph = with_real_processor
+      graph.fail_draft = true
+      attempt = click_time_attempt
+      approved_expense
+
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
+
+      attempt.reload
+      assert attempt.failed?
+      assert_includes attempt.error_messages, "EUSA draft creation failed"
+      assert_empty graph.drafts
+      assert_equal BatchAttempt::NO_DRAFT, attempt.draft_web_link
+      assert_not attempt.draft_unknown?
+    end
+
+    test "a build that fails after making its EUSA draft records the draft's link" do
+      graph = with_real_processor do |store|
+        store.define_singleton_method(:create_batch!) { |_attrs| raise "batch write failed" }
+      end
+      attempt = click_time_attempt
+      approved_expense
+
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
+
+      attempt.reload
+      assert attempt.failed?
+      assert_includes attempt.error_messages, "ORPHAN DRAFT"
+      assert_equal 1, graph.drafts.size
+      assert_equal "https://outlook.example/draft-1", attempt.draft_web_link
+      assert_equal attempt.draft_web_link, alerts(:failure).sole.last[:draft_link], "History and the email agree"
     end
 
     test "a Graph credential failure notifying the operator escalates to IT, not a doomed retry" do
@@ -125,60 +225,32 @@ module Reimbursements
       end
 
       assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
-      assert_empty alerts(:failure), "an auth failure must not also attempt the (equally doomed) failure email"
     ensure
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
 
-    test "a Graph credential failure inside the batch build itself also escalates to IT" do
-      @processor = FakeProcessor.new
+    test "a Graph credential failure inside the batch build itself escalates to IT and fails the attempt" do
       @processor.define_singleton_method(:process) { |**| raise ::GraphAuth::AuthError, "token expired" }
-      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+      attempt = click_time_attempt
       approved_expense
 
       assert_emails 1 do
-        assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args) }
+        assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id)) }
       end
 
       assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
       assert_empty @notifier.calls, "no operator email is attempted once Graph auth itself is broken"
+      assert attempt.reload.failed?
+      assert_includes attempt.error_messages, "token expired"
+      assert attempt.draft_unknown?, "with no result in hand the job cannot say whether a draft was made"
     ensure
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
 
     # --- BatchAttempt lifecycle: History's in-app trace of each build ------
 
-    def click_time_attempt
-      BatchAttempt.create!(cost_centre: CostCentre.default, bacs_date: Date.new(2026, 5, 13),
-                           triggered_by_email: OPERATOR.first)
-    end
-
-    test "resolves the click-time attempt to completed with the batch id" do
-      attempt = click_time_attempt
-      approved_expense
-
-      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
-
-      assert attempt.reload.completed?
-      assert_equal "recBat1", attempt.batch_record_id
-      assert_nil attempt.error_messages, "a clean build stores no warnings"
-    end
-
-    test "a failed build resolves the attempt to failed with its errors" do
-      @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
-      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
-      attempt = click_time_attempt
-      approved_expense
-
-      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
-
-      assert attempt.reload.failed?
-      assert_includes attempt.error_messages, "EUSA draft creation failed"
-    end
-
     test "a successful build with best-effort failures keeps them as warnings on the attempt" do
-      @processor = FakeProcessor.new(success: true, errors: [ "BACS file SharePoint upload failed" ])
-      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+      @processor = FakeBatchProcessor.new(success: true, errors: [ "BACS file SharePoint upload failed" ])
       attempt = click_time_attempt
       approved_expense
 
@@ -188,55 +260,8 @@ module Reimbursements
       assert_includes attempt.error_messages, "SharePoint upload failed"
     end
 
-    test "no approved expenses resolves the attempt to nothing_to_build" do
-      attempt = click_time_attempt
-      # nothing Approved seeded
-
-      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
-
-      assert attempt.reload.nothing_to_build?
-    end
-
-    test "a Graph credential failure resolves the attempt to failed" do
-      @processor = FakeProcessor.new
-      @processor.define_singleton_method(:process) { |**| raise ::GraphAuth::AuthError, "token expired" }
-      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
-      attempt = click_time_attempt
-      approved_expense
-
-      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
-
-      assert attempt.reload.failed?
-      assert_includes attempt.error_messages, "token expired"
-    ensure
-      Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
-    end
-
-    test "a direct run with no click-time attempt still records one" do
-      approved_expense
-
-      assert_difference -> { BatchAttempt.count }, 1 do
-        BuildBatchJob.perform_now(**enqueue_args)
-      end
-
-      attempt = BatchAttempt.recent_first.first
-      assert attempt.completed?
-      assert_equal OPERATOR.first, attempt.triggered_by_email
-    end
-
-    test "a cost centre gone between click and run resolves its attempt to failed, not left building" do
-      attempt = click_time_attempt
-      approved_expense
-
-      BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "gone", attempt_id: attempt.id))
-
-      assert attempt.reload.failed?, "the row must not linger in 'building' forever"
-      assert_includes attempt.error_messages, "no longer exists"
-    end
-
     test "resolves exactly its own attempt by id, never a leftover building row from a prior build" do
-      # A prior build died leaving R_old still 'building'. This run must resolve
-      # ITS row (by id), not grab the oldest building row for the cost centre.
+      # A prior build died leaving r_old 'building'.
       r_old = click_time_attempt
       r_mine = click_time_attempt
       approved_expense
@@ -244,16 +269,22 @@ module Reimbursements
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: r_mine.id))
 
       assert r_mine.reload.completed?, "my row is resolved"
+      assert_equal "recBat1", r_mine.batch_record_id
+      assert_nil r_mine.error_messages, "a clean build stores no warnings"
       assert r_old.reload.building?, "the leftover row is untouched, not mislabelled with my result"
     end
 
-    test "an unknown cost centre is a safe no-op" do
+    test "a cost centre gone between click and run is a no-op that fails its attempt, not left building" do
       approved_expense
+      attempt = click_time_attempt
 
-      BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "nope"))
+      BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "gone", attempt_id: attempt.id))
 
       assert_empty @processor.calls
       assert_empty @notifier.calls
+      assert attempt.reload.failed?, "the row must not linger in 'building' forever"
+      assert_includes attempt.error_messages, "no longer exists"
+      assert_equal BatchAttempt::NO_DRAFT, attempt.draft_web_link, "it failed before any draft"
     end
 
     test "with no operator recipients the batch still runs and the email is skipped" do

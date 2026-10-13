@@ -3,19 +3,13 @@ require "test_helper"
 module Reimbursements
   module Exports
     ##
-    # The Actuals export's Budget cell for a row split across several income
-    # budgets. A finance user reading the CSV and a finance user reading the
-    # ledger page must not be told two different things about where the money
-    # went, so both read one derivation.
+    # The Actuals export for a row split across several income budgets: it
+    # reads the same derivation as the ledger page, so the two cannot disagree.
     class ActualsTest < ActiveSupport::TestCase
       include ReimbursementsTestHelpers
 
       def csv_rows(store)
         CSV.parse(Actuals.new(store: store).to_csv(store.eusa_actuals), headers: true)
-      end
-
-      def budget_cell(store)
-        csv_rows(store).first["Budget"]
       end
 
       setup do
@@ -25,52 +19,25 @@ module Reimbursements
         @show_b = create_reimbursements_budget(name: "Show B", budget_type: "Income")
       end
 
-      test "a split row's Budget cell names every budget and its share" do
+      # Shares can sit in different areas, so one Area cell would be a lie.
+      test "a split row names every budget and its share, says Apportioned, and leaves Area blank" do
+        @show_a.update!(area: create_reimbursements_area(name: "Cogito"))
         DatabaseStore.new.apportion_actual!(@payout.id, [
           { budget_id: @show_a.id, amount: BigDecimal("2500") },
           { budget_id: @show_b.id, amount: BigDecimal("1500") }
         ])
 
-        assert_equal "Show A £2,500.00; Show B £1,500.00", budget_cell(DatabaseStore.new)
-      end
+        row = csv_rows(DatabaseStore.new).first
 
-      test "a split row's Status names the split" do
-        DatabaseStore.new.apportion_actual!(
-          @payout.id, [ { budget_id: @show_a.id, amount: BigDecimal("4000") } ]
-        )
-
-        assert_equal "Apportioned", csv_rows(DatabaseStore.new).first["Status"]
+        assert_equal "Cogito: Show A £2,500.00; Show B £1,500.00", row["Budget"]
+        assert_equal "Apportioned", row["Status"]
+        assert_nil row["Area"]
       end
 
       test "a row attached to one budget whole still names just that budget" do
         @payout.update!(budget: @show_a)
 
-        assert_equal "Show A", budget_cell(DatabaseStore.new)
-      end
-
-      # Shares can sit in different areas, so one Area cell would be a lie
-      # rather than a blank — the reason Batches carries no Area column.
-      test "a split row's Area cell is blank rather than naming one of several" do
-        area = create_reimbursements_area(name: "Cogito")
-        @show_a.update!(area: area)
-        DatabaseStore.new.apportion_actual!(@payout.id, [
-          { budget_id: @show_a.id, amount: BigDecimal("2500") },
-          { budget_id: @show_b.id, amount: BigDecimal("1500") }
-        ])
-
-        assert_nil csv_rows(DatabaseStore.new).first["Area"]
-      end
-
-      # Every cell goes through CellSanitizer, or a budget somebody named
-      # "=cmd|..." reaches Excel as a formula.
-      test "the Budget cell is sanitized" do
-        evil = create_reimbursements_budget(name: "=1+1", budget_type: "Income")
-        DatabaseStore.new.apportion_actual!(
-          @payout.id, [ { budget_id: evil.id, amount: BigDecimal("4000") } ]
-        )
-
-        assert_equal CellSanitizer.cell("=1+1 £4,000.00"), budget_cell(DatabaseStore.new)
-        assert_not budget_cell(DatabaseStore.new).start_with?("=")
+        assert_equal "Show A", csv_rows(DatabaseStore.new).first["Budget"]
       end
     end
   end

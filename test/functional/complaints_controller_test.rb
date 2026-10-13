@@ -7,6 +7,14 @@ class ComplaintsControllerTest < ActionController::TestCase
 
     assert_not_includes response.body, "Comment"
     assert_not_includes response.body, "Resolve"
+    # Image upload needs sign-in.
+    assert_select "[data-markdown-editor-upload-url-value]", false
+  end
+
+  test "new offers a signed-in visitor image upload" do
+    sign_in users(:member)
+    get :new
+    assert_select "[data-markdown-editor-upload-url-value]"
   end
 
   test "should create" do

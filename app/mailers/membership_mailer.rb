@@ -7,7 +7,7 @@ class MembershipMailer < ApplicationMailer
     @subject = "Welcome to Bedlam"
 
     qr = RQRCode::QRCode.new(@card.card_number, size: 2, level: :h)
-    attachments.inline["qr.png"] = RQRCode::Renderers::PNG.render(qr)
+    attachments.inline["qr.png"] = qr.as_png(module_px_size: 11, border_modules: 0).to_s
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end
@@ -18,7 +18,7 @@ class MembershipMailer < ApplicationMailer
     @subject = "Bedlam Membership"
 
     qr = RQRCode::QRCode.new(@card.card_number, size: 2, level: :h)
-    attachments.inline["qr.png"] = RQRCode::Renderers::PNG.render(qr)
+    attachments.inline["qr.png"] = qr.as_png(module_px_size: 11, border_modules: 0).to_s
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end

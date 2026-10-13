@@ -22,7 +22,6 @@ class Admin::StaffingDebtsController < AdminController
     redirect_to admin_staffing_debt_path(@staffing_debt)
   end
 
-  # New and Update are handled by the Generic Controller.
   def create
     get_resource.state = :normal
     get_resource.converted_from_maintenance_debt = :false

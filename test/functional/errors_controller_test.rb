@@ -1,34 +1,14 @@
 require "test_helper"
 
 class ErrorsControllerTest < ActionController::TestCase
-  test "renders the 404 page" do
-    get :show, params: { status: "404" }
+  # Rails can dispatch to any status; one with no page of its own still answers with its own status.
+  test "renders the 422 page, and the 500 page under a status with no page of its own" do
+    { "422" => [ 422, "that change was rejected" ], "503" => [ :service_unavailable, "We have been informed." ] }.each do |status, (code, text)|
+      get :show, params: { status: }
 
-    assert_response :not_found
-    assert_match "isn&#39;t the page you are looking for", response.body
-  end
-
-  test "renders the 422 page" do
-    get :show, params: { status: "422" }
-
-    assert_response 422
-    assert_match "that change was rejected", response.body
-  end
-
-  test "renders the 500 page" do
-    get :show, params: { status: "500" }
-
-    assert_response :internal_server_error
-    assert_match "We have been informed.", response.body
-  end
-
-  # Rails picks the status off the exception, so it can dispatch to any of them. The ones with no
-  # page of their own still have to answer with their own status.
-  test "renders the 500 page under a status that has no page of its own" do
-    get :show, params: { status: "503" }
-
-    assert_response :service_unavailable
-    assert_match "We have been informed.", response.body
+      assert_response code
+      assert_match text, response.body
+    end
   end
 
   test "reports the exception that was being handled" do

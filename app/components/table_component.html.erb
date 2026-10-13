@@ -1,4 +1,4 @@
-<table class="table table-sticky-head <%= @table_class %>" <% if fixed_layout? %>style="table-layout: fixed; width: 100%"<% end %>>
+<table class="table table-sticky-head table-hover" <% if fixed_layout? %>style="table-layout: fixed; width: 100%"<% end %>>
   <% if fixed_layout? %>
     <colgroup>
       <% @col_widths.each do |width| %>
@@ -7,15 +7,13 @@
     </colgroup>
   <% end %>
 
-  <% if @include_headers %>
-    <thead>
-      <tr>
-        <% rendered_headers.each do |header| %>
-          <th scope="col"><%= header %></th>
-        <% end %>
-      </tr>
-    </thead>
-  <% end %>
+  <thead>
+    <tr>
+      <% rendered_headers.each do |header| %>
+        <th scope="col"><%= header %></th>
+      <% end %>
+    </tr>
+  </thead>
 
   <tbody>
     <% @field_sets.each do |field_set| %>

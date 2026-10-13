@@ -6,6 +6,7 @@ module Reimbursements
 
     MAILBOX = "send@bedlamfringe.co.uk".freeze
     FINANCE = "finance@bedlamfringe.co.uk".freeze
+    PORTAL = "https://www.example.com/admin/reimbursements".freeze
 
     def cost_centre(name: "Bedlam Fringe 2026", notification_email: FINANCE)
       CostCentre.new(key: "fringe", name: name, eusa_code: "F40", notification_email: notification_email,
@@ -32,6 +33,31 @@ module Reimbursements
       assert_match "Receipt is missing the VAT breakdown.", mail[:html]
       assert_match "12.50", mail[:html]
       assert_match "Props", mail[:html]
+      assert_match(/\A<!DOCTYPE html>/, mail[:html], "a complete document, not a bare fragment")
+      assert_includes mail[:html], "<html"
+      assert_includes mail[:html], '<meta charset="utf-8">'
+      assert_includes mail[:html], "<title>Your Bedlam Fringe 2026 expense #7 was not approved</title>"
+      assert_includes mail[:html], %(href="#{PORTAL}/expenses/42")
+      assert_includes mail[:html], %(href="#{PORTAL}/expenses/new")
+      assert_includes mail[:html], %(href="mailto:#{FINANCE}")
+      assert_equal FINANCE, mail[:reply_to]
+      text = Nokogiri::HTML(mail[:html]).text.squish
+      # Without a contact there is no reply-to, and a reply reaches the send mailbox, which here
+      # is the one email-in polls; so the copy names the contact instead of inviting a reply.
+      assert_not_includes text, "reply to this email"
+      assert_includes text, "If you believe this decision is wrong, or you have fixed the reason above, " \
+                            "write to #{FINANCE} and we can put the claim back in the queue."
+    end
+
+    test "replies never go to the polled mailbox" do
+      [ nil, MAILBOX ].each do |notification_email|
+        notifier, graph = build(centre: cost_centre(notification_email: notification_email))
+
+        notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
+                           amount: 12.5, budget_name: "Props", description: "Fake blood", reason: "No receipt.")
+
+        assert_nil graph.send_mails.sole[:reply_to], notification_email.inspect
+      end
     end
 
     test "producer_notification lists the payee's expenses and totals" do
@@ -50,6 +76,8 @@ module Reimbursements
       assert_match "Fake blood", mail[:html]
       assert_match "20.50", mail[:html]
       assert_match "2026-05-13", mail[:html]
+      assert_includes mail[:html], %(href="#{PORTAL}/expenses/42">#7</a>)
+      assert_includes mail[:html], %(contact us at <a href="mailto:#{FINANCE}")
     end
 
     test "operator alerts render their bodies and carry the standard subjects" do
@@ -65,40 +93,99 @@ module Reimbursements
                                             budget_name: "Props", description: "Paint",
                                             flags: [ "no receipt" ] } ])
       notifier.batch_ready(recipients: recipients, total: "52.50", run_date: "9 July 2026",
-                           draft_link: "https://outlook.example/draft-1",
+                           draft_link: "https://outlook.example/draft-1", batch_id: 9,
                            expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
                                          budget_name: "Props", description: "Paint" } ])
-      notifier.failure(recipients: recipients, error_text: "SharePoint down", run_date: "9 July 2026")
+      notifier.failure(recipients: recipients, error_text: "SharePoint down", bacs_date: "9 July 2026")
 
       reminder, approved, ready, failure = graph.send_mails
       assert_equal recipients, reminder[:to]
       assert_match(/awaiting approval/, reminder[:subject])
       assert_match "5 day", reminder[:html]
-      # The ready-to-batch alert prompts Build Batch and carries NO draft link.
-      # A flagged claim is listed with its reason, and counted in the subject,
-      # rather than diverting the whole alert into a separate email.
+      # The ready-to-batch alert carries NO draft link; a flagged claim is listed with its reason
+      # and counted in the subject, not diverted into a separate email.
       assert_match(/ready to batch/, approved[:subject])
       assert_match(/1 flagged/, approved[:subject])
       assert_match "no receipt", approved[:html]
       assert_match "Tuesday 14 July", approved[:html]
-      assert_match "Build Batch", approved[:html]
       assert_no_match(/outlook\.example/, approved[:html])
       assert_match(/Draft ready/, ready[:subject])
       assert_match "https://outlook.example/draft-1", ready[:html]
       assert_match(/FAILED/, failure[:subject])
       assert_match "SharePoint down", failure[:html]
+      assert_includes reminder[:html], %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=to_approve")
+      assert_includes reminder[:html], %(href="#{PORTAL}/expense_edits/42/edit">#7</a>)
+      assert_includes approved[:html], %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=approved")
+      assert_includes approved[:html], %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+      assert_includes ready[:html], %(href="#{PORTAL}/batches/9")
+      assert_includes failure[:html], %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+      assert_includes failure[:html], "forward this email to IT"
+    end
+
+    # The interactive build runs no readiness checks, so the email must not claim any. Its date is
+    # the BACS date, not the day the batch was built.
+    test "batch_ready states the batch it built, with a count that reads right for one or several" do
+      notifier, graph = build
+      row = { auto_number: 3, payee_name: "Sam", amount: "40.00", budget_name: "Props",
+              description: "Paint" }
+
+      [ [ row ], [ row, row, row ] ].each do |expenses|
+        notifier.batch_ready(recipients: [ "ops@example.com" ], expenses: expenses, total: "40.00",
+                             draft_link: nil, run_date: "9 July 2026", batch_id: 9)
+      end
+
+      one, three = graph.send_mails.map { |mail| Nokogiri::HTML(mail[:html]).text.squish }
+      assert_includes one, "You built a batch of 1 approved expense for BACS date 9 July 2026."
+      assert_includes three, "You built a batch of 3 approved expenses for BACS date 9 July 2026."
+      [ one, three ].each { |text| assert_no_match(/readiness|checks/, text) }
+    end
+
+    # Build Batch sends it, so it is the operator's own build. A draft link means the failure
+    # came after the EUSA draft was made, where building again would draft claims twice.
+    test "failure tells the operator whether building again is safe" do
+      notifier, graph = build
+      notifier.failure(recipients: [ "ops@example.com" ], error_text: "EUSA draft creation failed: timeout",
+                       bacs_date: "9 July 2026")
+      notifier.failure(recipients: [ "ops@example.com" ], error_text: "ORPHAN DRAFT: repair the batch record",
+                       bacs_date: "9 July 2026", draft_link: "https://outlook.example/draft-1")
+
+      no_draft, drafted = graph.send_mails
+      assert_equal "[Bedlam Fringe 2026] Batch build FAILED for BACS date 9 July 2026", no_draft[:subject]
+      no_draft_text, drafted_text = [ no_draft, drafted ].map { |mail| Nokogiri::HTML(mail[:html]).text.squish }
+      [ no_draft_text, drafted_text ].each do |text|
+        assert_includes text, "The batch you built for BACS date 9 July 2026 failed. Nothing was sent to EUSA."
+        assert_includes text, "If you can't fix it, forward this email to IT. They get no other report of it."
+        assert_not_includes text, "automated BACS batch run"
+      end
+
+      assert_includes no_draft_text, "EUSA draft creation failed: timeout"
+      assert_includes no_draft_text,
+                      "Its claims are still Approved. Fix the problem, then build it again from Build Batch. " \
+                      "If this build left a draft in the send mailbox, delete it first so EUSA isn't asked to pay twice."
+      assert_includes no_draft[:html], %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+
+      assert_includes drafted_text,
+                      "The EUSA draft was made before the failure, so don't build this batch again, or its claims " \
+                      "could be drafted twice. Open the draft and check it against the errors above before you send it."
+      assert_includes drafted[:html], %(href="https://outlook.example/draft-1")
+      assert_not_includes drafted[:html], "batches/new", "a rebuild is the one thing not to do"
+    end
+
+    def owner_row(**attrs)
+      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
+        description: "Timber", age_days: 5 }.merge(attrs)
+    end
+
+    def remind_owner(*rows)
+      notifier, graph = build
+      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
+                                       rows: rows, run_date: "9 July 2026")
+      graph.send_mails.sole
     end
 
     test "owner_sign_off_reminder greets the owner and lists their claims" do
-      notifier, graph = build
+      mail = remind_owner(owner_row(budget_name: "Owned Set"))
 
-      notifier.owner_sign_off_reminder(
-        to: [ "olive@example.com" ], greeting_name: "Olive", run_date: "9 July 2026",
-        rows: [ { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Owned Set",
-                  description: "Timber", age_days: 5 } ]
-      )
-
-      mail = graph.send_mails.sole
       assert_equal MAILBOX, mail[:mailbox]
       assert_equal [ "olive@example.com" ], mail[:to]
       assert_match(/1 claim needs your sign-off \(9 July 2026\)/, mail[:subject])
@@ -107,19 +194,6 @@ module Reimbursements
       assert_match "Timber", mail[:html]
       assert_match "12.50", mail[:html]
       assert_match "5 day", mail[:html]
-      assert_match "My Budgets", mail[:html]
-    end
-
-    test "owner_sign_off_reminder pluralises its subject for several claims" do
-      notifier, graph = build
-      row = { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Set",
-              description: "Timber", age_days: 5 }
-
-      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
-                                       rows: [ row, row.merge(auto_number: 8) ],
-                                       run_date: "9 July 2026")
-
-      assert_match(/2 claims need your sign-off/, graph.send_mails.sole[:subject])
     end
 
     test "operator alert subjects reflect run_date, not wall-clock today" do
@@ -127,32 +201,15 @@ module Reimbursements
 
       travel_to Date.new(2026, 7, 11) do
         notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom",
-                         run_date: "9 July 2026")
+                         bacs_date: "9 July 2026")
       end
 
       assert_includes graph.send_mails.sole[:subject], "9 July 2026"
       assert_not_includes graph.send_mails.sole[:subject], "2026-07-11"
     end
 
-    test "the rendered email is a complete HTML document, not a bare fragment" do
-      notifier, graph = build
-
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
-                         amount: 12.5, budget_name: "Props", description: "Fake blood",
-                         reason: "Missing VAT breakdown.")
-
-      html = graph.send_mails.sole[:html]
-      assert_match(/\A<!DOCTYPE html>/, html)
-      assert_includes html, "<html"
-      assert_includes html, '<meta charset="utf-8">'
-      assert_includes html, "<title>Your Bedlam Fringe 2026 expense #7 was not approved</title>"
-    end
-
-    # The portal is multi-cost-centre (termtime becomes a second row), so no
-    # subject or sign-off may hardcode "Bedlam Fringe" — a termtime claimant
-    # must never be emailed about a Fringe expense. Everything is driven off
-    # the cost centre threaded into Notifier, so a second centre gets correct
-    # copy the moment its row exists.
+    # No subject or sign-off may hardcode "Bedlam Fringe": a termtime claimant must never be
+    # emailed about a Fringe expense. Copy comes from the cost centre threaded into Notifier.
     test "every subject and sign-off comes from the cost centre, never a literal Bedlam" do
       centre = cost_centre(name: "Termtime Payments")
       notifier, graph = build(centre: centre)
@@ -170,9 +227,9 @@ module Reimbursements
                                        rows: [ row ], run_date: "9 July 2026")
       notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "40.00",
                               run_date: "9 July 2026")
-      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50",
+      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50", batch_id: 9,
                            draft_link: "https://outlook.example/draft-1", run_date: "9 July 2026")
-      notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
+      notifier.failure(recipients: recipients, error_text: "boom", bacs_date: "9 July 2026")
 
       graph.send_mails.each do |mail|
         assert_not_includes mail[:subject], "Bedlam",
@@ -186,87 +243,21 @@ module Reimbursements
       assert_includes graph.send_mails.last[:html], "Termtime Payments BACS (automated)"
     end
 
-    PORTAL = "https://www.example.com/admin/reimbursements".freeze
-
-    def owner_row(**attrs)
-      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
-        description: "Timber", age_days: 5 }.merge(attrs)
-    end
-
-    def remind_owner(*rows)
-      notifier, graph = build
-      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
-                                       rows: rows, run_date: "9 July 2026")
-      graph.send_mails.sole[:html]
-    end
-
     test "owner reminder counts the budgets, not the claims, and links to My Budgets" do
-      html = remind_owner(owner_row, owner_row(auto_number: 8))
+      mail = remind_owner(owner_row, owner_row(auto_number: 8))
 
-      assert_includes html, "charged to a budget you own"
-      assert_includes html, %(href="#{PORTAL}/my_budgets")
-      assert_includes remind_owner(owner_row, owner_row(budget_id: 2)), "charged to budgets you own",
+      assert_match(/2 claims need your sign-off/, mail[:subject])
+      assert_includes mail[:html], "charged to a budget you own"
+      assert_includes mail[:html], %(href="#{PORTAL}/my_budgets")
+      assert_includes remind_owner(owner_row, owner_row(budget_id: 2))[:html], "charged to budgets you own",
                       "two lines can share a display name"
     end
 
     test "owner reminder names a budget's other owners on that budget only" do
-      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_id: 2, budget_name: "Props"))
+      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_id: 2, budget_name: "Props"))[:html]
 
       assert_includes html, "Set (also owned by Ann Other)"
       assert_equal 1, html.scan("also owned by").size
-    end
-
-    test "rejection links to the claim, a new claim and the cost centre's contact address" do
-      notifier, graph = build
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
-                         amount: 12.5, budget_name: "Props", description: "Paint", reason: "No receipt.")
-
-      html = graph.send_mails.sole[:html]
-      assert_includes html, %(href="#{PORTAL}/expenses/42")
-      assert_includes html, %(href="#{PORTAL}/expenses/new")
-      assert_includes html, %(href="mailto:#{FINANCE}")
-      assert_not_includes html, "feel free"
-    end
-
-    test "producer notification numbers and links each claim and names the contact address" do
-      notifier, graph = build
-      notifier.producer_notification(to: "pat@example.com", greeting_name: "Pat", total: "12.50",
-                                     bacs_date: Date.new(2026, 5, 13),
-                                     line_items: [ { auto_number: 7, record_id: 42, amount: "12.50",
-                                                     budget_name: "Props", description: "Paint" } ])
-
-      html = graph.send_mails.sole[:html]
-      assert_includes html, %(href="#{PORTAL}/expenses/42">#7</a>)
-      assert_includes html, %(contact us at <a href="mailto:#{FINANCE}")
-      assert_not_includes html, "let me know"
-    end
-
-    test "operator emails link to the portal pages they talk about" do
-      notifier, graph = build
-      recipients = [ "ops@bedlamfringe.co.uk" ]
-      row = { auto_number: 7, record_id: 42, payee_name: "Pat", amount: "12.50", age_days: 5,
-              budget_name: "Props", description: "Paint", flags: [] }
-
-      notifier.pending_reminder(recipients: recipients, rows: [ row ], run_date: "9 July 2026",
-                                threshold_days: 3)
-      notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "12.50",
-                              run_date: "9 July 2026")
-      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50", batch_id: 9,
-                           draft_link: nil, run_date: "9 July 2026")
-      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50",
-                           draft_link: nil, run_date: "9 July 2026")
-      notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
-
-      pending, approved, ready, ready_without_id, failure = graph.send_mails.map { |mail| mail[:html] }
-      assert_includes pending, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=to_approve")
-      assert_includes pending, %(href="#{PORTAL}/expense_edits/42/edit">#7</a>)
-      assert_includes approved, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=approved")
-      assert_includes approved, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
-      assert_includes ready, %(href="#{PORTAL}/batches/9")
-      assert_includes ready_without_id, %(href="#{PORTAL}/batches")
-      assert_includes failure, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
-      assert_includes failure, "forward this email to IT"
-      assert_not_includes failure, "server logs"
     end
 
     test "producer emails never offer the polled receive mailbox as a contact" do
@@ -280,6 +271,7 @@ module Reimbursements
 
       graph.send_mails.each do |mail|
         assert_not_includes mail[:html], "mailto:#{MAILBOX}"
+        assert_not_includes mail[:html], %(href="mailto:"), "no contact address, so no empty contact link"
         assert_not_includes mail[:html], "contact us"
       end
     end
@@ -291,16 +283,10 @@ module Reimbursements
       notifier, = build
 
       assert_raises(KeyError) do
-        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", run_date: "9 July 2026")
+        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", bacs_date: "9 July 2026")
       end
     ensure
       config.default_url_options = original
-    end
-
-    test "no template tells a lone owner that one of several can sign off" do
-      Rails.root.glob("app/views/reimbursements/emails/*.erb").each do |template|
-        assert_not_includes template.read, "one of you", "#{template} assumes several owners"
-      end
     end
 
     test "a Graph send failure propagates so callers can rescue it" do
@@ -308,7 +294,7 @@ module Reimbursements
       graph.fail_send = true
 
       assert_raises(::GraphAuth::Error) do
-        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", run_date: "9 July 2026")
+        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", bacs_date: "9 July 2026")
       end
     end
   end

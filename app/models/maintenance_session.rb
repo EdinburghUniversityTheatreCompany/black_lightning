@@ -10,9 +10,8 @@
 #  updated_at :datetime         not null
 #
 class MaintenanceSession < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
-    # Upper bound on how many credits (attendances) a single person can be granted in one session.
+    # Most credits one person can be granted in one session.
     MAX_CREDITS_PER_ATTENDEE = 200
 
     validates :date, presence: true
@@ -20,15 +19,11 @@ class MaintenanceSession < ApplicationRecord
     has_many :maintenance_credits, dependent: :restrict_with_error
     has_many :users, through: :maintenance_credits
 
-    # allow_destroy gives the association autosave, so attendances built/marked for destruction in
-    # #maintenance_credits_attributes= are persisted/deleted when the session is saved. (That
-    # custom setter fully replaces Rails' generated one, so reject_if would never run — blank rows
-    # are skipped there instead.)
+    # allow_destroy turns on autosave, which saves what #maintenance_credits_attributes= builds and
+    # marks for destruction. That setter replaces Rails' own, so it skips blank rows, not reject_if.
     accepts_nested_attributes_for :maintenance_credits, allow_destroy: true
 
-    # Building/destroying N attendances for one user would otherwise fire that user's debt
-    # reallocation N times (each attendance's after_save/after_destroy). Suppress the per-attendance
-    # reallocation during the save and run it once per affected user afterwards instead.
+    # Each credit's save reallocates its user's debts; this does it once per user instead.
     around_save :reallocate_attendee_debts_once
 
     def self.ransackable_attributes(auth_object = nil)
@@ -43,9 +38,8 @@ class MaintenanceSession < ApplicationRecord
         name.presence || date
     end
 
-    # One representative attendance per user, carrying the user's credit count as +quantity+, so the
-    # form can show a single row per person instead of one row per credit. Iterates the in-memory
-    # association (not a fresh query) so unsaved built rows survive a failed-save form re-render.
+    # One credit per user, carrying their count as +quantity+. Reads the loaded association, not a
+    # query, so unsaved rows survive a failed save's re-render.
     def attendees_for_form
         maintenance_credits
             .reject(&:marked_for_destruction?)
@@ -53,9 +47,8 @@ class MaintenanceSession < ApplicationRecord
             .map { |_user_id, group| group.first.tap { |rep| rep.quantity = group.size } }
     end
 
-    # Reconciles the per-user credit quantities submitted by the form against the existing
-    # attendances: builds new ones when a count goes up, destroys surplus ones when it goes down, and
-    # destroys all of a user's attendances when their row is removed (_destroy) or set to zero.
+    # Builds or destroys credits until each user has the submitted quantity. A removed row
+    # (_destroy) or a zero removes all of them.
     def maintenance_credits_attributes=(attributes)
         rows = attributes.respond_to?(:values) ? attributes.values : attributes
 
@@ -71,15 +64,14 @@ class MaintenanceSession < ApplicationRecord
             elsif attrs[:quantity].present?
                 attrs[:quantity].to_i.clamp(0, MAX_CREDITS_PER_ATTENDEE)
             else
-                1 # a listed user with no explicit quantity counts as one credit
+                1 # no quantity means one credit
             end
             desired[user_id.to_i] += count
         end
 
         existing_by_user = maintenance_credits.reject(&:marked_for_destruction?).group_by(&:user_id)
 
-        # The form renders every current attendee, so the submitted rows are the complete desired
-        # set: any existing user no longer present (row removed, or its user reassigned) drops to 0.
+        # The form renders every attendee, so a user missing from the submission drops to zero.
         (desired.keys | existing_by_user.keys).each do |user_id|
             want = desired[user_id]
             have = existing_by_user[user_id] || []
@@ -88,7 +80,7 @@ class MaintenanceSession < ApplicationRecord
                 (want - have.size).times { maintenance_credits.build(user_id: user_id) }
                 pending_reallocation_user_ids << user_id
             elsif want < have.size
-                # Destroy surplus, preferring attendances not yet matched to a debt.
+                # Prefer credits not yet matched to a debt.
                 have.sort_by { |att| att.maintenance_debt ? 1 : 0 }
                     .first(have.size - want)
                     .each(&:mark_for_destruction)
@@ -99,14 +91,12 @@ class MaintenanceSession < ApplicationRecord
 
     private
 
-    # Users whose credit count changed in this save and so need their debts rematched once.
+    # Users whose credit count changed, so their debts need rematching.
     def pending_reallocation_user_ids
         @pending_reallocation_user_ids ||= Set.new
     end
 
-    # Suppresses each attendance's inline reallocation while the batch of built/destroyed
-    # attendances is persisted, then reallocates every affected user exactly once. The flush runs
-    # only on a successful save and stays inside the save transaction (matching the old behaviour).
+    # Reallocates only after a successful save, inside its transaction.
     def reallocate_attendee_debts_once
         previous = User.suppress_maintenance_reallocation
         User.suppress_maintenance_reallocation = true

@@ -10,27 +10,22 @@
 # Table name: venues
 # Database name: primary
 #
-#  id                 :integer          not null, primary key
-#  address            :text(16777215)
-#  description        :text(16777215)
-#  image_content_type :string(255)
-#  image_file_name    :string(255)
-#  image_file_size    :integer
-#  image_updated_at   :datetime
-#  location           :string(255)
-#  name               :string(255)
-#  tagline            :string(255)
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
+#  id          :integer          not null, primary key
+#  address     :text(16777215)
+#  description :text(16777215)
+#  location    :string(255)
+#  name        :string(255)
+#  tagline     :string(255)
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
 #
 class Venue < ApplicationRecord
-  # Length validations enforcing database column limits
-  validates :name, length: { maximum: 255 }
-  validates :tagline, length: { maximum: 255 }
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[image_content_type image_file_name image_file_size image_updated_at]
+
+  validates :name, :tagline, length: { maximum: 255 }
   validates :description, length: { maximum: 16777215 }
   validates :location, length: { maximum: 255 }
-  validates :image_file_name, length: { maximum: 255 }
-  validates :image_content_type, length: { maximum: 255 }
   validates :address, length: { maximum: 16777215 }
   include FormattingHelper
 
@@ -92,7 +87,7 @@ class Venue < ApplicationRecord
       # and not in Rails, which is less critical and will not produce a Rails error blocking the web page.
       return nil unless latlng_array.length == 2
 
-      location.split(",")
+      latlng_array
     else
       nil
     end

@@ -1,16 +1,14 @@
 namespace :graph do
   desc "Print the mailboxes the app touches over Graph, as env assignments for docs/graph-mailbox-rbac.ps1"
   task mailboxes: :environment do
-    # Exists because getting this list from anywhere other than the database is
-    # how you scope the Entra app to the wrong mailboxes. A cost centre's send
-    # address is a separate operator-editable column from its receive address,
-    # and on the live system they differ (finance@ vs reimbursements@). Scoping
-    # only the receive mailbox passed every check and then 403'd on sendMail.
+    # Read from the database, so the Entra app isn't scoped to the wrong mailboxes: a cost centre's
+    # send address is a separate editable column from its receive address, and live they differ
+    # (finance@ vs reimbursements@). Scoping only the receive mailbox passed every check, then 403'd
+    # on sendMail.
     centres = Reimbursements::CostCentre.all.to_a
 
-    # Every one of these needs Application Mail Full Access, not Mail.ReadWrite:
-    # the receive mailbox replies (Mail.Send), and the send mailbox creates,
-    # reads back and deletes drafts (Mail.ReadWrite).
+    # Each needs Application Mail Full Access, not Mail.ReadWrite: the receive mailbox replies
+    # (Mail.Send), and the send mailbox creates, reads back and deletes drafts (Mail.ReadWrite).
     send_receive = centres.flat_map { |c| [ c.receive_mailbox, c.send_mailbox ] }
     climate = Climate::Settings.mailbox
 

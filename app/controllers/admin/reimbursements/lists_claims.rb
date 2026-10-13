@@ -1,39 +1,44 @@
 module Admin
   module Reimbursements
     ##
-    # The claims table an area's page and a loose line's page both render: the
-    # same list, the same tabs and the same page size, from one definition, so
-    # the two screens cannot drift apart (and jscpd's duplication gate stays at
-    # zero over two controllers that would otherwise carry the same four lines).
+    # The claims table an area's page and a loose line's page both render.
     module ListsClaims
       extend ActiveSupport::Concern
 
-      # Shorter than the finance lists' 50. A claims table is read for "where
-      # has mine got to", which is answered near the top, and the busiest
-      # production area carries 59 rows.
+      # Shorter than the finance lists' 50: the question ("where has mine got to") is
+      # answered near the top.
       CLAIMS_PAGE_SIZE = 25
 
       private
 
-      # Claims charged to any of these lines, newest first. Read off the store's
-      # one preloaded expense list (batch, budget, person and receipts ride
-      # along) rather than a query per line.
+      # Claims charged to any of these lines, newest first. Reads the store's one
+      # preloaded expense list rather than a query per line. A draft keeps its budget
+      # but is the submitter's alone (see ClaimTabs), so it is left out.
       def claims_for_lines(lines)
         ids = Array(lines).map(&:record_id).to_set
         store.expenses
-             .select { |expense| ids.include?(expense.budget&.record_id) }
+             .select { |expense| ids.include?(expense.budget&.record_id) && expense.status != ::Reimbursements::Status::DRAFT }
              .sort_by { |expense| [ expense.submitted_at || Time.at(0), expense.auto_number.to_i ] }
              .reverse
       end
 
-      # Counts every tab from the WHOLE list before filtering, so the row of
-      # tabs states what is there rather than what the current tab shows.
+      # An owner sees their own line or area; finance sees all. 404, not 403, so a stranger
+      # cannot tell the record exists.
+      def owner_page_record(finder)
+        record = store.public_send(finder, params[:id])
+        visible = record && (can?(:manage, :reimbursements_finance) ||
+                             (current_person.present? && record.owner_ids.include?(current_person.record_id)))
+        raise ActiveRecord::RecordNotFound unless visible
+
+        record
+      end
+
+      # Tab counts come from the whole list, before filtering.
       def load_claims(lines)
         claims = claims_for_lines(lines)
         @claim_counts = ::Reimbursements::ClaimTabs.counts(claims)
         @claim_tab = ::Reimbursements::ClaimTabs.resolve(params[:status])
-        @claims = Kaminari.paginate_array(::Reimbursements::ClaimTabs.filter(claims, @claim_tab))
-                          .page(params[:page]).per(CLAIMS_PAGE_SIZE)
+        @claims = paginate(::Reimbursements::ClaimTabs.filter(claims, @claim_tab), per: CLAIMS_PAGE_SIZE)
       end
     end
   end

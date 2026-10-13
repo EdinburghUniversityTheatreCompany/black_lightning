@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
-# Exports the local development database for use in the devcontainer.
-#
-# Usage:
-#   bin/export-dev-db
-#
-# This creates .devcontainer/dump.sql.gz. The next time you rebuild or reopen
-# the devcontainer, setup.sh will auto-import it into the container's MySQL.
-#
-# The dump file is gitignored — it's for local use only.
+# Exports the local development database to .devcontainer/dump.sql.gz (gitignored). The next time
+# the devcontainer is rebuilt or reopened, setup.sh imports it into the container's MySQL.
 
 set -eo pipefail
 

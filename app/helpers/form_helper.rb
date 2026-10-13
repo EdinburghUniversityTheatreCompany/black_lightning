@@ -11,7 +11,6 @@ module FormHelper
           datetime:      :tailwind_horizontal_multi_select,
           file:          :tailwind_horizontal_file,
           radio_buttons: :tailwind_horizontal_collection,
-          range:         :tailwind_horizontal_range,
           time:          :tailwind_horizontal_multi_select
         }
       }
@@ -25,7 +24,6 @@ module FormHelper
           datetime:      :horizontal_multi_select,
           file:          :horizontal_file,
           radio_buttons: :horizontal_collection,
-          range:         :horizontal_range,
           time:          :horizontal_multi_select
         }
       }
@@ -38,11 +36,8 @@ module FormHelper
     simple_form_for(object, *(args << options.merge(new_options)), &block)
   end
 
-  # Control classes for the hand-rolled `form_with url:` forms (finance,
-  # climate), read from the same FormStyles constants simple_form's wrappers
-  # use. See shared/form/_field for the label + hint wrapper around them.
-  # `width:` is the one utility a caller may swap (nil for a control that sizes
-  # itself, such as a date input or a table cell's amount).
+  # Control classes for hand-rolled `form_with url:` forms, from the FormStyles constants
+  # simple_form uses. `width: nil` suits a control that sizes itself, such as a date input.
   def input_classes(*extra, width: "w-full")
     [ width, FormStyles::INPUT_BASE, *extra ].compact.join(" ")
   end

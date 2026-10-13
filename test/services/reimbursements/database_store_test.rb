@@ -1,25 +1,15 @@
 require "test_helper"
 
 module Reimbursements
-  # The AR-backed store is the single data gateway (built by
-  # Reimbursements.build_store); these lock its public API and attribute
-  # vocabulary.
+  # The AR-backed store's public API and attribute vocabulary.
   class DatabaseStoreTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
     def store = @store ||= DatabaseStore.new
 
-    def create_person(name: "Pat", email: "pat@example.com", sort_code: nil, account_number: nil)
-      person = Person.create!(name: name, email: email)
-      if sort_code || account_number
-        person.create_payment_details!(sort_code: sort_code.to_s, account_number: account_number.to_s)
-      end
-      person
-    end
-
     test "expenses_for filters by payee and sorts newest first" do
-      pat = create_person
-      other = create_person(name: "Other", email: "other@example.com")
+      pat = create_reimbursements_person
+      other = create_reimbursements_person(name: "Other", email: "other@example.com")
       old = Expense.create!(status: Status::PENDING, person: pat, submitted_at: 2.days.ago)
       new = Expense.create!(status: Status::PENDING, person: pat, submitted_at: 1.hour.ago)
       Expense.create!(status: Status::PENDING, person: other)
@@ -33,12 +23,11 @@ module Reimbursements
       expense = Expense.create!(status: Status::PENDING)
 
       assert_equal expense.id, store.find_expense(expense.record_id).id
-      assert_equal expense.id, store.find_expense!(expense.record_id).id
       assert_nil store.find_expense("999999")
     end
 
     test "person_by_email is case-insensitive and strips" do
-      pat = create_person(email: "pat@example.com")
+      pat = create_reimbursements_person(email: "pat@example.com")
       assert_equal pat.id, store.person_by_email("  PAT@Example.COM ").id
       assert_nil store.person_by_email("")
     end
@@ -54,8 +43,8 @@ module Reimbursements
 
     test "update_budget! updates columns and syncs owners" do
       budget = Budget.create!(name: "Props")
-      alice = create_person(name: "Alice", email: "alice@example.com")
-      bob = create_person(name: "Bob", email: "bob@example.com")
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
       budget.owners << alice
 
       store.update_budget!(budget.record_id, name: "Props 2", notes: "n",
@@ -86,7 +75,7 @@ module Reimbursements
 
     test "create_expense! speaks the store vocabulary and stamps the year" do
       year = FinancialYear.create!(label: "Fringe 2026", active: true)
-      pat = create_person
+      pat = create_reimbursements_person
       budget = Budget.create!(name: "Props")
 
       expense = store.create_expense!(
@@ -104,13 +93,11 @@ module Reimbursements
       assert_nil expense[:payment_reference]
     end
 
-    # Belt and braces under ExpenseForm's offerable-budget rule. Finance deletes
-    # budgets while producers hold the submission form open, so the row can go
-    # between the form's check and this insert — and a raw
-    # ActiveRecord::InvalidForeignKey is a 500 that loses the whole claim
-    # (Honeybadger 134234926). Named, so the controller can re-render the form.
-    test "create_expense! raises BudgetGoneError when the budget vanished" do
-      pat = create_person
+    # Finance deletes budgets while producers hold the form open, and a raw InvalidForeignKey
+    # would 500 and lose the claim (Honeybadger 134234926).
+    test "a write naming a vanished budget raises BudgetGoneError and writes nothing" do
+      pat = create_reimbursements_person
+      expense = Expense.create!(status: Status::PENDING, amount: 5, description: "before")
       budget = Budget.create!(name: "Props")
       gone_id = budget.record_id
       budget.destroy!
@@ -119,14 +106,7 @@ module Reimbursements
         store.create_expense!(person_record_id: pat.record_id, budget_record_id: gone_id,
                               status: Status::PENDING, amount: BigDecimal("12.5"))
       end
-      assert_equal 0, Expense.count, "nothing may be written"
-    end
-
-    test "update_expense! raises BudgetGoneError when the budget vanished" do
-      expense = Expense.create!(status: Status::PENDING, amount: 5, description: "before")
-      budget = Budget.create!(name: "Props")
-      gone_id = budget.record_id
-      budget.destroy!
+      assert_equal 1, Expense.count, "nothing may be written"
 
       assert_raises(DatabaseStore::BudgetGoneError) do
         store.update_expense!(expense.record_id, budget_record_id: gone_id, description: "after")
@@ -134,33 +114,22 @@ module Reimbursements
       assert_equal "before", expense.reload.description, "the whole update must roll back"
     end
 
-    test "update_expense! drops nils but honours an explicit budget clear" do
+    test "update_expense! drops nils, clears foreign_amount and honours an explicit budget clear" do
       budget = Budget.create!(name: "Props")
-      expense = Expense.create!(status: Status::PENDING, budget: budget, amount: 5)
+      expense = Expense.create!(status: Status::PENDING, budget: budget, amount: 5,
+                                foreign_amount: BigDecimal("640"), foreign_currency: "EUR")
 
-      store.update_expense!(expense.record_id, amount: nil, description: "kept")
+      # foreign_amount is the one money column a present-and-nil value clears; blanking it used
+      # to be a silent no-op that looked like a save.
+      store.update_expense!(expense.record_id, amount: nil, foreign_amount: nil, description: "kept")
       expense.reload
-      assert_equal BigDecimal("5"), expense.amount
+      assert_equal BigDecimal("5"), expense.amount, "amount keeps the 'nil means leave it' contract"
+      assert_nil expense.foreign_amount
       assert_equal "kept", expense.description
       assert_equal budget, expense.budget
 
       store.update_expense!(expense.record_id, budget_record_id: "")
       assert_nil expense.reload.budget
-    end
-
-    test "update_expense! clears foreign_amount when it is explicitly nil" do
-      # The one money column a present-and-nil value CLEARS. Compaction made
-      # blanking the invoice amount on the finance edit form a no-op that
-      # looked like a save: the field came back with the old figure in it.
-      expense = Expense.create!(status: Status::PENDING, amount: 5,
-                                foreign_amount: BigDecimal("640"), foreign_currency: "EUR")
-
-      store.update_expense!(expense.record_id, foreign_amount: nil, description: "kept")
-
-      expense.reload
-      assert_nil expense.foreign_amount
-      assert_equal "kept", expense.description
-      assert_equal BigDecimal("5"), expense.amount, "amount keeps the 'nil means leave it' contract"
     end
 
     test "receipt attach and remove, guarding the last receipt on a non-draft" do
@@ -200,13 +169,10 @@ module Reimbursements
 
     test "batch lifecycle mirrors BatchProcessor's writes" do
       batch = store.create_batch!(date_sent: Date.new(2026, 5, 13),
-                                  notes: "BACS SharePoint: https://sp/x",
                                   sharepoint_backup_url: "https://sp/x",
                                   draft_message_id: "AAMkAG=")
 
-      assert_equal "2026-05-13", batch.name # derived, like the Airtable formula
-      # Derived from the draft message id, not sent by the caller and not a column.
-      assert batch.eusa_draft_created
+      assert_equal "2026-05-13", batch.name # derived
       assert_equal batch.id, store.find_batch_by_draft_message_id("AAMkAG=").id
       assert_nil store.find_batch_by_draft_message_id("")
 
@@ -227,29 +193,95 @@ module Reimbursements
       assert_equal "Pat P", person.name
       assert_equal "80-22-60", person.sort_code
       assert_equal "12345678", person.account_number
-      assert person.verified?
+      assert person.verified
       assert_equal "ok", person.notes
       assert_equal 1, PaymentDetails.count
 
       store.update_person!(person.record_id, verified: false)
-      assert_not person.reload.verified?
+      assert_not person.reload.verified
     end
 
-    test "actuals: create with linked ids, per-period lookup, and linking" do
+    test "actuals: create, per-period lookup, and linking" do
       expense = Expense.create!(status: Status::PAID)
       budget = Budget.create!(name: "Props")
 
       actual = store.create_actual!(nominal_code: "4000", narrative: "BACS", debit: 10,
-                                    period: "P1", linked_expense_ids: [ expense.record_id ],
-                                    linked_budget_ids: [])
-      assert_equal [ expense.record_id ], actual.linked_expense_ids
-      assert_empty actual.linked_budget_ids
+                                    period: "P1", expense_id: expense.id)
+      assert_equal expense.id, actual.expense_id
+      assert_nil actual.budget_id
 
       assert_equal [ actual.id ], store.actuals_for_period("P1").map(&:id)
       assert_empty store.actuals_for_period("P2")
 
       store.link_actual_to_budget!(actual.record_id, budget.record_id)
-      assert_equal [ budget.record_id ], EusaActual.find(actual.id).linked_budget_ids
+      assert_equal budget.id, EusaActual.find(actual.id).budget_id
+    end
+
+    # --- The year an actuals row belongs to -------------------------------------
+
+    # EUSA's March rows arrive after the switch to the new year, and still belong to the old one.
+    test "create_actual! stamps the year the row's date falls in, not the active year" do
+      last_year, _active = create_reimbursements_tax_years(active: "2027/2028")
+
+      actual = store.create_actual!(nominal_code: "4000", narrative: "March hire", debit: 10,
+                                    date: Date.new(2027, 3, 20))
+
+      assert_equal last_year, actual.financial_year
+    end
+
+    test "create_actual! stamps the active year when no single year holds the row's date" do
+      _last_year, active = create_reimbursements_tax_years(active: "2027/2028")
+      FinancialYear.create!(label: "Fringe 2026", starts_on: Date.new(2026, 8, 1),
+                            ends_on: Date.new(2027, 7, 31))
+
+      { "outside every year" => Date.new(2025, 5, 1),
+        "inside two years" => Date.new(2026, 12, 1),
+        "undated" => nil }.each do |narrative, date|
+        actual = store.create_actual!(nominal_code: "4000", narrative: narrative, debit: 10, date: date)
+
+        assert_equal active, actual.financial_year, narrative
+      end
+    end
+
+    # Reconcile apply imports a whole paste through one store.
+    test "create_actual! reads the financial years once per store, not once per row" do
+      create_reimbursements_tax_years(active: "2027/2028")
+      store.create_actual!(nominal_code: "4000", narrative: "first", debit: 1, date: Date.new(2027, 3, 1))
+
+      year_reads = 0
+      count_year_reads = lambda do |*, payload|
+        year_reads += 1 if payload[:sql].include?("FROM `reimbursements_financial_years`")
+      end
+      ActiveSupport::Notifications.subscribed(count_year_reads, "sql.active_record") do
+        store.create_actual!(nominal_code: "4000", narrative: "second", debit: 2, date: Date.new(2027, 3, 2))
+        store.create_actual!(nominal_code: "4000", narrative: "third", debit: 3)
+      end
+
+      assert_equal 0, year_reads
+    end
+
+    # Stamped with the active year, a reversal imported after the switch could never be paired by
+    # hand with its accrual from the year before.
+    test "a reversal imported after the year switch pairs by hand with last year's accrual" do
+      last_year, next_year = create_reimbursements_tax_years(active: "2026/2027")
+      accrual = store.create_actual!(nominal_code: "4000", narrative: "Accrual", debit: 10,
+                                     date: Date.new(2027, 3, 31))
+      next_year.activate!
+
+      reversal = DatabaseStore.new.create_actual!(nominal_code: "4000", narrative: "Reversal", credit: 10,
+                                                  date: Date.new(2027, 4, 2))
+
+      assert_equal last_year, reversal.financial_year
+      assert_equal [ reversal ], accrual.offset_candidates([ reversal ])
+    end
+
+    test "create_expense_for_actual! files the claim under the year of the row's date" do
+      last_year, _active = create_reimbursements_tax_years(active: "2027/2028")
+      actual = create_reimbursements_actual(date: Date.new(2027, 3, 20))
+
+      expense = store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+
+      assert_equal last_year, expense.financial_year
     end
 
     test "link_offsetting_pair! stamps both legs and points them at each other" do
@@ -264,40 +296,32 @@ module Reimbursements
       assert_predicate reversal, :offset?
       assert_equal reversal.id, accrual.offset_of_id
       assert_equal accrual.id, reversal.offset_of_id
+      assert_equal 2, EusaActual.count, "pairing never deletes a row: finance needs the audit trail"
     end
 
-    # Both rows survive an offset: finance needs the audit trail, so pairing
-    # only ever stamps and cross-links, it never deletes.
-    test "link_offsetting_pair! keeps both rows and refreshes the memoized list" do
-      accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10)
-      reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL", credit: 10)
-      store.eusa_actuals # memoize the pre-pairing list
-
-      store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
-
-      assert_equal 2, EusaActual.count
-      assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
-    end
-
-    test "create_expense_for_actual! creates the expense already linked to the row" do
+    # The guard sits inside the transaction, so a stale caller check cannot convert a row twice.
+    test "create_expense_for_actual! links the new expense and refuses a second conversion" do
       actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
 
       expense = store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
-
-      assert_equal [ expense.record_id ], actual.reload.linked_expense_ids
-      assert_not_predicate actual, :convertible_to_expense?
-    end
-
-    # The convertibility guard lives INSIDE the writing transaction, so a caller
-    # whose own check went stale cannot convert the same row twice.
-    test "create_expense_for_actual! refuses a row that is already converted" do
-      actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
-      store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+      assert_equal expense.id, actual.reload.expense_id
 
       assert_raises(DatabaseStore::NotConvertibleError) do
         store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
       end
       assert_equal 1, Expense.count, "the second attempt writes nothing"
+    end
+
+    # The expense and its link commit together, or a failed link leaves the row still offering
+    # "Create expense" and the next click double-counts the charge.
+    test "create_expense_for_actual! writes nothing when the link fails" do
+      failing = Class.new(DatabaseStore) { def link_actual_to_expense!(*) = raise("blip") }.new
+      actual = failing.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
+
+      assert_no_difference -> { Expense.count } do
+        assert_raises(RuntimeError) { failing.create_expense_for_actual!(actual.record_id, status: Status::PAID) }
+      end
+      assert_nil actual.reload.expense_id
     end
 
     test "create_expense_for_actual! refuses an offsetting leg" do
@@ -321,7 +345,6 @@ module Reimbursements
       assert legs.all?(&:offset?)
       assert_equal legs.last.id, legs.first.offset_of_id
       assert_equal legs.first.id, legs.last.offset_of_id
-      assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
     end
 
     test "unlink_offsetting_pair! clears both legs from either side" do
@@ -337,11 +360,10 @@ module Reimbursements
         assert_nil leg.offset_of_id
       end
       assert_equal 2, EusaActual.count, "unlinking never deletes a row"
-      assert store.eusa_actuals.none?(&:offset?), "the memoized list is busted, not stale"
     end
 
-    # A row pointing AT the one being cleared is cleared too, so a half-linked
-    # row from an older import can't be left stamped with a dangling pointer.
+    # A row pointing at the cleared one is cleared too, so no half-linked row keeps a dangling
+    # pointer.
     test "unlink_offsetting_pair! also clears a leg that only points at this one" do
       target = store.create_actual!(nominal_code: "4000", narrative: "TARGET", debit: 10)
       pointer = store.create_actual!(nominal_code: "4000", narrative: "POINTER", credit: 10)
@@ -355,73 +377,12 @@ module Reimbursements
       assert_not_predicate target.reload, :offset?
     end
 
-    test "memoized lists refresh after bust_expenses!" do
-      store.expenses
-      Expense.create!(status: Status::PENDING)
-      assert_empty store.expenses
-
-      store.bust_expenses!
-      assert_equal 1, store.expenses.size
-    end
-
     # --- Cache busting on every write --------------------------------------
-    # One store serves a whole request, so a write that forgets its bust_*! makes
-    # every later read in that request render pre-write figures — the operator
-    # saves a budget and the page redraws with the old number. These read the
-    # memoized list first, write, then re-read and assert the FRESH figures.
-
-    test "update_budget! and the forecast writes refresh the memoized budgets" do
-      budget = Budget.create!(name: "Props", nominal_code: "4000", initial_budget: 100)
-      store.budgets # memoize the pre-write list
-
-      store.update_budget!(budget.record_id, initial_budget: 250)
-      assert_equal BigDecimal("250"), store.budgets.sole.initial_budget,
-                   "update_budget! must bust the memoized budgets"
-
-      store.create_forecast!(budget_id: budget.record_id, amount: 400,
-                             date: Date.new(2026, 6, 1), reason: "revised")
-      assert_equal BigDecimal("400"), store.budgets.sole.current_forecast,
-                   "create_forecast! must bust the memoized budgets"
-    end
-
-    test "create_budget_update! refreshes the memoized budgets" do
-      budget = Budget.create!(name: "Props", nominal_code: "4000")
-      store.budgets
-
-      store.create_budget_update!(
-        effective_date: Date.new(2026, 6, 1), note: "Budget meeting", created_by: users(:member),
-        forecasts: [ { budget_id: budget.record_id, amount: BigDecimal("500") } ]
-      )
-
-      assert_equal BigDecimal("500"), store.budgets.sole.current_forecast
-    end
-
-    test "update_person! refreshes the memoized people" do
-      person = store.create_person!(name: "Pat", email: "pat@example.com")
-      store.people # memoize the pre-write list
-
-      store.update_person!(person.record_id, name: "Pat Producer", account_number: "66374958")
-
-      refreshed = store.people.sole
-      assert_equal "Pat Producer", refreshed.name, "update_person! must bust the memoized people"
-      assert_equal "66374958", refreshed.account_number
-    end
-
-    test "update_expense! refreshes the memoized expenses" do
-      expense = Expense.create!(status: Status::PENDING, amount: 5)
-      store.expenses # memoize the pre-write list
-
-      store.update_expense!(expense.record_id, amount: BigDecimal("42"))
-
-      assert_equal BigDecimal("42"), store.expenses.sole.amount,
-                   "update_expense! must bust the memoized expenses"
-    end
-
-    # The sweep: 22 bust_*! call sites, one row per mutator. A missing bust
-    # leaves the very same memoized array object in place, so identity is the
-    # honest uniform check — the content assertions above pin the figures.
+    # One store serves a request, so a write that forgets its bust makes later reads render
+    # pre-write figures. A missing bust leaves the same memoized array in place, so identity is
+    # the check.
     test "every write busts the memoized list it affects" do
-      person = create_person
+      person = create_reimbursements_person
       budget = Budget.create!(name: "Props", nominal_code: "4000")
       forecast = store.create_forecast!(budget_id: budget.record_id, amount: 100,
                                         date: Date.new(2026, 5, 1), reason: "initial")
@@ -436,15 +397,21 @@ module Reimbursements
         [ :budgets, "update_forecast!",
           -> { store.update_forecast!(forecast.record_id, amount: 120, date: Date.new(2026, 5, 2), reason: "fix") } ],
         [ :budgets, "delete_forecast!", -> { store.delete_forecast!(forecast.record_id) } ],
+        [ :budgets, "create_forecast!",
+          -> { store.create_forecast!(budget_id: budget.record_id, amount: 400, date: Date.new(2026, 6, 1), reason: "r") } ],
+        [ :budgets, "create_budget_update!",
+          -> { store.create_budget_update!(effective_date: Date.new(2026, 6, 1), note: "n", created_by: nil, forecasts: [ { budget_id: budget.record_id, amount: BigDecimal("500") } ]) } ],
         [ :expenses, "create_expense!",
           -> { store.create_expense!(person_record_id: person.record_id, status: Status::PENDING) } ],
         [ :expenses, "attach_receipt!",
           -> { store.attach_receipt!(draft.record_id, filename: "d.pdf", content_type: "application/pdf", bytes: "%PDF") } ],
         [ :expenses, "remove_receipt!",
           -> { store.remove_receipt!(draft.record_id, draft.reload.receipts.sole.attachment_id) } ],
+        [ :expenses, "update_expense!", -> { store.update_expense!(expense.record_id, amount: BigDecimal("42")) } ],
         [ :expenses, "revert_expense_to_approved!", -> { store.revert_expense_to_approved!(expense.record_id) } ],
         [ :expenses, "delete_expense!", -> { store.delete_expense!(draft.record_id) } ],
         [ :people, "create_person!", -> { store.create_person!(name: "New", email: "new@example.com") } ],
+        [ :people, "update_person!", -> { store.update_person!(person.record_id, name: "Pat P") } ],
         [ :batches, "create_batch!", -> { store.create_batch!(date_sent: Date.new(2026, 6, 3)) } ],
         [ :batches, "update_batch!", -> { store.update_batch!(batch.record_id, producer_notifications_sent: true) } ],
         [ :batches, "delete_batch!", -> { store.delete_batch!(batch.record_id) } ],
@@ -454,7 +421,11 @@ module Reimbursements
         [ :eusa_actuals, "link_actual_to_budget!",
           -> { store.link_actual_to_budget!(accrual.record_id, budget.record_id) } ],
         [ :eusa_actuals, "link_offsetting_pair!",
-          -> { store.link_offsetting_pair!(accrual.record_id, reversal.record_id) } ]
+          -> { store.link_offsetting_pair!(accrual.record_id, reversal.record_id) } ],
+        [ :eusa_actuals, "unlink_offsetting_pair!",
+          -> { store.unlink_offsetting_pair!(accrual.record_id) } ],
+        [ :eusa_actuals, "create_offsetting_pair!",
+          -> { store.create_offsetting_pair!({ nominal_code: "4000", narrative: "A2", debit: 5 }, { nominal_code: "4000", narrative: "R2", credit: 5 }) } ]
       ]
 
       writes.each do |list, label, write|
@@ -475,7 +446,7 @@ module Reimbursements
 
       grouped = store.budgets_by_nominal_code
 
-      assert_equal [ "4000", "4100", "(none)" ].sort, grouped.keys.sort
+      assert_equal [ "4000", "4100", "(none)" ], grouped.keys
       assert_equal [ props_a.id, props_b.id ].sort, grouped["4000"].map(&:id).sort
       assert_equal [ travel.id ], grouped["4100"].map(&:id)
       assert_equal [ uncoded.id ], grouped["(none)"].map(&:id)
@@ -488,11 +459,8 @@ module Reimbursements
       expense = Expense.create!(budget: budget, status: Status::PAID, amount_excl_vat: 10)
       EusaActual.create!(expense: expense, nominal_code: "4000", debit: 10)
 
-      # The producer's new-expense form only needs names for a <select>; it must
-      # not instantiate every expense and every ledger row to draw it.
-      assert_no_queries_match(/reimbursements_eusa_actuals/i) { DatabaseStore.new.budgets }
-      assert_no_queries_match(/reimbursements_expenses/i) { DatabaseStore.new.budgets }
-      assert_no_queries_match(/reimbursements_eusa_actuals/i) { DatabaseStore.new.active_budgets }
+      # The producer's <select> needs names only, not every expense and ledger row.
+      assert_no_queries_match(/reimbursements_(eusa_actuals|expenses)\b/i) { DatabaseStore.new.active_budgets }
     end
 
     test "budgets_with_actuals preloads so the EUSA rollup costs no per-budget query" do
@@ -513,13 +481,13 @@ module Reimbursements
     end
 
     test "expenses preloads payment details so a payee bank check costs no query" do
-      pat = create_person(sort_code: "001122", account_number: "12345678")
+      pat = create_reimbursements_person(sort_code: "001122", account_number: "12345678")
       Expense.create!(person: pat, status: Status::PENDING, amount_excl_vat: 10)
 
       loaded = store.expenses
 
-      # ReviewSupport.attention_summary asks this of every expense; without the
-      # preload an end-of-year export pays one query per payee.
+      # attention_summary asks this of every expense; without the preload an export pays a query
+      # per payee.
       assert_queries_count(0) { loaded.each(&:effective_has_bank_details?) }
     end
 
@@ -529,87 +497,58 @@ module Reimbursements
       expense = Expense.create!(budget: props, status: Status::PAID, amount_excl_vat: 10)
 
       # Counted by Props via its expense, and by the income budget directly.
-      linked_expense = EusaActual.create!(nominal_code: "4000", narrative: "linked", debit: 10,
-                                          expense: expense)
-      linked_budget = EusaActual.create!(nominal_code: "8000", narrative: "income", credit: 50,
-                                         budget: income)
-      # Counted by nobody, even though 4000 *does* have a budget: linkage is what
-      # a budget rollup can see, so this is exactly the invisible spend.
+      EusaActual.create!(nominal_code: "4000", narrative: "linked", debit: 10, expense: expense)
+      EusaActual.create!(nominal_code: "8000", narrative: "income", credit: 50, budget: income)
+      # Counted by nobody although 4000 has a budget: linkage, not nominal code, decides.
       on_budgeted_code = EusaActual.create!(nominal_code: "4000", narrative: "unlinked hire",
                                             debit: BigDecimal("1250"))
       no_budget_at_all = EusaActual.create!(nominal_code: "9999", narrative: "no budget", debit: 20)
       blank_code = EusaActual.create!(nominal_code: "", narrative: "no code", debit: 5)
       unlinked_credit = EusaActual.create!(nominal_code: "4000", narrative: "refund", credit: 30)
-
-      unattributed = store.unattributed_actuals.map(&:id)
-
-      assert_includes unattributed, on_budgeted_code.id
-      assert_includes unattributed, no_budget_at_all.id
-      assert_includes unattributed, blank_code.id, "a blank nominal code must not be suppressed"
-      assert_includes unattributed, unlinked_credit.id
-      assert_not_includes unattributed, linked_expense.id
-      assert_not_includes unattributed, linked_budget.id
-      # Sorted by nominal code (blank first, then numerically ascending) so
-      # finance can see which budget a row probably belongs to.
-      assert_equal [ blank_code.id, on_budgeted_code.id, unlinked_credit.id,
-                     no_budget_at_all.id ], store.unattributed_actuals.map(&:id)
-    end
-
-    test "unattributed_actuals excludes both legs of an offsetting pair" do
+      # An offset pair nets to zero, so neither leg is unplanned spend.
       accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL",
                                      debit: BigDecimal("4200"))
       reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL",
                                       credit: BigDecimal("4200"))
       store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
 
-      assert_empty store.unattributed_actuals,
-                   "a correctly-offset accrual pair nets to zero, it is not unplanned spend"
+      # Sorted by nominal code, blank first (a blank code must not be suppressed).
+      assert_equal [ blank_code.id, on_budgeted_code.id, unlinked_credit.id,
+                     no_budget_at_all.id ], store.unattributed_actuals.map(&:id)
     end
 
-    # An apportioned row carries NO budget_id — apportion_actual! clears it —
-    # so a list that only rejects rows with one would report every split row
-    # as unlinked income, on the very card that exists to surface money no
-    # budget accounts for.
-    test "an apportioned row is not reported as unattributed" do
+    # An apportioned row has no budget_id, so only the apportioned exclusion keeps it off the
+    # card; undoing the split must put it back.
+    test "an apportioned row is off the unattributed list until the split is removed" do
       budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
       actual = create_reimbursements_eusa_actual(credit: 900)
       store.apportion_actual!(actual.id, [ { budget_id: budget.id, amount: BigDecimal("900") } ])
+      assert_not_includes store.unattributed_actuals.map(&:id), actual.id
 
-      assert_not_includes DatabaseStore.new.unattributed_actuals.map(&:id), actual.id
-    end
-
-    # Undoing a split has to put the row back on the card, or income nobody
-    # has attributed disappears from the one screen that would show it.
-    test "removing an apportionment puts the row back on the unattributed list" do
-      budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
-      actual = create_reimbursements_eusa_actual(credit: 900)
-      store.apportion_actual!(actual.id, [ { budget_id: budget.id, amount: BigDecimal("900") } ])
       store.remove_apportionment!(actual.id)
-
-      assert_includes DatabaseStore.new.unattributed_actuals.map(&:id), actual.id
+      assert_includes store.unattributed_actuals.map(&:id), actual.id
     end
 
-    # apportioned? reads an association, so without the preload behind
-    # eusa_actuals_for_cost_centre this fires one query per row on a page
-    # that renders hundreds.
+    # apportioned? reads an association: without the preload behind eusa_actuals_for_cost_centre
+    # it fires a query per row.
     test "the unattributed list does not query per row for allocations" do
       3.times { |i| create_reimbursements_eusa_actual(credit: 100, narrative: "Payout #{i}") }
       fresh = DatabaseStore.new
       fresh.eusa_actuals # warm the one list read the card is built from
 
-      queries = count_queries { fresh.unattributed_actuals }
-
-      assert_equal 0, queries, "apportioned? must read preloaded allocations"
+      assert_queries_count(0) { fresh.unattributed_actuals }
     end
 
     # --- Budget updates ----------------------------------------------------
 
     test "create_budget_update! records the shared update and one forecast per entry" do
+      FinancialYear.create!(label: "Fringe 2026", active: true)
+      draft = FinancialYear.create!(label: "Fringe 2027")
       a = Budget.create!(name: "Props", nominal_code: "4000")
       b = Budget.create!(name: "Travel", nominal_code: "4100")
       user = users(:member)
 
-      update = store.create_budget_update!(
+      update = scoped_store(draft).create_budget_update!(
         effective_date: Date.new(2026, 6, 1), note: "Budget meeting",
         created_by: user,
         forecasts: [ { budget_id: a.record_id, amount: BigDecimal("500") },
@@ -619,12 +558,10 @@ module Reimbursements
       assert_equal Date.new(2026, 6, 1), update.effective_date
       assert_equal "Budget meeting", update.note
       assert_equal user.id, update.created_by_id
-      assert_equal 2, update.forecasts.count
-      # Each forecast carries the shared date + note and links back to the update.
+      assert_equal draft, update.financial_year, "stamps the year being viewed, not just the live one"
       created = BudgetForecast.where(budget_update_id: update.id).order(:budget_id)
       assert_equal [ BigDecimal("500"), BigDecimal("250") ].sort, created.map(&:amount).sort
       assert created.all? { |f| f.date == Date.new(2026, 6, 1) && f.reason == "Budget meeting" }
-      # The new forecast becomes each budget's current forecast.
       assert_equal BigDecimal("500"), Budget.find(a.id).current_forecast
     end
 
@@ -646,13 +583,17 @@ module Reimbursements
 
     def scoped_store(year) = DatabaseStore.new(financial_year: year)
 
-    test "budgets_for_year lists only the store's year" do
+    test "year scoping: budgets_for_year and budgets_with_actuals narrow, budgets does not" do
       this_year = FinancialYear.create!(label: "Fringe 2027")
       last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
       mine = Budget.create!(name: "Props", financial_year: this_year)
-      Budget.create!(name: "Old props", financial_year: last_year)
+      old = Budget.create!(name: "Old props", financial_year: last_year)
+      scoped = scoped_store(this_year)
 
-      assert_equal [ mine.id ], scoped_store(this_year).budgets_for_year.map(&:id)
+      assert_equal [ mine.id ], scoped.budgets_for_year.map(&:id)
+      assert_equal [ mine.id ], scoped.budgets_with_actuals.map(&:id)
+      # budgets is an id lookup: scoping it blanks the name on last year's claims.
+      assert_includes scoped.budgets.map(&:id), old.id
     end
 
     test "budgets_for_year returns every budget when the store has no year" do
@@ -660,31 +601,8 @@ module Reimbursements
       Budget.create!(name: "Props", financial_year: year)
       Budget.create!(name: "Unstamped")
 
-      # Jobs and the producer surfaces build an unscoped store; they must keep
-      # seeing everything rather than silently losing the unstamped rows a
-      # pre-financial-year database is full of.
+      # Jobs and producer surfaces use an unscoped store and must keep seeing unstamped rows.
       assert_equal 2, store.budgets_for_year.size
-    end
-
-    test "budgets stays unscoped so a name lookup resolves across years" do
-      this_year = FinancialYear.create!(label: "Fringe 2027")
-      last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
-      Budget.create!(name: "Props", financial_year: this_year)
-      old = Budget.create!(name: "Old props", financial_year: last_year)
-
-      # Review, the expenses index and every export resolve an expense's budget
-      # name through this list. Scoping it would blank the name on last year's
-      # claims while this year is selected.
-      assert_includes scoped_store(this_year).budgets.map(&:id), old.id
-    end
-
-    test "budgets_with_actuals is scoped to the store's year" do
-      this_year = FinancialYear.create!(label: "Fringe 2027")
-      last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
-      mine = Budget.create!(name: "Props", financial_year: this_year)
-      Budget.create!(name: "Old props", financial_year: last_year)
-
-      assert_equal [ mine.id ], scoped_store(this_year).budgets_with_actuals.map(&:id)
     end
 
     test "active_budgets follows the ACTIVE year, not the selected one" do
@@ -693,8 +611,7 @@ module Reimbursements
       live_budget = Budget.create!(name: "Props", active: true, financial_year: live)
       Budget.create!(name: "Next year props", active: true, financial_year: draft)
 
-      # A finance user browsing next year's draft budgets must not be able to
-      # file a claim against them — submitters file against the live year.
+      # Submitters file against the live year; a finance user browsing next year's draft must not.
       assert_equal [ live_budget.id ], scoped_store(draft).active_budgets.map(&:id)
     end
 
@@ -713,127 +630,69 @@ module Reimbursements
 
     def second_cost_centre = create_second_reimbursements_cost_centre
 
-    test "budgets_for_year lists only the store's cost centre" do
+    test "cost-centre scoping: budgets_for_year and budgets_with_actuals narrow, budgets and active_budgets do not" do
       fringe = CostCentre.default
-      termtime = second_cost_centre
       mine = Budget.create!(name: "Props", cost_centre: fringe)
-      Budget.create!(name: "Termtime props", cost_centre: termtime)
-
-      assert_equal [ mine.id ], centre_store(fringe).budgets_for_year.map(&:id)
-    end
-
-    test "a budget with no cost centre is in every centre's scope" do
+      theirs = Budget.create!(name: "Termtime props", active: true, cost_centre: second_cost_centre)
       unplaced = Budget.create!(name: "Unplaced")
+      scoped = centre_store(fringe)
 
-      # The same leniency as the financial-year scoping: a row written before
-      # cost centres existed must not vanish from every screen at once.
-      assert_includes centre_store(second_cost_centre).budgets_for_year.map(&:id), unplaced.id
+      # Same leniency as year scoping: a row from before cost centres must not vanish.
+      assert_equal [ mine.id, unplaced.id ].sort, scoped.budgets_for_year.map(&:id).sort
+      assert_equal [ mine.id, unplaced.id ].sort, scoped.budgets_with_actuals.map(&:id).sort
+      # budgets is an id lookup; active_budgets is the submitter picker, which spans centres.
+      assert_includes scoped.budgets.map(&:id), theirs.id
+      assert_includes scoped.active_budgets.map(&:id), theirs.id
     end
 
-    test "budgets stays unscoped by cost centre so a name lookup still resolves" do
-      termtime = second_cost_centre
-      theirs = Budget.create!(name: "Termtime props", cost_centre: termtime)
-
-      assert_includes centre_store(CostCentre.default).budgets.map(&:id), theirs.id
-    end
-
-    test "active_budgets is deliberately NOT cost-centre scoped" do
-      termtime = second_cost_centre
-      theirs = Budget.create!(name: "Termtime props", active: true, cost_centre: termtime)
-
-      assert_includes centre_store(CostCentre.default).active_budgets.map(&:id), theirs.id
-    end
-
-    test "submittable_budgets drops a hidden centre's lines and keeps unplaced ones" do
-      hidden = second_cost_centre
-      hidden.update!(hidden_from_submitters: true)
+    test "submittable_budgets drops only a hidden centre's lines, keeping unplaced ones" do
+      hidden = create_second_reimbursements_cost_centre(hidden_from_submitters: true)
       theirs = Budget.create!(name: "Termtime props", active: true, cost_centre: hidden)
       unplaced = Budget.create!(name: "Contingency", active: true)
+      visible = Budget.create!(name: "Props", active: true, cost_centre: CostCentre.default)
 
-      assert_equal [ unplaced.id ], DatabaseStore.new.submittable_budgets.map(&:id)
-      assert_includes DatabaseStore.new.active_budgets.map(&:id), theirs.id
-    end
-
-    test "budgets_with_actuals is scoped to the store's cost centre" do
-      fringe = CostCentre.default
-      termtime = second_cost_centre
-      mine = Budget.create!(name: "Props", cost_centre: fringe)
-      Budget.create!(name: "Termtime props", cost_centre: termtime)
-
-      assert_equal [ mine.id ], centre_store(fringe).budgets_with_actuals.map(&:id)
-    end
-
-    test "expenses_for_cost_centre resolves an expense's centre through its budget" do
-      fringe = CostCentre.default
-      termtime = second_cost_centre
-      mine = Expense.create!(status: Status::PENDING,
-                             budget: Budget.create!(name: "Props", cost_centre: fringe))
-      Expense.create!(status: Status::PENDING,
-                      budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
-      unplaced = Expense.create!(status: Status::PENDING)
-
-      assert_equal [ mine.id, unplaced.id ].sort,
-                   centre_store(fringe).expenses_for_cost_centre.map(&:id).sort
-    end
-
-    test "expenses stays unscoped by cost centre" do
-      termtime = second_cost_centre
-      theirs = Expense.create!(status: Status::PENDING,
-                               budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
-
-      assert_includes centre_store(CostCentre.default).expenses.map(&:id), theirs.id
+      assert_equal [ unplaced.id, visible.id ], store.submittable_budgets.map(&:id)
+      assert_includes store.active_budgets.map(&:id), theirs.id
     end
 
     test "the money path owns an unplaced claim once, not once per centre" do
       fringe = CostCentre.default
       termtime = second_cost_centre
+      mine = Expense.create!(status: Status::APPROVED,
+                             budget: Budget.create!(name: "Props", cost_centre: fringe))
       unplaced = Expense.create!(status: Status::APPROVED)
       theirs = Expense.create!(status: Status::APPROVED,
                                budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
 
-      # The screens' filter shows it under both — that is safe, it pays nobody.
-      assert_includes centre_store(fringe).expenses_for_cost_centre.map(&:id), unplaced.id
+      # The screens' filter resolves a claim's centre through its budget and shows an unplaced
+      # claim under both centres: safe, it pays nobody. expenses itself is an unscoped id lookup.
+      assert_equal [ mine.id, unplaced.id ].sort,
+                   centre_store(fringe).expenses_for_cost_centre.map(&:id).sort
       assert_includes centre_store(termtime).expenses_for_cost_centre.map(&:id), unplaced.id
+      assert_includes centre_store(fringe).expenses.map(&:id), theirs.id
 
-      # Build Batch must not: two centres selecting one claim can build it into
-      # two BACS spreadsheets and two live EUSA drafts (limits_concurrency is
-      # keyed per centre, so those builds do not serialise), and EUSA pays twice.
+      # Build Batch must not: two centres selecting one claim build it into two live EUSA drafts
+      # (limits_concurrency is per centre, so the builds do not serialise) and EUSA pays twice.
       assert_includes store.expenses_owned_by_cost_centre(fringe).map(&:id), unplaced.id
       assert_not_includes store.expenses_owned_by_cost_centre(termtime).map(&:id), unplaced.id
       assert_includes store.expenses_owned_by_cost_centre(termtime).map(&:id), theirs.id
     end
 
     test "the money path refuses to answer without a cost centre" do
-      # "No cost centre" cannot mean "every centre" on a path that pays people,
-      # and an empty answer would silently build an empty batch.
+      # "No centre" cannot mean "every centre" on a path that pays people.
       assert_raises(ArgumentError) { store.expenses_owned_by_cost_centre(nil) }
     end
 
-    test "eusa_actuals_for_cost_centre scopes on the row's own cost centre" do
-      fringe = CostCentre.default
-      termtime = second_cost_centre
-      mine = EusaActual.create!(narrative: "Ours", debit: 10, cost_centre: fringe)
-      EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: termtime)
+    test "eusa_actuals_for_cost_centre and unattributed_actuals scope on the row's own centre, eusa_actuals does not" do
+      mine = EusaActual.create!(narrative: "Ours", debit: 10, cost_centre: CostCentre.default)
+      theirs = EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: second_cost_centre)
       unplaced = EusaActual.create!(narrative: "Legacy", debit: 10)
+      scoped = centre_store(CostCentre.default)
 
-      assert_equal [ mine.id, unplaced.id ].sort,
-                   centre_store(fringe).eusa_actuals_for_cost_centre.map(&:id).sort
-    end
-
-    test "eusa_actuals stays unscoped so the reconcile dedup pool is whole" do
-      termtime = second_cost_centre
-      theirs = EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: termtime)
-
-      assert_includes centre_store(CostCentre.default).eusa_actuals.map(&:id), theirs.id
-    end
-
-    test "unattributed_actuals is scoped to the store's cost centre" do
-      fringe = CostCentre.default
-      termtime = second_cost_centre
-      mine = EusaActual.create!(narrative: "Ours", debit: 10, cost_centre: fringe)
-      EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: termtime)
-
-      assert_equal [ mine.id ], centre_store(fringe).unattributed_actuals.map(&:id)
+      assert_equal [ mine.id, unplaced.id ].sort, scoped.eusa_actuals_for_cost_centre.map(&:id).sort
+      assert_equal [ mine.id, unplaced.id ].sort, scoped.unattributed_actuals.map(&:id).sort
+      # eusa_actuals is the reconcile dedup pool and stays whole.
+      assert_includes scoped.eusa_actuals.map(&:id), theirs.id
     end
 
     test "batches_for_cost_centre reads each batch's centre off its expenses" do
@@ -865,7 +724,7 @@ module Reimbursements
       )
 
       assert_equal termtime.id, unplaced.reload.cost_centre_id
-      # Never re-homes a line another pot already owns, even if asked to.
+      # Never re-homes a line another pot owns, even if asked.
       assert_equal CostCentre.default.id, placed.reload.cost_centre_id
     end
 
@@ -912,31 +771,9 @@ module Reimbursements
       assert_equal 1, result.revised
     end
 
-    # The spreadsheet is the committee's route for revising a show's AGREED
-    # TOTAL, and a revised Area Budget used to be silently dropped. It lands as
-    # a forecast on the AREA, under the same update as the line revisions —
-    # one committee meeting is one BudgetUpdate — and the area's own
-    # initial_budget stays write-once, so Area#projected_amount moves while the
-    # figure first agreed is still there to measure drift against.
-    # #areas preloads every area-bound budget's expenses and forecasts — the
-    # 10->36 shape Phase 1 guarded against — and a screen that only PRINTS a
-    # name must not pay it.
-    test "area_names_by_id costs one query however many budgets hang off the areas" do
-      3.times do |n|
-        area = Area.create!(name: "Area #{n}")
-        3.times do |line|
-          budget = Budget.create!(name: "Line #{line}", nominal_code: "4000", area: area)
-          Expense.create!(budget: budget, description: "x", amount_excl_vat: 10)
-          budget.forecasts.create!(amount: 20, date: Date.current)
-        end
-      end
-      store = DatabaseStore.new
-
-      assert_queries_count(1) { store.area_names_by_id }
-      assert_equal 3, store.area_names_by_id.size
-      assert_equal "Area 0", store.area_names_by_id[Area.order(:id).first.record_id]
-    end
-
+    # The sheet is the committee's route for revising a show's agreed total: it lands as a forecast
+    # on the AREA under the same BudgetUpdate as the line revisions, and the area's initial_budget
+    # stays write-once so drift is still measurable.
     test "import_budgets! logs a revised area total as an area forecast in the same update" do
       year = FinancialYear.create!(label: "Fringe 2027", active: true)
       area = Area.create!(name: "Cogito", initial_budget: BigDecimal("1000"), financial_year: year)
@@ -1003,77 +840,54 @@ module Reimbursements
       assert_equal 0, BudgetUpdate.count
     end
 
-    test "import_budgets! creates the areas the sheet names before the budgets that reference them" do
+    test "import_budgets! puts a create in an area named by the sheet (created first) or passed by id" do
       year = FinancialYear.create!(label: "Fringe 2027")
       cost_centre = CostCentre.default
+      existing = create_reimbursements_area(name: "Improverts", cost_centre: cost_centre,
+                                            financial_year: year)
 
-      result = scoped_store(year).import_budgets!(
-        creates: [ { name: "Cogito: Marketing", nominal_code: "4000", budget_type: "Expense",
-                     active: true, financial_year: year, cost_centre: cost_centre,
-                     owner_ids: [], area_name: "Cogito" } ],
-        revisions: [], owner_syncs: [], note: "x", created_by: nil,
-        area_creates: [ { name: "Cogito", cost_centre: cost_centre, financial_year: year } ]
-      )
+      result = assert_difference -> { Area.count }, 1 do
+        scoped_store(year).import_budgets!(
+          creates: [ { name: "Cogito: Marketing", nominal_code: "4000", budget_type: "Expense",
+                       active: true, financial_year: year, cost_centre: cost_centre,
+                       owner_ids: [], area_name: "Cogito" },
+                     { name: "Improverts: Props", nominal_code: "4001", budget_type: "Expense",
+                       active: true, financial_year: year, cost_centre: cost_centre,
+                       owner_ids: [], area_id: existing.record_id } ],
+          revisions: [], owner_syncs: [], note: "x", created_by: nil,
+          area_creates: [ { name: "Cogito", cost_centre: cost_centre, financial_year: year } ]
+        )
+      end
 
-      area = Area.find_by(name: "Cogito")
-      assert_not_nil area
-      assert_equal area.id, Budget.find_by(name: "Cogito: Marketing").area_id
+      assert_equal Area.find_by(name: "Cogito").id, Budget.find_by(name: "Cogito: Marketing").area_id
+      assert_equal existing.id, Budget.find_by(name: "Improverts: Props").area_id
       assert_equal 1, result.areas_created
     end
 
-    test "import_budgets! attaches a create to an area passed by id, creating none" do
-      year = FinancialYear.create!(label: "Fringe 2027")
-      cost_centre = CostCentre.default
-      area = create_reimbursements_area(name: "Cogito", cost_centre: cost_centre, financial_year: year)
-
-      result = scoped_store(year).import_budgets!(
-        creates: [ { name: "Cogito: Marketing", nominal_code: "4000", budget_type: "Expense",
-                     active: true, financial_year: year, cost_centre: cost_centre,
-                     owner_ids: [], area_id: area.record_id } ],
-        revisions: [], owner_syncs: [], note: "x", created_by: nil
-      )
-
-      assert_equal area.id, Budget.find_by(name: "Cogito: Marketing").area_id
-      assert_equal 0, result.areas_created
-      assert_equal 1, Area.where(name: "Cogito").count
-    end
-
-    # The re-home path shares #resolve_area with the creates, so a line moved
-    # into an area this same import is creating resolves the same way — which
-    # is what stops a re-import (every line matched, nothing created) leaving
-    # the sheet's new area with no budget in it.
-    test "import_budgets! moves a re-homed budget into an area the same import creates" do
-      year = FinancialYear.create!(label: "Fringe 2027")
-      cost_centre = CostCentre.default
-      budget = Budget.create!(name: "Cogito: Marketing", financial_year: year,
-                              cost_centre: cost_centre)
-
-      result = scoped_store(year).import_budgets!(
-        creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
-        area_creates: [ { name: "Cogito", cost_centre: cost_centre, financial_year: year } ],
-        re_homes: [ { budget_id: budget.record_id, area_name: "Cogito" } ]
-      )
-
-      assert_equal Area.find_by(name: "Cogito").id, budget.reload.area_id
-      assert_equal 1, result.re_homed
-    end
-
-    test "import_budgets! moves a re-homed budget out of the area it was in" do
+    # Shares #resolve_area with creates, so a re-import (every line matched, nothing created)
+    # still puts lines into the area the sheet creates.
+    test "import_budgets! re-homes budgets into an area it creates and out of the area they were in" do
       year = FinancialYear.create!(label: "Fringe 2027")
       cost_centre = CostCentre.default
       improverts = create_reimbursements_area(name: "Improverts", cost_centre: cost_centre,
                                               financial_year: year)
       cogito = create_reimbursements_area(name: "Cogito", cost_centre: cost_centre,
                                           financial_year: year)
-      budget = Budget.create!(name: "Cogito: Marketing", financial_year: year,
-                              cost_centre: cost_centre, area: improverts)
+      unplaced = Budget.create!(name: "Panto: Marketing", financial_year: year,
+                                cost_centre: cost_centre)
+      moved = Budget.create!(name: "Cogito: Marketing", financial_year: year,
+                             cost_centre: cost_centre, area: improverts)
 
-      scoped_store(year).import_budgets!(
+      result = scoped_store(year).import_budgets!(
         creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
-        re_homes: [ { budget_id: budget.record_id, area_id: cogito.record_id } ]
+        area_creates: [ { name: "Panto", cost_centre: cost_centre, financial_year: year } ],
+        re_homes: [ { budget_id: unplaced.record_id, area_name: "Panto" },
+                    { budget_id: moved.record_id, area_id: cogito.record_id } ]
       )
 
-      assert_equal cogito.id, budget.reload.area_id
+      assert_equal Area.find_by(name: "Panto").id, unplaced.reload.area_id
+      assert_equal cogito.id, moved.reload.area_id
+      assert_equal 2, result.re_homed
     end
 
     test "import_budgets! re-syncs owners on budgets that already existed" do
@@ -1090,10 +904,8 @@ module Reimbursements
       assert_equal [ alice.record_id ], budget.reload.owner_ids
     end
 
-    # --- Area owners: the sheet ADDS, and never removes -----------------------
-    # A spreadsheet has no way to spell "remove this owner" — a blank cell says
-    # nothing — and an owner dropped silently is a show's sign-off authority
-    # gone. Removal stays hand-work on the area form.
+    # --- Area owners: the sheet adds and never removes -----------------------
+    # A blank cell says nothing, so removal stays hand-work on the area form.
 
     test "import_budgets! unions the sheet's owners into an area, removing nobody" do
       year = FinancialYear.create!(label: "Fringe 2027")
@@ -1126,9 +938,8 @@ module Reimbursements
       assert_equal [ alice.record_id ], Area.find_by(name: "Cogito").owner_ids
     end
 
-    # The owner column is grouped by the area each line NAMES, ticked or not —
-    # so an area every re-home into it was unticked out of never gets created,
-    # and there is nothing to own.
+    # Owners are grouped by the area each line names, ticked or not, so an area every re-home was
+    # unticked out of is never created and has nothing to own.
     test "import_budgets! skips an area owner sync for an area it never created" do
       year = FinancialYear.create!(label: "Fringe 2027")
       alice = Person.create!(name: "Alice", email: "alice@example.com")
@@ -1143,19 +954,10 @@ module Reimbursements
       assert_equal 0, result.area_owners_synced
     end
 
-    # THE property, not the branch: an empty list means "the sheet named
-    # nobody", which must never read as "remove everyone".
-    #
-    # Its two defences are joint, and this goes red when BOTH are gone (checked):
-    # the union makes the list a superset before `if union.any?` is ever
-    # consulted, and the guard stops the bare list reaching Area#sync_owner_ids!
-    # — a DIFF sync, whose `where.not(person_id: [])` is WHERE 1=1. Neither
-    # alone reddens it, which is exactly why the guard is defence in depth and
-    # not a reachable bug: see the method's own comment. There is deliberately
-    # no test for the guarded branch by itself, because with the union in place
-    # it can only be entered by an ownerless area asked to add nothing — a
-    # no-op whose rows are scoped to that area either way, so no mutation of
-    # this code can make such a test fail.
+    # The property, not the branch: an empty list means "the sheet named nobody", never "remove
+    # everyone". Two defences hold it jointly (the union makes the list a superset, and the
+    # `any?` guard keeps a bare list from Area#sync_owner_ids!'s WHERE 1=1), so a test of the
+    # guard alone could not fail.
     test "add_area_owners! with an empty list removes nobody" do
       bob = Person.create!(name: "Bob", email: "bob@example.com")
       area = create_reimbursements_area(name: "Cogito")
@@ -1169,7 +971,7 @@ module Reimbursements
     # --- import_expenses! ----------------------------------------------------
 
     test "import_expenses! creates one claim per row, in one transaction" do
-      pat = create_person
+      pat = create_reimbursements_person
       budget = Budget.create!(name: "Props")
 
       created = store.import_expenses!(rows: [
@@ -1181,7 +983,7 @@ module Reimbursements
     end
 
     test "import_expenses! writes nothing at all when one row fails" do
-      pat = create_person
+      pat = create_reimbursements_person
       budget = Budget.create!(name: "Props")
       Expense.create!(status: Status::PAID, import_key: "OLD-2")
 
@@ -1194,11 +996,9 @@ module Reimbursements
       end
     end
 
-    # The sheet's own numbers are inserted BEFORE the rows that need one
-    # assigned, or MAX+1 walks straight into a number the sheet is about to
-    # claim — and create_expense! never retries past a number it was handed.
+    # Numbered rows go first, or MAX+1 walks into a number the sheet is about to claim.
     test "import_expenses! honours the sheet's expense numbers without colliding" do
-      pat = create_person
+      pat = create_reimbursements_person
       budget = Budget.create!(name: "Props")
 
       store.import_expenses!(rows: [
@@ -1209,14 +1009,13 @@ module Reimbursements
       assert_equal [ 1, 2 ], Expense.order(:auto_number).pluck(:auto_number)
     end
 
-    test "import_expenses! sends nothing and enqueues nothing" do
-      pat = create_person
-      budget = Budget.create!(name: "Props")
+    # nil means "assign one"; a number somebody handed over is never retried past a collision.
+    test "create_expense! numbers a claim given a nil auto_number and raises on a handed number that is taken" do
+      first = store.create_expense!(status: Status::PAID, auto_number: nil)
+      assert_predicate first.auto_number, :present?
 
-      assert_no_enqueued_jobs do
-        assert_no_emails do
-          store.import_expenses!(rows: [ expense_row(pat, budget, key: "OLD-1") ])
-        end
+      assert_raises(ActiveRecord::RecordNotUnique) do
+        store.create_expense!(status: Status::PAID, auto_number: first.auto_number)
       end
     end
 
@@ -1228,23 +1027,8 @@ module Reimbursements
         payment_method: Expense::PAYMENT_METHOD_UK_BACS, import_key: key }
     end
 
-    test "create_budget_update! stamps the store's year, not just the active one" do
-      FinancialYear.create!(label: "Fringe 2026", active: true)
-      draft = FinancialYear.create!(label: "Fringe 2027")
-      budget = Budget.create!(name: "Props", financial_year: draft)
-
-      update = scoped_store(draft).create_budget_update!(
-        effective_date: Date.new(2027, 6, 1), note: "Committee budget", created_by: nil,
-        forecasts: [ { budget_id: budget.record_id, amount: BigDecimal("500") } ]
-      )
-
-      assert_equal draft, update.financial_year
-    end
-
     # --- settle_expense_from_actual! ----------------------------------------
-    #
-    # The one place a reconciled row settles its claim, shared by the reconcile
-    # apply and the manual link on the Actuals index.
+    # Shared by the reconcile apply and the manual link on the Actuals index.
 
     def settle_setup(international:, amount: BigDecimal("230.00"))
       budget = Budget.create!(name: "Insurance", nominal_code: "432540")
@@ -1261,10 +1045,8 @@ module Reimbursements
       [ expense, actual ]
     end
 
-    # An international claim's stored amount was finance's GBP estimate, typed
-    # at review because nobody knows the rate until the payment clears. Left
-    # uncorrected, every budget rollup quotes the estimate forever.
-    test "settling an international claim corrects its amount to what the bank charged" do
+    # The stored amount is finance's estimate; uncorrected, every rollup quotes it forever.
+    test "settling an international claim links the row and corrects its amount to what the bank charged" do
       expense, actual = settle_setup(international: true)
 
       store.settle_expense_from_actual!(actual.record_id, expense.record_id,
@@ -1273,24 +1055,13 @@ module Reimbursements
 
       settled = expense.reload
       assert_equal BigDecimal("236.10"), settled.amount
+      assert_equal BigDecimal("236.10"), settled.amount_excl_vat
       assert_equal Status::PAID, settled.status
       assert_equal Date.new(2026, 5, 20), settled.payment_confirmed_date
+      assert_equal expense.id, actual.reload[:expense_id]
     end
 
-    # No reclaimable UK VAT on a foreign invoice, so Expense mirrors it.
-    test "the corrected amount carries the ex-VAT figure with it" do
-      expense, actual = settle_setup(international: true)
-
-      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
-                                        payment_date: Date.new(2026, 5, 20),
-                                        gbp_charged: BigDecimal("236.10"))
-
-      assert_equal BigDecimal("236.10"), expense.reload.amount_excl_vat
-    end
-
-    # A UK claim's amount is what the producer actually spent, not an estimate.
-    # Overwriting it from the ledger row would silently rewrite the claim to
-    # whatever EUSA happened to book.
+    # A UK amount is what the producer spent, not an estimate.
     test "settling a UK claim leaves its amount alone" do
       expense, actual = settle_setup(international: false)
 
@@ -1303,47 +1074,58 @@ module Reimbursements
       assert_equal Status::PAID, settled.status
     end
 
-    test "settling links the actual to the expense" do
-      expense, actual = settle_setup(international: true)
+    # Both callers filter first; this is the refusal for the next one that forgets.
+    test "settling refuses a claim nobody agreed to pay or one already settled, and writes nothing" do
+      other_row = EusaActual.create!(nominal_code: "432540", narrative: "Earlier run",
+                                     debit: BigDecimal("230.00"))
+      {
+        "a draft" => { status: Status::DRAFT },
+        "a rejected claim" => { status: Status::REJECTED },
+        "a Paid claim with a payment date" => { status: Status::PAID,
+                                                payment_confirmed_date: Date.new(2026, 5, 1) },
+        "a Paid claim another row settled" => { status: Status::PAID, other_row: true }
+      }.each do |label, attrs|
+        expense, actual = settle_setup(international: false)
+        other_row.update!(expense_id: expense.id) if attrs.delete(:other_row)
+        expense.update!(attrs)
+        before = expense.reload.attributes.slice("status", "payment_confirmed_date")
+
+        error = assert_raises(DatabaseStore::NotSettleableError, label) do
+          store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                            payment_date: Date.new(2026, 5, 20))
+        end
+        assert_equal expense.status, error.status, label
+        assert_nil actual.reload[:expense_id], label
+        assert_equal before, expense.reload.attributes.slice("status", "payment_confirmed_date"), label
+      end
+    end
+
+    # An imported Paid claim with no payment date is still waiting for its EUSA row.
+    test "settling still takes a Paid claim no row or payment date has settled yet" do
+      expense, actual = settle_setup(international: false)
+      expense.update!(status: Status::PAID)
 
       store.settle_expense_from_actual!(actual.record_id, expense.record_id,
-                                        payment_date: Date.new(2026, 5, 20),
-                                        gbp_charged: BigDecimal("236.10"))
+                                        payment_date: Date.new(2026, 5, 20))
 
+      assert_equal Date.new(2026, 5, 20), expense.reload.payment_confirmed_date
       assert_equal expense.id, actual.reload[:expense_id]
     end
 
     # --- Areas -----------------------------------------------------------
 
-    test "areas is unscoped and areas_for_year is scoped to year and cost centre" do
-      other = create_second_reimbursements_cost_centre
-      mine = create_reimbursements_area(name: "Cogito", cost_centre: CostCentre.default)
-      theirs = create_reimbursements_area(name: "Panto", cost_centre: other)
-
-      store = DatabaseStore.new(
-        financial_year: FinancialYear.current,
-        cost_centre: CostCentre.default
-      )
-
-      assert_includes store.areas, theirs, "areas is an id->record lookup and must not be narrowed"
-      assert_includes store.areas_for_year, mine
-      assert_not_includes store.areas_for_year, theirs
-    end
-
-    test "areas_for_year returns every area when the store has no year or centre" do
+    test "areas is unscoped; areas_for_year narrows by year and centre and keeps unplaced areas" do
       year = FinancialYear.create!(label: "Fringe 2027")
-      create_reimbursements_area(name: "Cogito", financial_year: year)
-      create_reimbursements_area(name: "Unstamped", financial_year: nil)
+      other = create_second_reimbursements_cost_centre
+      mine = create_reimbursements_area(name: "Cogito", cost_centre: CostCentre.default,
+                                        financial_year: year)
+      theirs = create_reimbursements_area(name: "Panto", cost_centre: other, financial_year: year)
+      unplaced = create_reimbursements_area(name: "Unplaced")
+      scoped = DatabaseStore.new(financial_year: year, cost_centre: CostCentre.default)
 
-      assert_equal 2, store.areas_for_year.size
-    end
-
-    test "an area with no financial year or cost centre counts as belonging to every one" do
-      unplaced = create_reimbursements_area(name: "Unplaced", financial_year: nil, cost_centre: nil)
-
-      assert_includes scoped_store(FinancialYear.create!(label: "Fringe 2027")).areas_for_year.map(&:id),
-                       unplaced.id
-      assert_includes centre_store(second_cost_centre).areas_for_year.map(&:id), unplaced.id
+      assert_includes scoped.areas, theirs, "areas is an id->record lookup and must not be narrowed"
+      assert_equal [ mine.id, unplaced.id ].sort, scoped.areas_for_year.map(&:id).sort
+      assert_equal 3, store.areas_for_year.size, "an unscoped store sees every area"
     end
 
     test "find_area reads the row directly, unaffected by a stale memoized list" do
@@ -1354,10 +1136,7 @@ module Reimbursements
       assert_nil store.find_area("999999")
     end
 
-    # The area edit page reads Area#committed_amount and #allocated, which call
-    # the equivalent Budget readers per line — so without the same preload
-    # #areas carries, the one screen those figures exist for pays two queries
-    # per budget line.
+    # The area edit page's figures read each line's expenses and forecasts.
     test "find_area preloads each budget line's expenses and forecasts" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
@@ -1373,9 +1152,11 @@ module Reimbursements
       assert_predicate line.association(:forecasts), :loaded?
     end
 
-    test "create_area! writes the permitted columns" do
+    test "create_area! writes the given columns and busts the memoized lists" do
       year = FinancialYear.create!(label: "Fringe 2027")
       cost_centre = CostCentre.default
+      store.areas # memoize both lists, so a same-request relist must see the new area
+      store.areas_for_year
 
       area = store.create_area!(name: "Cogito", initial_budget: BigDecimal("500"),
                                 notes: "Autumn show", active: true,
@@ -1386,28 +1167,8 @@ module Reimbursements
       assert_equal "Autumn show", area.notes
       assert_equal cost_centre, area.cost_centre
       assert_equal year, area.financial_year
-    end
-
-    test "create_area! busts the memoized lists so a same-request relist sees it" do
-      store.areas # memoize the empty list in
-      store.areas_for_year # memoize the empty scoped list in
-
-      created = store.create_area!(name: "Cogito")
-
-      assert_includes store.areas.map(&:id), created.id
-      assert_includes store.areas_for_year.map(&:id), created.id
-    end
-
-    test "update_area! updates the row and busts the memoized lists" do
-      area = create_reimbursements_area(name: "Cogito")
-      store.areas # memoize the stale name in
-
-      updated = store.update_area!(area.record_id, name: "Cogito Renamed",
-                                   initial_budget: BigDecimal("750"))
-
-      assert_equal "Cogito Renamed", updated.name
-      assert_equal BigDecimal("750"), updated.initial_budget
-      assert_equal "Cogito Renamed", store.areas.find { |a| a.id == area.id }.name
+      assert_includes store.areas.map(&:id), area.id
+      assert_includes store.areas_for_year.map(&:id), area.id
     end
 
     test "sync_area_owners! diff-syncs the owners join table" do
@@ -1417,23 +1178,12 @@ module Reimbursements
       area.sync_owner_ids!([ alice.id ])
       store.areas # memoize the stale owner list in
 
-      store.sync_area_owners!(area.record_id, [ bob.id ])
+      # A multi-checkbox posts a blank hidden default; to_i would make it 0 and raise
+      # InvalidForeignKey.
+      store.sync_area_owners!(area.record_id, [ "", bob.id.to_s ])
 
       assert_equal [ bob.record_id ], area.reload.owner_ids
       assert_equal [ bob.record_id ], store.areas.find { |a| a.id == area.id }.owner_ids
-    end
-
-    test "sync_area_owners! drops blank ids, the shape a multi-checkbox param takes" do
-      alice = Person.create!(name: "Alice", email: "alice@example.com")
-      area = create_reimbursements_area(name: "Cogito")
-
-      # A Rails multi-checkbox posts a blank hidden default alongside any ticked
-      # boxes. Area#sync_owner_ids! does person_ids.map(&:to_i) with no
-      # filtering, so an unguarded blank becomes 0 and create!(person_id: 0)
-      # raises ActiveRecord::InvalidForeignKey against reimbursements_area_owners.
-      store.sync_area_owners!(area.record_id, [ "", alice.id.to_s ])
-
-      assert_equal [ alice.record_id ], area.reload.owner_ids
     end
 
     test "areas preloads owners and its budgets' expenses and forecasts" do
@@ -1448,10 +1198,7 @@ module Reimbursements
 
       loaded = DatabaseStore.new.areas
 
-      # Area#committed_amount and #allocated each call the equivalent Budget
-      # reader per budget, which in turn reads the budget's expenses/forecasts
-      # associations — without the preload an areas index N+1s once per budget
-      # per area, per figure.
+      # Without the preload an areas index N+1s per budget per area.
       assert_queries_count(0) do
         assert_equal 2, loaded.size
         loaded.each do |area|

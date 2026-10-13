@@ -10,7 +10,7 @@
   <div class="form-inputs">
     <%= f.input :subject %>
 
-    <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical) %>
+    <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical, uploads: user_signed_in?) %>
   </div>
 
   <%= recaptcha_v3(action: 'submit_complaint') %>

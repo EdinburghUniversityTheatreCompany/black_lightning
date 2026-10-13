@@ -26,22 +26,19 @@ class Admin::StaffingsController < AdminController
     @upcoming_staffings = filtered.includes(:staffing_jobs, staffing_jobs: :user)
                                   .future.order(start_time: :asc).group_by(&:slug)
 
-    # Paginate archived staffings by slug group (one row per show).
-    # First, get paginated slugs ordered by most recent end_time.
+    # One row per show: paginate the slugs, then load their staffings.
     archived_slugs = filtered.past
                              .select("slug, MAX(end_time) as max_end_time")
                              .group(:slug)
                              .reorder("max_end_time DESC")
                              .page(params[:page]).per(10)
 
-    # Then load the full staffing records for those slugs with eager loading.
     @archived_staffings = filtered.past
                                   .includes(:staffing_jobs, staffing_jobs: :user)
                                   .where(slug: archived_slugs.map(&:slug))
                                   .order(start_time: :asc)
                                   .group_by(&:slug)
 
-    # Keep the pagination object for the view.
     @archived_staffings_pagination = archived_slugs
 
     respond_to do |format|

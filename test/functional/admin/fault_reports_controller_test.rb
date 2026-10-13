@@ -1,5 +1,4 @@
 require "test_helper"
-require "benchmark"
 
 class Admin::FaultReportsControllerTest < ActionController::TestCase
   setup do

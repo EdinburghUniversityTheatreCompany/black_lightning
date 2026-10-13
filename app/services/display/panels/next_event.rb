@@ -1,8 +1,7 @@
 module Display
   module Panels
-    # One slot of the rotation. Slots wrap, so six slots against four events
-    # repeat the first two rather than leaving a dark screen.
-    class NextEvent < Base
+    # One slot of the EventPool rotation (slots wrap).
+    class NextEvent
       def initialize(slot, on: Date.current)
         @slot = slot
         @on = on

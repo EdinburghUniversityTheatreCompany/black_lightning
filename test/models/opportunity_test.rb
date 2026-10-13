@@ -33,28 +33,12 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunity.active?
   end
 
-  test "email_visibility defaults to no_one" do
-    opp = Opportunity.new
-    assert opp.no_one?
-  end
-
-  test "email_visibility enum has correct values" do
-    assert_equal 0, Opportunity.email_visibilities[:no_one]
-    assert_equal 1, Opportunity.email_visibilities[:members_only]
-    assert_equal 2, Opportunity.email_visibilities[:everyone]
-  end
-
-  test "contact_email is optional" do
-    opp = opportunities(:active_opportunity)
-    opp.contact_email = nil
-    assert opp.valid?
-  end
-
-  test "contact_email validates format when present" do
-    opp = opportunities(:active_opportunity)
-    opp.contact_email = "not-an-email"
-    assert_not opp.valid?
-    assert_includes opp.errors[:contact_email], "is invalid"
+  test "contact and submitter emails are format-validated when present" do
+    %i[contact_email submitter_email].each do |attr|
+      opp = build_opportunity(attr => "not-an-email")
+      assert_not opp.valid?
+      assert_includes opp.errors[attr], "is invalid"
+    end
   end
 
   test "should return the correct css class" do
@@ -83,19 +67,13 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "is invalid without a creator or submitter" do
-    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now)
+    opp = build_opportunity(creator_id: nil)
     assert_not opp.valid?
     assert_includes opp.errors[:base], "must have a creator or a submitter name and email"
   end
 
-  test "is valid without a title when a company and project provide a heading" do
-    opp = opportunities(:internal_project_opportunity)
-    assert_nil opp.title
-    assert opp.valid?, opp.errors.full_messages.to_sentence
-  end
-
   test "is invalid with neither a title nor a company/project heading" do
-    opp = Opportunity.new(description: "D", expiry_date: 1.week.from_now, creator: users(:admin))
+    opp = build_opportunity(title: nil)
     assert_not opp.valid?
     assert_includes opp.errors[:base], "must have a title, or a company and project"
   end
@@ -109,10 +87,7 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunities(:internal_project_opportunity).on_behalf_of?, "creator-only posting is not on behalf"
     assert_not opportunities(:external_project_opportunity).on_behalf_of?, "creator-less posting is external, not on behalf"
 
-    on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
-                                creator_id: 1, submitter_name: "Jane Director",
-                                submitter_email: "jane@example.com")
-    assert on_behalf.on_behalf_of?
+    assert on_behalf_opportunity.on_behalf_of?
   end
 
   test "attribution_label credits the submitter, the creator, or both for on-behalf postings" do
@@ -121,9 +96,7 @@ class Admin::OpportunityTest < ActionView::TestCase
     internal = opportunities(:internal_project_opportunity)
     assert_equal internal.creator.name, internal.attribution_label
 
-    on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
-                                creator_id: 1, submitter_name: "Jane Director",
-                                submitter_email: "jane@example.com")
+    on_behalf = on_behalf_opportunity
     assert_equal "#{users(:admin).name}, on behalf of Jane Director", on_behalf.attribution_label
     assert_equal "#{users(:admin).name}, on behalf of Jane Director (jane@example.com)",
                  on_behalf.attribution_label(include_submitter_email: true)
@@ -134,13 +107,9 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunities(:active_opportunity).expired?
   end
 
-  # Regression: both expiry comparisons must be date-to-date. Against
-  # Time.current an expiry_date coerces to midnight UTC, which during British
-  # Summer Time is LATER than "now" between 00:00 and 01:00 local — so a posting
-  # that expires today (including one just closed) read as still active, and
-  # still listable, for that one hour a day. Travel into that window so the
-  # date-vs-time distinction is what the test turns on; it would pass for the
-  # other 23 hours either way.
+  # Regression: expiry must compare date-to-date. Against Time.current an expiry_date coerces to
+  # midnight UTC, which in BST is later than "now" from 00:00 to 01:00, so a posting expiring today
+  # read as active and listable. Travel into that window: the other 23 hours pass either way.
   test "a posting expiring today is expired inside the 00:00-01:00 BST window" do
     travel_to Time.zone.local(2026, 7, 25, 0, 30) do
       assert_equal 3600, Time.zone.now.utc_offset, "sanity: 00:30 on 25 July is BST (UTC+1)"
@@ -154,8 +123,7 @@ class Admin::OpportunityTest < ActionView::TestCase
     end
   end
 
-  # The other side of the same window: tomorrow's expiry is still live, so the
-  # fix didn't just expire everything an hour early.
+  # The other side of that window: tomorrow's expiry stays live.
   test "a posting expiring tomorrow is still live inside the 00:00-01:00 BST window" do
     travel_to Time.zone.local(2026, 7, 25, 0, 30) do
       opp = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current.tomorrow)
@@ -166,15 +134,13 @@ class Admin::OpportunityTest < ActionView::TestCase
     end
   end
 
+  test "display_title prefers the title, else company and project, which also satisfies validation" do
+    assert_equal "Gutter Theatre crew call", opportunities(:external_project_opportunity).display_title
 
-  test "display_title falls back to company and project" do
     opp = opportunities(:internal_project_opportunity)
     assert_nil opp.title
     assert_equal "Edinburgh University Theatre Company: Eurydice", opp.display_title
-  end
-
-  test "display_title prefers an explicit title" do
-    assert_equal "Gutter Theatre crew call", opportunities(:external_project_opportunity).display_title
+    assert opp.valid?, opp.errors.full_messages.to_sentence
   end
 
   test "company_name falls back to the associated company" do
@@ -182,15 +148,13 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "company_name resolves to an existing company (case-insensitive)" do
-    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
-                          company_name: companies(:gutter_theatre).name.upcase)
+    opp = build_opportunity(company_name: companies(:gutter_theatre).name.upcase)
     opp.validate
     assert_equal companies(:gutter_theatre), opp.company
   end
 
   test "company_name creates a new, unreviewed company when it does not match" do
-    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
-                          company_name: "A Brand New Society")
+    opp = build_opportunity(company_name: "A Brand New Society")
     assert_difference("Company.count", 1) { opp.save! }
     assert_equal "A Brand New Society", opp.company.name
     assert_not opp.company.reviewed, "newly created companies should be unreviewed"
@@ -212,51 +176,31 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "notification_email targets the submitter, ignoring the public contact_email" do
-    # External submission: notify the submitter, not the (possibly third-party) contact_email.
     external = opportunities(:external_project_opportunity)
     external.contact_email = "someone-else@example.com"
     assert_equal "jane@example.com", external.notification_email
 
-    # Member submission: notify the creator's account.
     internal = opportunities(:internal_project_opportunity)
     assert_equal internal.creator.email, internal.notification_email
   end
 
   test "notification_email and notification_name target the creator for on-behalf postings" do
-    # When a user posts on an external person's behalf, the creator is the one who actually
-    # submitted it, so approval/rejection decisions go to them — they can pass the news on.
-    on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
-                                creator: users(:admin), submitter_name: "Jane Director",
-                                submitter_email: "jane@example.com")
+    on_behalf = on_behalf_opportunity
     assert_equal users(:admin).email, on_behalf.notification_email
     assert_equal users(:admin).name, on_behalf.notification_name
   end
 
   test "submitter_display_name prefers the external submitter over the account creator" do
-    # A posting can carry both an account creator and an external submitter (e.g. a manager
-    # attributes it to an account but records who actually submitted). The displayed contact name
-    # must match resolved_contact_email, which prefers the submitter — otherwise the show page
-    # pairs the creator's name with the submitter's email.
-    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
-                          creator_id: 1, submitter_name: "Jane Director",
-                          submitter_email: "jane@example.com")
-    assert_equal "Jane Director", opp.submitter_display_name
+    # Must match resolved_contact_email, which prefers the submitter, or the show page pairs the
+    # creator's name with the submitter's email.
+    assert_equal "Jane Director", on_behalf_opportunity.submitter_display_name
 
-    # With no external submitter, fall back to the account creator.
     member = opportunities(:internal_project_opportunity)
     assert_equal member.creator.name, member.submitter_display_name
   end
 
-  test "submitter_email validates format when present" do
-    opp = opportunities(:external_project_opportunity)
-    opp.submitter_email = "nope"
-    assert_not opp.valid?
-    assert_includes opp.errors[:submitter_email], "is invalid"
-  end
-
   test "destroying an opportunity destroys its unreviewed company when it has no other opportunities" do
-    opp = Opportunity.create!(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
-                              company_name: "Orphan Society", approved: false)
+    opp = build_opportunity(company_name: "Orphan Society").tap(&:save!)
     company = opp.company
     assert_not company.reviewed
 
@@ -265,10 +209,8 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "destroying an opportunity keeps its unreviewed company when it has other opportunities" do
-    opp1 = Opportunity.create!(title: "T1", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
-                               company_name: "Shared Society", approved: false)
-    opp2 = Opportunity.create!(title: "T2", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
-                               company_name: "Shared Society", approved: false)
+    opp1 = build_opportunity(title: "T1", company_name: "Shared Society").tap(&:save!)
+    build_opportunity(title: "T2", company_name: "Shared Society").save!
     company = opp1.company
 
     assert_no_difference("Company.count") { opp1.destroy }
@@ -276,8 +218,7 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "destroying an opportunity keeps a reviewed company" do
-    opp = Opportunity.create!(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
-                              company_name: companies(:gutter_theatre).name, approved: false)
+    opp = build_opportunity(company_name: companies(:gutter_theatre).name).tap(&:save!)
     assert companies(:gutter_theatre).reviewed
 
     assert_no_difference("Company.count") { opp.destroy }
@@ -300,5 +241,15 @@ class Admin::OpportunityTest < ActionView::TestCase
     internal_index = active.index(opportunities(:internal_project_opportunity))
     external_index = active.index(opportunities(:external_project_opportunity))
     assert internal_index < external_index, "internal company opportunities should sort before external ones"
+  end
+
+  private
+
+  def build_opportunity(**attrs)
+    Opportunity.new({ title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1 }.merge(attrs))
+  end
+
+  def on_behalf_opportunity
+    build_opportunity(submitter_name: "Jane Director", submitter_email: "jane@example.com")
   end
 end

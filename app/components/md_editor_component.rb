@@ -3,11 +3,10 @@ class MdEditorComponent < ViewComponent::Base
 
   LAYOUTS = %i[horizontal vertical].freeze
 
-  # layout: :horizontal is the admin forms — a label column beside the editor,
-  # matching simple_form's tailwind_horizontal_form wrapper that every other
-  # field on those pages uses. :vertical is the public forms, whose other fields
-  # come from the vertical_form wrapper: label above, control full width.
-  def initialize(f:, field:, rows: 10, input_field_args: {}, layout: :horizontal)
+  # layout: :horizontal is the admin forms (label column beside the editor, like the
+  # other fields there); :vertical is the public forms (label above, full width).
+  # uploads: false hides image upload, which needs a signed-in user (MarkdownController#upload).
+  def initialize(f:, field:, rows: 10, input_field_args: {}, layout: :horizontal, uploads: true)
     raise ArgumentError, "layout must be one of #{LAYOUTS.inspect}" unless LAYOUTS.include?(layout)
 
     @f = f
@@ -15,25 +14,31 @@ class MdEditorComponent < ViewComponent::Base
     @rows = rows
     @input_field_args = input_field_args
     @layout = layout
+    @uploads = uploads
   end
 
-  def upload_url
-    helpers.markdown_upload_path
-  end
-
-  def item_type
-    @f.object.class.name
-  end
-
-  def item_id
-    @f.object.id
-  end
+  private
 
   def editor_height
     "#{@rows * 28}px"
   end
 
-  private
+  # Without an upload URL the editor offers no image upload at all.
+  def editor_data
+    data = {
+      controller: "markdown-editor",
+      markdown_editor_height_value: editor_height,
+      markdown_editor_primary_button_class_value: ButtonComponent.classes_for(variant: :primary, size: :sm),
+      markdown_editor_secondary_button_class_value: ButtonComponent.classes_for(variant: :secondary, size: :sm)
+    }
+    return data unless @uploads
+
+    data.merge(
+      markdown_editor_upload_url_value: helpers.markdown_upload_path,
+      markdown_editor_item_type_value: @f.object.class.name,
+      markdown_editor_item_id_value: @f.object.id
+    )
+  end
 
   def vertical?
     @layout == :vertical
@@ -46,12 +51,5 @@ class MdEditorComponent < ViewComponent::Base
   # nil so content_tag omits the attribute rather than emitting class="".
   def control_wrapper_class
     vertical? ? nil : "w-full md:w-9/12 px-2"
-  end
-
-  # The horizontal label sits in a styled column, so the <label> carries nothing
-  # itself. Stacked, it is the field's own label and takes the same rules its
-  # siblings get from `col-form-label` in bootstrap_compat.css.
-  def label_class
-    vertical? ? FormStyles::LABEL : nil
   end
 end

@@ -9,35 +9,21 @@ class OpportunityMailer < ApplicationMailer
     )
   end
 
-  # Sent to the submitter when their opportunity is approved. +note+ is an optional message
-  # from the reviewer.
-  def approved(opportunity, note = nil)
-    @opportunity = opportunity
-    @note = note.presence
-    return if opportunity.notification_email.blank?
+  # +note+ is an optional message from the reviewer.
+  def approved(opportunity, note = nil) = decision(opportunity, note, "has been approved")
 
-    mail(
-      to: notification_recipient(opportunity),
-      subject: "Your opportunity \"#{opportunity.display_title}\" has been approved"
-    )
-  end
-
-  # Sent to the submitter when their opportunity is rejected. +note+ is an optional message.
-  def rejected(opportunity, note = nil)
-    @opportunity = opportunity
-    @note = note.presence
-    return if opportunity.notification_email.blank?
-
-    mail(
-      to: notification_recipient(opportunity),
-      subject: "Your opportunity \"#{opportunity.display_title}\" was not approved"
-    )
-  end
+  def rejected(opportunity, note = nil) = decision(opportunity, note, "was not approved")
 
   private
 
-  def notification_recipient(opportunity)
-    name = opportunity.notification_name
-    email_address_with_name(opportunity.notification_email, name.presence || opportunity.notification_email)
+  def decision(opportunity, note, outcome)
+    @opportunity = opportunity
+    @note = note.presence
+    return if opportunity.notification_email.blank?
+
+    mail(
+      to: email_address_with_name(opportunity.notification_email, opportunity.notification_name),
+      subject: "Your opportunity \"#{opportunity.display_title}\" #{outcome}"
+    )
   end
 end

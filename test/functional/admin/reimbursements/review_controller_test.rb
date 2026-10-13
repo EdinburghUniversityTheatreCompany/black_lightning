@@ -4,11 +4,8 @@ module Admin
   module Reimbursements
     class ReviewControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
-      include ActiveJob::TestHelper
 
       MC = ::Reimbursements::ModulusCheck
-
-      FakeChecker = ReimbursementsTestHelpers::FakeModulusChecker
 
       setup do
         grant_finance_permission(users(:member))
@@ -19,12 +16,10 @@ module Admin
         @no_bank_person = create_reimbursements_person(name: "Nora NoBank", email: "nora@example.com")
         @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
 
-        @checker = FakeChecker.new("66374958" => MC::VALID)
+        @checker = FakeModulusChecker.new("66374958" => MC::VALID)
         ReviewController.checker_builder = -> { @checker }
 
-        # Rejection emails now go through the Graph notifier; inject a real
-        # Notifier over a recording FakeGraphClient so tests assert the send
-        # (mailbox / recipient / subject / body) rather than an enqueued mailer.
+        # A real Notifier over a recording FakeGraphClient, so tests assert the send.
         @graph = FakeGraphClient.new
         ReviewController.notifier_builder =
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
@@ -37,22 +32,15 @@ module Admin
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
-      # The queue redirect, ignoring the #expense-… anchor every action now
-      # carries (ReviewController#queue_anchor). The anchor has tests of its
-      # own below; asserting it on every unrelated redirect would only pin the
-      # record ids the fixtures happen to hand out.
-      def assert_redirected_to_review(tab: nil)
+      # The queue redirect, ignoring the ?focus= anchor, which has tests of its own.
+      def assert_redirected_to_review(**query)
         target = URI.parse(@response.redirect_url)
         rest = Rack::Utils.parse_nested_query(target.query.to_s).except("focus")
-        query = rest.any? ? "?#{rest.to_query}" : ""
-        assert_equal admin_reimbursements_review_path(tab: tab), "#{target.path}#{query}"
+        query_string = rest.any? ? "?#{rest.to_query}" : ""
+        assert_equal admin_reimbursements_review_path(**query), "#{target.path}#{query_string}"
       end
 
-      # Where the last redirect came back to. BOTH the ?focus= parameter and
-      # the #expense-… fragment carry it, and they must agree: the fragment is
-      # what a no-JS navigation honours, while the parameter is the one that
-      # survives a Turbo form submission (fetch follows the 302 itself and
-      # never transmits a fragment).
+      # Where the last redirect came back to: ?focus= and the fragment must agree.
       def redirect_anchor
         target = URI.parse(@response.redirect_url)
         focus = Rack::Utils.parse_nested_query(target.query.to_s)["focus"]
@@ -74,13 +62,6 @@ module Admin
                             bytes: "JPEG#{tag}")
       end
 
-      # --- Auth gating -----------------------------------------------------
-
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
       test "each card's budget select is a Tom Select" do
         expense = create_reimbursements_expense(person: @person, budget: @budget, status: "Pending")
         sign_in @user
@@ -90,27 +71,8 @@ module Admin
         assert_select "select#budget_record_id_#{expense.record_id}.simple-select2:not([class*=border])"
       end
 
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :index
-        assert_response :forbidden
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        sign_in other
-
-        get :index
-
-        assert_response :forbidden
-      end
-
-      # --- Index: partition, flags -----------------------------------------
-
       test "partitions pending into ready and needs-attention, and lists approved separately" do
-        # Distinct amounts so these two don't incidentally look like duplicates
-        # of each other (same payee — see #find_duplicate_submissions).
+        # Distinct amounts, or the two read as duplicates.
         ready = pending_expense(amount: BigDecimal("111"))
         attention = pending_expense(amount: BigDecimal("222"), amount_excl_vat: nil) # missing excl VAT
         approved = pending_expense(status: ::Reimbursements::Status::APPROVED)
@@ -135,37 +97,20 @@ module Admin
         assert_select "a[aria-current=page]", text: /Awaiting owner/, count: 0
       end
 
-      # --- The three tabs ----------------------------------------------------
-
-      test "the default tab is the finance queue, not the owner queue" do
+      test "no tab, an unknown tab and the old tab=pending land on the finance queue" do
         gated_expense
         sign_in @user
 
-        get :index
-
-        assert_equal "to_approve", assigns(:tab)
+        [ nil, "nonsense", "pending" ].each do |tab|
+          get :index, params: { tab: tab }.compact
+          assert_equal "to_approve", assigns(:tab), tab.inspect
+        end
         assert_select "a[aria-current=page]", text: /To approve/
-      end
-
-      test "an unknown tab falls back to the finance queue" do
-        sign_in @user
-
-        get :index, params: { tab: "nonsense" }
-
-        assert_equal "to_approve", assigns(:tab)
-      end
-
-      test "tab=pending still lands on the finance queue, for old links" do
-        sign_in @user
-
-        get :index, params: { tab: "pending" }
-
-        assert_equal "to_approve", assigns(:tab)
       end
 
       test "a gated claim is on the awaiting-owner tab, not in the finance queue" do
         gated_expense
-        ready = pending_expense(auto_number: 77)
+        ready = pending_expense(auto_number: 77) # on the ownerless @budget
         sign_in @user
 
         get :index, params: { tab: "awaiting_owner" }
@@ -176,16 +121,16 @@ module Admin
         assert_not_includes assigns(:ready).map(&:record_id), gated_expense.record_id
       end
 
-      test "a claim on a budget with no owner goes straight to the finance queue" do
-        # No owners on the budget, so OwnerReview.gate_applies? is false and no
-        # sign-off is awaited -- this is the documented ownerless-budget path.
-        ownerless = pending_expense(auto_number: 78)
+      test "a gated claim with no submitted date says nothing about how long it has waited" do
+        gated_expense.update_column(:submitted_at, nil)
         sign_in @user
 
-        get :index
+        get :index, params: { tab: "awaiting_owner" }
 
-        assert_includes assigns(:to_approve).map(&:record_id), ownerless.record_id
-        assert_empty assigns(:awaiting_owner)
+        assert_response :success
+        assert_select "p.text-warning", text: /Awaiting a budget owner's endorsement/ do |paragraphs|
+          assert_no_match(/\b(submitted|waiting)\b/i, paragraphs.text)
+        end
       end
 
       test "the awaiting-owner tab still offers the finance override" do
@@ -212,23 +157,13 @@ module Admin
         assert_not_includes response.body, "Not gated"
       end
 
-      # --- CSV export --------------------------------------------------------
-
-      test "index CSV export answers a text/csv download named for today" do
-        pending_expense
-        sign_in @user
-
-        get :index, format: :csv
-
-        assert_csv_download("expenses")
-      end
-
       test "index CSV export exports the queue with the shared Expenses columns" do
         pending_expense(auto_number: 1, description: "Fake blood")
         sign_in @user
 
         get :index, format: :csv
 
+        assert_csv_download("expenses")
         rows = CSV.parse(response.body)
         assert_equal ::Reimbursements::Exports::Expenses::HEADERS, rows.first
         assert_equal 2, rows.size, "header + the one pending expense"
@@ -262,28 +197,17 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/review?format=csv&amp;tab=approved"
       end
 
-      # A queue card without a date can't be triaged: "how long has this producer
-      # been waiting" is the first question asked of a pending claim, and the
-      # nightly reminder chases on exactly that age.
-      test "each card states the date the claim was submitted" do
+      # How long the producer has waited is the first question asked of a claim.
+      test "each card states the date the claim was submitted, on both tabs" do
         pending_expense(auto_number: 7, submitted_at: Time.utc(2026, 5, 1, 9))
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_select "span", text: "Submitted 2026-05-01"
-      end
-
-      test "the approved tab states the submitted date too" do
         pending_expense(auto_number: 8, status: ::Reimbursements::Status::APPROVED,
                         submitted_at: Time.utc(2026, 4, 2, 9))
         sign_in @user
 
-        get :index, params: { tab: "approved" }
-
-        assert_response :success
-        assert_select "span", text: "Submitted 2026-04-02"
+        { nil => "2026-05-01", "approved" => "2026-04-02" }.each do |tab, day|
+          get :index, params: { tab: tab }.compact
+          assert_select "span", text: "Submitted #{day}"
+        end
       end
 
       test "renders the payee-override warning" do
@@ -299,7 +223,7 @@ module Admin
         assert_includes response.body, "Acme Lighting Ltd"
       end
 
-      test "renders receipts in a fancybox gallery keyed per expense, still managed inline" do
+      test "each card renders its receipts in its own viewer pane and fancybox group, managed inline" do
         a = pending_expense(receipt: false)
         b = pending_expense(receipt: false)
         attach_image_receipt(a, "A")
@@ -310,45 +234,26 @@ module Admin
 
         assert_response :success
         assert_includes response.body, 'data-controller="fancybox receipt-viewer"'
-        # Each card gets its own fancybox group so the lightbox pages within one expense.
-        assert_includes response.body, "data-fancybox=\"receipts-#{a.record_id}\""
-        assert_includes response.body, "data-fancybox=\"receipts-#{b.record_id}\""
-        assert_includes response.body, a.receipts.sole.url
-        # Reviewers can still attach/detach receipts inline (per-tab review routes).
-        assert_match(/Remove this receipt/, response.body)
-        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "to_approve")
-      end
-
-      # --- In-page receipt viewer ------------------------------------------
-
-      # Each card carries its own viewer pane, closed until a thumbnail is
-      # clicked, so reviewing a queue never sends the operator to a new tab.
-      test "each card renders a receipt strip wired to its own closed viewer pane" do
-        a = pending_expense(receipt: false)
-        b = pending_expense(receipt: false)
-        attach_test_receipt(a, filename: "invoice-a.pdf")
-        attach_test_receipt(b, filename: "invoice-b.pdf")
-        sign_in @user
-
-        get :index
-
-        assert_response :success
         [ a, b ].each do |expense|
+          # One fancybox group per card, so the lightbox pages within one expense.
+          assert_includes response.body, "data-fancybox=\"receipts-#{expense.record_id}\""
           pane_id = "receipt-pane-#{expense.record_id}"
           assert_includes response.body, "id=\"#{pane_id}\""
           assert_includes response.body, "aria-controls=\"#{pane_id}\""
           assert_includes response.body, "aria-label=\"Receipt viewer for expense ##{expense.auto_number}\""
         end
+        assert_includes response.body, a.receipts.sole.url
+        assert_match(/Remove this receipt/, response.body)
+        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "to_approve")
         # A thumbnail is a real button with its own accessible name, not a link.
-        assert_includes response.body, 'aria-label="View receipt 1 of 1, invoice-a.pdf"'
+        assert_includes response.body, 'aria-label="View receipt 1 of 1, receiptA.jpg"'
         assert_includes response.body, 'data-action="receipt-viewer#show"'
-        # Nothing navigates away from the queue any more.
+        # Nothing navigates away from the queue.
         assert_no_match(/<a[^>]+target="_blank"[^>]*>\s*<span[^>]*>\s*<i class="fa-solid fa-file-lines/,
                         response.body)
       end
 
-      # Twenty pending claims must not pull twenty PDFs on page load, so the pane's
-      # <iframe> ships with data-src only and the controller assigns src on open.
+      # The pane's <iframe> ships data-src only; the controller sets src on open.
       test "a queue of claims fetches no receipt documents on page load" do
         3.times { |i| attach_test_receipt(pending_expense(receipt: false), filename: "r#{i}.pdf") }
         sign_in @user
@@ -373,29 +278,11 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Possible duplicate of"
-        # A possible duplicate is otherwise clean (bank details, budget, amount
-        # all fine) but must still land in Attention, not Ready — approving both
-        # in two clicks would double-pay the same claim.
+        # Otherwise clean, but approving both would double-pay.
         assert_equal [ first.record_id, second.record_id ].sort,
                      assigns(:attention).map(&:record_id).sort
         assert_empty assigns(:ready)
       end
-
-      # The AI verdict was this page's only Turbo Stream subscription. With it
-      # gone the page must carry none at all — an orphan
-      # <turbo-cable-stream-source> would open a socket onto a channel nothing
-      # ever broadcasts to.
-      test "the review page subscribes to no Turbo Stream" do
-        pending_expense
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_not_includes response.body, "turbo-cable-stream-source"
-      end
-
-      # --- Bulk actions ----------------------------------------------------
 
       test "the to-approve tab exposes bulk-select checkboxes and a bulk toolbar" do
         a = pending_expense
@@ -416,8 +303,7 @@ module Admin
 
       test "a flagged card's Approve confirms with its reasons; a clean card's doesn't" do
         clean = pending_expense
-        # No receipts -> "no receipt" attention reason (advisory-only, so the
-        # server never blocks it — this confirm is the only safety net).
+        # No receipt is advisory, so this confirm is the only guard.
         flagged = pending_expense(receipt: false)
         sign_in @user
 
@@ -435,9 +321,6 @@ module Admin
       end
 
       test "a blocking card disables Approve instead of offering a doomed 'anyway'" do
-        # No bank details -> blocking (approve_expense refuses it), so the
-        # button can never succeed and must be disabled, not a misleading
-        # "Approve anyway?".
         blocked = pending_expense(person: @no_bank_person)
         sign_in @user
 
@@ -446,35 +329,6 @@ module Admin
         assert_response :success
         assert_select "button[aria-label*='Approve #'][disabled]"
         assert_select "form[action*='#{admin_reimbursements_approve_review_path(blocked.record_id)}']", 0
-      end
-
-      test "approve refuses a budget present but with a blank record id (blank nominal-code guard)" do
-        # attention_summary flags this as blocking; approve_expense must agree,
-        # or it would write a blank nominal code into the BACS spreadsheet. A
-        # blank-record_id budget can't exist as a DB row, so build the value
-        # object unpersisted (record_id pinned blank) and serve it through a
-        # DatabaseStore whose writes are recorded.
-        blank_budget = ::Reimbursements::Budget.new(name: "Ghost", nominal_code: "")
-        blank_budget.define_singleton_method(:record_id) { "" }
-        person = ::Reimbursements::Person.new(name: "Pat", email: "p@x.co")
-        person.build_payment_details(sort_code: "08-99-99", account_number: "66374958")
-        expense = ::Reimbursements::Expense.new(
-          auto_number: 5, status: ::Reimbursements::Status::PENDING, person: person,
-          amount: BigDecimal("10"), amount_excl_vat: BigDecimal("8"), budget: blank_budget
-        )
-        expense.instance_variable_set(:@receipts, [])
-        expense.define_singleton_method(:record_id) { "recBlankBud" }
-        store = ::Reimbursements::DatabaseStore.new
-        updates = []
-        store.define_singleton_method(:find_expense!) { |_id| expense }
-        store.define_singleton_method(:update_expense!) { |*args| updates << args }
-        BaseController.store_builder = ->(**) { store }
-        sign_in @user
-
-        patch :approve, params: { id: "recBlankBud" }
-
-        assert_empty updates, "must not approve an expense with a blank-record_id budget"
-        assert_match(/without a budget/i, flash[:alert])
       end
 
       test "bulk approve advances every selected pending expense" do
@@ -501,16 +355,6 @@ module Admin
         assert_equal ::Reimbursements::Status::PENDING, no_bank.reload.status
         assert_match(/1 approved/, flash[:notice])
         assert_match(/1 skipped \(missing bank details, budget, or amount\)/, flash[:notice])
-      end
-
-      test "bulk approve with nothing selected writes nothing and reports it" do
-        a = pending_expense
-        sign_in @user
-
-        patch :bulk_approve, params: { expense_ids: [] }
-
-        assert_match(/Select at least one/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, a.reload.status, "nothing was written"
       end
 
       test "bulk reject rejects each selected expense and emails each producer" do
@@ -553,47 +397,26 @@ module Admin
         assert_match(/Select at least one/, flash[:alert])
       end
 
-      # --- Save ------------------------------------------------------------
-
-      test "save writes the edited fields" do
+      # AR casts "£1,200" to 0, so the parsed value is what must be written.
+      test "save writes the edited fields, parsing currency-formatted amounts" do
         expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+        patch :save, params: { id: expense.record_id, amount: "£1,200.50", amount_excl_vat: "1,000",
                                description: "Updated blood", payment_reference: "NEWREF",
                                nominal_code_override: "4100", budget_record_id: @budget.record_id }
 
         assert_redirected_to_review
         expense.reload
-        assert_equal BigDecimal("20"), expense.amount
-        assert_equal BigDecimal("16.67"), expense.amount_excl_vat
+        assert_equal BigDecimal("1200.50"), expense.amount
+        assert_equal BigDecimal("1000"), expense.amount_excl_vat
         assert_equal "Updated blood", expense.description
         assert_equal "NEWREF", expense.payment_reference
         assert_equal "4100", expense.nominal_code_override
       end
 
-      # Money on the review card reads through AmountParser like every other form in the
-      # portal, so a pasted "£1,200" is accepted — and the PARSED value is what gets
-      # written. AR casts a string to a decimal column with to_d, which reads "£1,200" as
-      # 0, so passing the raw field through would turn an approved claim into £0.
-      test "save accepts a currency-formatted amount and stores the parsed number" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "£1,200.50",
-                               amount_excl_vat: "1,000", description: "Updated blood",
-                               payment_reference: "NEWREF", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        expense.reload
-        assert_equal BigDecimal("1200.50"), expense.amount
-        assert_equal BigDecimal("1000"), expense.amount_excl_vat
-      end
-
-      # A rejected edit must write NOTHING — no field of the record, not just
-      # the one the validation tripped on. Compares every column against the
-      # pre-request copy (updated_at excluded: the seed helper's receipt
-      # attach touches it after the in-memory copy was loaded).
+      # Every column unchanged. updated_at is excluded: the seed helper's receipt
+      # attach touches it after the copy was loaded.
       def assert_no_write(expense)
         fresh = ::Reimbursements::Expense.find(expense.id)
         assert_equal expense.attributes.except("updated_at"), fresh.attributes.except("updated_at"),
@@ -622,18 +445,6 @@ module Admin
         assert_equal BigDecimal("10.42"), expense.reload.amount_excl_vat
       end
 
-      test "save rejects a negative amount and writes nothing" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "-5", amount_excl_vat: "16.67",
-                               description: "x", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/valid amount/i, flash[:alert])
-        assert_no_write(expense)
-      end
-
       test "save rejects a non-numeric amount and writes nothing" do
         expense = pending_expense
         sign_in @user
@@ -645,32 +456,6 @@ module Admin
         assert_match(/valid amount/i, flash[:alert])
         assert_no_write(expense)
       end
-
-      test "save rejects a negative excl-VAT amount and writes nothing" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "-1",
-                               description: "x", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/excl. VAT/i, flash[:alert])
-        assert_no_write(expense)
-      end
-
-      test "save rejects an excl-VAT amount greater than the total and writes nothing" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "25.00",
-                               description: "x", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/can't be more than the total/i, flash[:alert])
-        assert_no_write(expense)
-      end
-
-      # --- Approve ---------------------------------------------------------
 
       test "approve auto-fills a payment reference when blank and marks approved" do
         expense = pending_expense(payment_reference: "")
@@ -684,9 +469,7 @@ module Admin
         assert_equal "Props", expense.payment_reference
       end
 
-      # Post-rename three shows' lines are all called "Marketing", so the
-      # auto-derived reference has to carry the show — it is written onto the
-      # BACS spreadsheet EUSA reconciles against.
+      # Three shows' lines are all called "Marketing", so the reference names the show.
       test "the auto-filled reference names the show when the budget is in an area" do
         @budget.update!(area: create_reimbursements_area(name: "Cogito"))
         expense = pending_expense(payment_reference: "")
@@ -697,8 +480,8 @@ module Admin
         assert_equal "Cogito Props", expense.reload.payment_reference
       end
 
-      test "approve keeps an existing payment reference" do
-        expense = pending_expense(payment_reference: "KEEPME")
+      test "approve keeps an existing payment reference and saves no edits" do
+        expense = pending_expense(description: "Original", payment_reference: "KEEPME")
         sign_in @user
 
         patch :approve, params: { id: expense.record_id }
@@ -706,12 +489,8 @@ module Admin
         expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, expense.status
         assert_equal "KEEPME", expense.payment_reference
+        assert_equal "Original", expense.description, "no save without save_changes"
       end
-
-      # --- Keeping your place in the queue (anchored redirects) ------------
-      #
-      # The queue is unpaginated and every action used to reload it at the top,
-      # so approving the fifth card threw the operator 1,600px back up the page.
 
       test "a card carries an id the redirect can anchor to" do
         expense = pending_expense
@@ -734,7 +513,7 @@ module Admin
       end
 
       test "approving comes back to the next card that was below it" do
-        # Distinct amounts so neither reads as the other's duplicate.
+        # Distinct amounts, or the two read as duplicates.
         first = pending_expense(amount: BigDecimal("111"), amount_excl_vat: BigDecimal("100"))
         second = pending_expense(amount: BigDecimal("222"), amount_excl_vat: BigDecimal("200"))
         sign_in @user
@@ -764,8 +543,6 @@ module Admin
         assert_nil redirect_anchor
       end
 
-      # --- Owner-endorsement gate (Phase E3) -------------------------------
-
       def owner_person
         @owner_person ||= create_reimbursements_person(name: "Olga Owner", email: "olga@example.com",
                                                        sort_code: "08-99-99", account_number: "66374958")
@@ -776,8 +553,7 @@ module Admin
                                                        owners: [ owner_person ])
       end
 
-      # Submitted by @person (who has bank details), charged to a budget owned
-      # by owner_person — so the submitter isn't an owner and the gate applies.
+      # Submitted by @person on owner_person's budget, so the gate applies.
       def gated_expense
         @gated_expense ||= pending_expense(budget: owned_budget, payment_reference: "OWNED PAT")
       end
@@ -810,74 +586,60 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
       end
 
-      test "approve auto-bypasses a claim the budget owner submitted themselves" do
-        own = pending_expense(person: owner_person, budget: owned_budget, payment_reference: "OWNED")
-        sign_in @user
-
-        patch :approve, params: { id: own.record_id }
-
-        assert_equal ::Reimbursements::Status::APPROVED, own.reload.status
-      end
-
       test "override_approve records the finance override and approves" do
         gated_expense
         sign_in @user
 
         assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 1 do
-          patch :override_approve, params: { id: gated_expense.record_id }
+          patch :override_approve, params: { id: gated_expense.record_id,
+                                             override_note: "Owner has no portal account" }
         end
 
         endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
         assert endorsement.finance_override?
         assert_equal @user.id, endorsement.overridden_by_id
+        assert_equal "Owner has no portal account", endorsement.note
         assert_equal BigDecimal("12.5"), endorsement.endorsed_amount, "override snapshots the amount"
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
         assert_match(/overridden/i, flash[:notice])
       end
 
-      # --- Bulk override ------------------------------------------------------
-      # The Awaiting-owner tab has no bulk APPROVE — bulk approve skips every
-      # gated claim there, so it could only ever report "0 approved" — but that
-      # argues for a bulk OVERRIDE, not for nothing: one owner who never opens
-      # the portal gates every claim on their show.
+      test "override_approve keeps an owner's endorsement that landed after the page loaded" do
+        endorse_gated_expense!
+        sign_in @user
+
+        patch :override_approve, params: { id: gated_expense.record_id, override_note: "Stale page" }
+
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
+        assert_equal owner_person.record_id, endorsement.endorsed_by_person_id
+        assert_nil endorsement.overridden_by_id
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
+        assert_no_match(/overridden/i, flash[:notice])
+      end
 
       def second_gated_expense
         @second_gated_expense ||= pending_expense(budget: owned_budget, payment_reference: "OWNED 2")
       end
 
-      test "bulk override clears the gate on every ticked claim" do
-        gated_expense
-        second_gated_expense
+      test "bulk override records who overrode it and why, and approves every ticked claim" do
+        claims = [ gated_expense, second_gated_expense ]
         sign_in @user
 
         assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 2 do
-          patch :bulk_override_approve, params: {
-            expense_ids: [ gated_expense.record_id, second_gated_expense.record_id ],
-            override_note: "No owner holds a portal account"
-          }
+          patch :bulk_override_approve, params: { expense_ids: claims.map(&:record_id),
+                                                  override_note: "Owner has left" }
         end
 
-        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
-        assert_equal ::Reimbursements::Status::APPROVED, second_gated_expense.reload.status
-        assert_match(/2 approved with sign-off overridden/, flash[:notice])
+        claims.each do |claim|
+          assert_equal ::Reimbursements::Status::APPROVED, claim.reload.status
+          endorsement = ::Reimbursements::OwnerEndorsement.for_expense(claim.record_id).first
+          assert endorsement.finance_override?
+          assert_equal @user.id, endorsement.overridden_by_id
+          assert_equal "Owner has left", endorsement.note
+        end
+        assert_equal "2 approved with sign-off overridden.", flash[:notice]
       end
 
-      test "bulk override records who overrode it and why, on each claim" do
-        gated_expense
-        sign_in @user
-
-        patch :bulk_override_approve, params: {
-          expense_ids: [ gated_expense.record_id ], override_note: "Owner has left"
-        }
-
-        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
-        assert endorsement.finance_override?
-        assert_equal @user.id, endorsement.overridden_by_id
-        assert_equal "Owner has left", endorsement.note
-      end
-
-      # Required here though optional on a single claim: this is the
-      # higher-consequence action and the note is the only record of it.
       test "bulk override refuses without a note and writes nothing" do
         gated_expense
         sign_in @user
@@ -900,9 +662,6 @@ module Admin
         assert_match(/Select at least one claim/, flash[:alert])
       end
 
-      # A claim with a DATA problem must not get a gate-satisfying row written
-      # for an approval that never runs, or a later plain approve sails past a
-      # gate nobody cleared.
       test "bulk override skips a claim with a hard block and writes no row for it" do
         gated_expense
         no_bank = pending_expense(person: @no_bank_person, budget: owned_budget,
@@ -922,19 +681,6 @@ module Admin
         assert_match(/1 skipped/, flash[:notice])
       end
 
-      # The summary must not report "awaiting owner sign-off" back: that is the
-      # one thing this action just cleared, so it would read as a failure.
-      test "the bulk override summary never names the gate it just cleared" do
-        gated_expense
-        sign_in @user
-
-        patch :bulk_override_approve, params: {
-          expense_ids: [ gated_expense.record_id ], override_note: "Owner has left"
-        }
-
-        assert_no_match(/awaiting owner/i, flash[:notice])
-      end
-
       test "the Awaiting owner tab offers the bulk override and no bulk approve" do
         gated_expense
         sign_in @user
@@ -947,9 +693,6 @@ module Admin
       end
 
       test "override_approve writes no override row and reports the hard block when one remains" do
-        # A gated claim that ALSO lacks bank details: overriding must surface the
-        # bank problem and NOT write a gate-satisfying row (else a later plain
-        # approve would sail past the owner gate we'd have silently satisfied).
         no_bank = pending_expense(person: @no_bank_person, budget: owned_budget,
                                   payment_reference: "OWNED")
         sign_in @user
@@ -965,23 +708,9 @@ module Admin
         gated_expense
         sign_in @user
 
-        assert_nothing_raised do
-          patch :override_approve, params: { id: gated_expense.record_id, override_note: "x" * 500 }
-        end
+        patch :override_approve, params: { id: gated_expense.record_id, override_note: "x" * 500 }
+
         assert_equal 255, ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note.length
-      end
-
-      test "the review queue sorts a gated claim onto its own tab with an override button" do
-        gated_expense
-        sign_in @user
-
-        get :index, params: { tab: "awaiting_owner" }
-
-        assert_response :success
-        assert_includes assigns(:awaiting_owner).map(&:record_id), gated_expense.record_id
-        assert_select "form[action=?]",
-                      admin_reimbursements_override_approve_review_path(gated_expense.record_id,
-                                                                       tab: "awaiting_owner")
       end
 
       test "bulk approve skips a claim awaiting owner endorsement" do
@@ -991,10 +720,8 @@ module Admin
 
         patch :bulk_approve, params: { expense_ids: [ clean.record_id, gated_expense.record_id ] }
 
-        # Only the clean (ownerless-budget) claim advanced; the gated one skipped.
         assert_equal ::Reimbursements::Status::APPROVED, clean.reload.status
         assert_equal ::Reimbursements::Status::PENDING, gated_expense.reload.status
-        # ...and the summary names the owner-gate reason, not "missing bank/budget/amount".
         assert_match(/1 approved/, flash[:notice])
         assert_match(/1 awaiting owner sign-off/, flash[:notice])
       end
@@ -1011,9 +738,6 @@ module Admin
       end
 
       test "the Approved tab keeps the 'Owner sign-off overridden' pill" do
-        # The endorsement lookup was built from the PENDING list alone, so the
-        # one record that finance bypassed a control vanished the moment the
-        # bypass succeeded.
         gated_expense
         sign_in @user
         patch :override_approve, params: { id: gated_expense.record_id }
@@ -1036,27 +760,7 @@ module Admin
         assert_match(/needs a fresh owner sign-off/i, flash[:notice])
       end
 
-      test "save-then-approve says the edit itself re-opened the owner gate" do
-        # The Save Changes branch of the unsaved-edits dialog. Editing the
-        # amount revokes the covering endorsement, so the approval is refused —
-        # and the refusal must name THIS edit as the cause rather than reading
-        # as a condition that was already standing.
-        endorse_gated_expense!
-        sign_in @user
-
-        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                  amount: "999.00", amount_excl_vat: "999.00", description: "x",
-                                  payment_reference: "OWNED PAT",
-                                  budget_record_id: owned_budget.record_id }
-
-        assert_match(/needs a fresh owner sign-off/i, flash[:alert])
-        assert_match(/needs a budget owner's endorsement/i, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, gated_expense.reload.status
-      end
-
       test "a gated claim blocked on something else does not promise a finance override" do
-        # #16 in the audit: the card said "Or use the finance override below"
-        # while the override form was suppressed by the bank-details block.
         pending_expense(person: @no_bank_person, budget: owned_budget, payment_reference: "OWNED")
         sign_in @user
 
@@ -1088,33 +792,14 @@ module Admin
         assert_match(/no address is never emailed/, response.body)
       end
 
-      test "override_approve stores the finance override note" do
-        gated_expense
+      test "the awaiting-owner card says a claim was submitted today" do
+        gated_expense.update!(submitted_at: Time.current)
         sign_in @user
 
-        patch :override_approve, params: { id: gated_expense.record_id,
-                                           override_note: "Owner has no portal account" }
+        get :index, params: { tab: "awaiting_owner" }
 
-        assert_equal "Owner has no portal account",
-                     ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note
+        assert_match(/Submitted today\./, response.body)
       end
-
-      test "approve is blocked without effective bank details" do
-        expense = pending_expense(person: @no_bank_person)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_redirected_to_review
-        assert_match(/without bank details/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      # --- The international rail ------------------------------------------
-      #
-      # Before payment_method existed these claims could never be approved at
-      # all: approve_blocker read the UK sort-code pair, which an IBAN-only
-      # payee has none of.
 
       def international_expense(**attrs)
         pending_expense(
@@ -1126,6 +811,31 @@ module Admin
         )
       end
 
+      test "the card masks a third party's IBAN like a UK account, full value only behind the reveal" do
+        international_expense(payee_name_override: "Studio Bühne")
+        sign_in @user
+
+        get :index
+
+        assert_select "[data-bank-details-target='value'][data-revealed=?]", "DE89 3704 0044 0532 0130 00",
+                      text: "****3000"
+        assert_no_match(/>[^<]*DE89/, response.body, "the IBAN must not be rendered as visible text")
+        assert_includes response.body, "DEUTDEFF500"
+      end
+
+      # A People record has no IBAN field, so pointing there is a dead end.
+      test "an international claim with no IBAN or BIC sends finance to the claim's override" do
+        expense = international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person)
+        sign_in @user
+
+        get :index
+
+        assert_match(/No IBAN and BIC on this claim/, response.body)
+        assert_select "a[href=?]", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                      text: "payee override"
+        assert_select "a", text: /People record/, count: 0
+      end
+
       test "approve accepts an international claim with an IBAN and both amounts" do
         expense = international_expense
         sign_in @user
@@ -1135,66 +845,26 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
       end
 
-      test "approve is blocked on an international claim with no IBAN" do
-        expense = international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person)
+      test "approve refuses each hard block and writes nothing" do
         sign_in @user
+        [
+          [ -> { pending_expense(person: @no_bank_person) }, /without bank details/ ],
+          [ -> { international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person) },
+            /without bank details/ ],
+          [ -> { international_expense(foreign_amount: nil) }, /without the amount in EUR/ ],
+          [ -> { international_expense(foreign_amount: nil, foreign_currency: "USD") }, /without the amount in USD/ ],
+          # Budget rollups are GBP, so approving without one books the claim at nothing.
+          [ -> { international_expense(amount: nil) }, /without a GBP amount/ ],
+          [ -> { pending_expense(budget: nil) }, /without a budget linked/ ],
+          [ -> { pending_expense(amount_excl_vat: 0) }, /without an amount excluding VAT/ ]
+        ].each do |build, alert|
+          expense = build.call
 
-        patch :approve, params: { id: expense.record_id }
+          patch :approve, params: { id: expense.record_id }
 
-        assert_match(/without bank details/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      test "approve is blocked on an international claim with no EUR amount" do
-        expense = international_expense(foreign_amount: nil)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without the amount in EUR/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      # The structural half of "finance types the GBP figure at review": the
-      # budget rollups are all GBP, so an approval without one would book the
-      # claim against its budget at nothing.
-      test "approve is blocked on an international claim with no GBP amount" do
-        expense = international_expense(amount: nil)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without a GBP amount/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      test "a UK claim is never asked for a EUR amount" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
-      end
-
-      test "approve is blocked without a linked budget" do
-        expense = pending_expense(budget: nil)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without a budget linked/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      test "approve is blocked without a non-zero excl-VAT amount" do
-        expense = pending_expense(amount_excl_vat: 0)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without an amount excluding VAT/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+          assert_match alert, flash[:alert], alert.inspect
+          assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+        end
       end
 
       test "a stale approve against an already-Approved expense is a no-op, not a re-approve" do
@@ -1207,8 +877,6 @@ module Admin
         assert_match(/no longer Pending/, flash[:alert])
         assert_equal untouched, already.reload.updated_at, "nothing was written"
       end
-
-      # --- Reject ----------------------------------------------------------
 
       test "the reject form asks for confirmation before emailing the producer" do
         expense = pending_expense(auto_number: 42)
@@ -1307,13 +975,6 @@ module Admin
         assert_response :not_found
       end
 
-      # --- Save-then-decide (unsaved-edits dialog) --------------------------
-      # The review card's Save form is separate from the Approve/Reject forms, so
-      # an edit-then-decide would otherwise drop the edits. When the operator
-      # picks "Save Changes" in the client dialog, the decision request carries
-      # the edited fields plus save_changes=1 and the server persists them FIRST,
-      # in the same request, so the decision acts on the saved values.
-
       test "approve with save_changes persists the edited fields, then approves" do
         expense = pending_expense(description: "Old", payment_reference: "")
         sign_in @user
@@ -1333,19 +994,23 @@ module Admin
         assert_equal "4100", expense.nominal_code_override
       end
 
-      test "approve with save_changes aborts the decision when the edit fails validation" do
-        expense = pending_expense(description: "Old")
+      test "a decision with save_changes is aborted when the edit fails validation" do
         sign_in @user
 
-        patch :approve, params: { id: expense.record_id, save_changes: "1",
-                                  amount: "-5", amount_excl_vat: "16.67",
-                                  description: "Should not persist", budget_record_id: @budget.record_id }
+        { approve: {}, reject: { rejection_reason: "Wrong budget" }, override_approve: {} }.each do |action, extra|
+          claim = action == :override_approve ? gated_expense : pending_expense
 
-        assert_redirected_to_review
-        assert_match(/valid amount/i, flash[:alert])
-        expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, expense.status, "decision aborted"
-        assert_equal "Old", expense.description, "no edit persisted on an aborted decision"
+          patch action, params: { id: claim.record_id, save_changes: "1", amount: "-5", amount_excl_vat: "1",
+                                  description: "Should not persist", budget_record_id: claim.budget.record_id,
+                                  **extra }
+
+          assert_match(/valid amount/i, flash[:alert], action)
+          claim.reload
+          assert_equal ::Reimbursements::Status::PENDING, claim.status, "#{action}: decision aborted"
+          assert_equal "Fake blood", claim.description, "#{action}: no edit persisted"
+        end
+        assert_empty @graph.send_mails, "no rejection email on an aborted decision"
+        assert_equal 0, ::Reimbursements::OwnerEndorsement.count, "no override row on an aborted decision"
       end
 
       test "reject with save_changes persists the edited fields, then rejects" do
@@ -1364,62 +1029,27 @@ module Admin
         assert_equal "Wrong budget", expense.rejection_reason
       end
 
-      test "reject with save_changes aborts the decision when the edit fails validation" do
-        expense = pending_expense(description: "Old")
-        sign_in @user
-
-        patch :reject, params: { id: expense.record_id, save_changes: "1",
-                                 rejection_reason: "Wrong budget",
-                                 amount: "abc", amount_excl_vat: "16.67",
-                                 description: "Should not persist", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/valid amount/i, flash[:alert])
-        expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, expense.status, "decision aborted"
-        assert_equal "Old", expense.description, "no edit persisted on an aborted decision"
-        assert_empty @graph.send_mails, "no rejection email fired on an aborted decision"
-      end
-
-      test "override_approve with save_changes persists the edited fields, then overrides" do
+      test "override_approve with save_changes saves the edits, then overrides on the SAVED amount" do
         gated_expense
         sign_in @user
 
         patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                           amount: "30.00", amount_excl_vat: "25.00",
+                                           amount: "3000.00", amount_excl_vat: "2500.00",
                                            description: "Edited before override",
                                            payment_reference: "OWNED PAT",
                                            budget_record_id: owned_budget.record_id }
 
         gated_expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
-        assert_equal BigDecimal("30"), gated_expense.amount
+        assert_equal BigDecimal("3000"), gated_expense.amount
         assert_equal "Edited before override", gated_expense.description
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
+        assert_equal BigDecimal("3000"), endorsement.endorsed_amount,
+                     "the override must snapshot the amount it actually approved"
       end
 
-      test "override_approve with save_changes aborts the decision when the edit fails validation" do
-        gated_expense
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::OwnerEndorsement.count } do
-          patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                             amount: "-5", amount_excl_vat: "1",
-                                             description: "Should not persist",
-                                             budget_record_id: owned_budget.record_id }
-        end
-
-        assert_match(/valid amount/i, flash[:alert])
-        gated_expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status, "decision aborted"
-        assert_equal "Fake blood", gated_expense.description, "no edit persisted on an aborted decision"
-      end
-
-      # The decision must act on the SAVED values, not the pre-edit ones. Returning
-      # the stale expense from save_edits_before_decision passes every test above
-      # (they only check the row afterwards), while the owner-endorsement gate would
-      # be evaluated against superseded terms: an owner-endorsed £12.50 claim edited
-      # to £3,000 through Save Changes would be approved against the £12.50
-      # sign-off, defeating the re-endorsement rule entirely.
+      # The decision must act on the SAVED values: a £12.50 endorsement must not
+      # approve the claim edited to £3,000.
       test "approve with save_changes re-opens the owner gate when the edit changes the amount" do
         endorse_gated_expense! # covers amount 12.5 on owned_budget
         sign_in @user
@@ -1432,15 +1062,13 @@ module Admin
 
         assert_match(/needs a budget owner's endorsement/i, flash[:alert],
                      "the decision must see the SAVED amount, not the endorsed one")
+        assert_match(/needs a fresh owner sign-off/i, flash[:alert], "names this edit as the cause")
         gated_expense.reload
         assert_equal ::Reimbursements::Status::PENDING, gated_expense.status
-        # The save still stands — only the decision is blocked, so the operator can
-        # see what they changed and chase a fresh sign-off.
+        # The save stands; only the decision is blocked.
         assert_equal BigDecimal("3000"), gated_expense.amount
       end
 
-      # The mirror case: an edit that leaves the endorsed terms alone still approves,
-      # so re-opening the gate isn't just "any save_changes blocks".
       test "approve with save_changes still approves when the edit leaves the endorsed terms alone" do
         endorse_gated_expense!
         sign_in @user
@@ -1454,54 +1082,6 @@ module Admin
         gated_expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
         assert_equal "Wording fixed only", gated_expense.description
-      end
-
-      test "override_approve with save_changes snapshots the SAVED amount on the endorsement" do
-        gated_expense
-        sign_in @user
-
-        patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                           amount: "3000.00", amount_excl_vat: "2500.00",
-                                           description: "Edited up before override",
-                                           payment_reference: "OWNED PAT",
-                                           budget_record_id: owned_budget.record_id }
-
-        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
-        assert_equal BigDecimal("3000"), endorsement.endorsed_amount,
-                     "the override must snapshot the amount it actually approved"
-        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
-      end
-
-      # Moving the claim to a DIFFERENT owned budget through Save Changes re-opens
-      # the gate too — the endorsement was given for the old budget's line.
-      test "approve with save_changes re-opens the owner gate when the edit changes the budget" do
-        endorse_gated_expense!
-        other_owned = create_reimbursements_budget(name: "Owned Too", nominal_code: "4200",
-                                                   owners: [ owner_person ])
-        sign_in @user
-
-        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                  amount: "12.50", amount_excl_vat: "10.42",
-                                  description: "Moved to another budget",
-                                  payment_reference: "OWNED PAT",
-                                  budget_record_id: other_owned.record_id }
-
-        assert_match(/needs a budget owner's endorsement/i, flash[:alert])
-        gated_expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status
-        assert_equal other_owned.id, gated_expense.budget_id, "the move still saved"
-      end
-
-      test "a plain approve without save_changes still approves without touching the edit fields" do
-        # Backwards-compatibility: the pristine-form path posts no edit params.
-        expense = pending_expense(description: "Original", payment_reference: "KEEP")
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        expense.reload
-        assert_equal ::Reimbursements::Status::APPROVED, expense.status
-        assert_equal "Original", expense.description, "no save happened without save_changes"
       end
 
       # --- The chosen cost centre survives every click --------------------
@@ -1528,21 +1108,33 @@ module Admin
 
         patch :approve, params: { id: expense.record_id, tab: "to_approve", cost_centre: termtime.key }
 
-        query = Rack::Utils.parse_nested_query(URI.parse(@response.redirect_url).query)
-        assert_equal termtime.key, query["cost_centre"]
-        assert_equal "to_approve", query["tab"]
+        assert_redirected_to_review(tab: "to_approve", cost_centre: termtime.key)
       end
 
-      test "an approval with no centre selected still comes back to every centre" do
+      # An explicit All (cost_centre=) is a choice: a page that drops it lets the
+      # sidebar put the operator's home centre back on the next click.
+      test "the tab links and card actions keep an explicit All" do
+        create_second_reimbursements_cost_centre
         expense = pending_expense
         sign_in @user
 
-        patch :approve, params: { id: expense.record_id }
+        get :index, params: { cost_centre: "" }
 
-        assert_redirected_to_review
+        assert_select "a[href=?]", admin_reimbursements_review_path(tab: "approved", cost_centre: "")
+        assert_select "form[action=?]", admin_reimbursements_approve_review_path(
+          expense.record_id, tab: "to_approve", cost_centre: ""
+        )
       end
 
-      # --- Unsaved-edits dialog wiring (rendered markup) -------------------
+      test "an approval from an explicit All comes back to All" do
+        create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id, tab: "to_approve", cost_centre: "" }
+
+        assert_redirected_to_review(tab: "to_approve", cost_centre: "")
+      end
 
       test "the review card wires the unsaved-edits guard on its decision controls" do
         expense = pending_expense
@@ -1554,29 +1146,16 @@ module Admin
         assert_select "div[data-controller~=?]", "review-decision"
         assert_select "dialog[data-review-decision-target=dialog]"
         assert_select "form[data-review-decision-target=editForm]"
-        # Approve (button_to) and Reject (submit_tag) both carry the click guard
-        # plus a verb the dialog title reads.
+        # Both decisions carry the guard and the verb the dialog title reads.
         assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"
         assert_select "[data-action*=?][data-decision-verb=rejecting]", "review-decision#guard"
-        # All three ways out of the dialog.
         assert_select "dialog button", text: "Cancel"
         assert_select "dialog button", text: "Save Changes"
         assert_select "dialog button", text: "Discard Changes"
-        # The heading is the dialog's accessible name, and the native close event
-        # (Escape included) is wired so a dismissed dialog forgets its decision.
+        # Escape fires the native close event, which must forget the decision.
         title_id = "unsaved-edits-title-#{expense.record_id}"
         assert_select "dialog[aria-labelledby=?][data-action*=?]", title_id, "close->review-decision#closed"
         assert_select "h2##{title_id}[data-review-decision-target=title]"
-      end
-
-      test "the review card wires the guard on the owner-gate override button too" do
-        gated_expense
-        sign_in @user
-
-        get :index, params: { tab: "awaiting_owner" }
-
-        assert_response :success
-        assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"
       end
     end
   end

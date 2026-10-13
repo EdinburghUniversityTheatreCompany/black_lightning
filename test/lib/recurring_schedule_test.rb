@@ -1,23 +1,36 @@
 require "test_helper"
 require "fugit"
 
-# RecurringEnqueueRetry catches a deadlocked enqueue, but not colliding is the actual fix and it
-# costs nothing to keep.
+# config/recurring.yml is read by Solid Queue at boot, so a typo in a class name or a renamed
+# job is a job that silently never runs in production. Not colliding is the fix for a
+# deadlocked enqueue; RecurringEnqueueRetry is only the net.
 class RecurringScheduleTest < ActiveSupport::TestCase
   SCHEDULES = YAML.load_file(Rails.root.join("config/recurring.yml")).freeze
 
-  # reimbursements_mailbox_poll runs every 5 minutes, so it occupies every minute divisible by
-  # five. A daily job landing on one of those collides with it every single day.
+  # reimbursements_mailbox_poll runs every 5 minutes, so a daily job on a minute divisible by
+  # five collides with it every day.
   DENSE_POLL_INTERVAL_MINUTES = 5
 
   def crons
     SCHEDULES.to_h { |key, config| [ key, Fugit.parse(config.fetch("schedule")) ] }
   end
 
-  test "every schedule parses" do
-    crons.each do |key, cron|
-      assert_not_nil cron, "#{key} has an unparseable schedule"
+  test "every entry names a job, declares a queue and has a schedule that parses" do
+    parsed = crons
+    SCHEDULES.each do |name, config|
+      klass = config["class"].to_s.safe_constantize
+
+      assert klass && klass < ActiveJob::Base, "#{name} names #{config['class'].inspect}, which is not a job"
+      assert config["queue"].present?, "#{name} has no queue"
+      # Not covered by the parse below: Fugit reads a blank string as a zero Duration.
+      assert config["schedule"].present?, "#{name} has no schedule"
+      assert_not_nil parsed[name], "#{name} has an unparseable schedule"
     end
+  end
+
+  # No indoor poller on purpose: crypt readings arrive by CSV import.
+  test "the outdoor climate poller is scheduled" do
+    assert_equal "Climate::OutdoorPollJob", SCHEDULES.dig("climate_outdoor_poll", "class")
   end
 
   test "no two daily jobs are due at the same time" do
@@ -37,19 +50,8 @@ class RecurringScheduleTest < ActiveSupport::TestCase
                  "every-5-minute mailbox poll every day"
   end
 
-  # The one that actually broke: both were "at 3am every day" and roughly half the pretix runs
-  # were dropped between 2026-08-27 and 2026-08-31.
-  test "the pretix reconcile and the bank details retention no longer share a slot" do
-    pretix = crons.fetch("pretix_reconcile_memberships")
-    retention = crons.fetch("reimbursements_bank_details_retention")
-
-    assert_not_equal [ pretix.hours, pretix.minutes ], [ retention.hours, retention.minutes ]
-  end
-
-  # Every 15 minutes, so it can collide every quarter hour rather than once a
-  # day. climate_mailbox_poll already sits on :00/:15/:30/:45 -- the grid the
-  # every-5-minute mailbox poll owns -- so this one is offset off it instead of
-  # joining the pile.
+  # Every 15 minutes, so it could collide every quarter hour. It is offset off the
+  # five-minute grid, which climate_mailbox_poll already shares.
   test "the pretix performance sync avoids the five-minute mailbox poll grid" do
     minutes = crons.fetch("pretix_sync_performances").minutes
 
@@ -61,7 +63,8 @@ class RecurringScheduleTest < ActiveSupport::TestCase
   private
 
   # Cron entries pinned to a specific hour and minute. The interval schedules ("every 5 minutes")
-  # parse to a Fugit::Duration and have no fixed slot to collide on.
+  # parse to a Fugit::Cron too, but with no hours, so the `hours.present?` test is what leaves
+  # them out: they have no fixed slot to collide on.
   def daily_jobs
     crons.select { |_, cron| cron.is_a?(Fugit::Cron) && cron.hours.present? && cron.minutes.present? }
   end

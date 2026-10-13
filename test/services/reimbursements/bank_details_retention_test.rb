@@ -2,11 +2,8 @@ require "test_helper"
 
 module Reimbursements
   ##
-  # Bank details are held to pay a claim, so they are kept while there is a
-  # claim to pay and cleared once there has not been one for a while. Nothing
-  # here touches the Person or their expenses: those are financial records the
-  # society has to keep, and it is the account number — the part that can move
-  # money — that has no reason to sit on file indefinitely.
+  # Details are kept while there is a claim to pay and cleared after a while
+  # without one. The Person and their expenses are never touched.
   class BankDetailsRetentionTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
@@ -18,8 +15,7 @@ module Reimbursements
                                    account_number: "66374958", **attrs)
     end
 
-    # Backdate the whole record, the way a payee who filed nothing this year
-    # looks: the details themselves are the clock when there are no claims.
+    # The details' own age is the clock when there are no claims.
     def backdate!(person, ago)
       person.payment_details.update_columns(created_at: ago.ago, updated_at: ago.ago)
       person
@@ -31,9 +27,10 @@ module Reimbursements
       expense
     end
 
+    # Nothing but the account details goes.
     test "clears the details of a payee whose last claim is past the retention period" do
       person = backdate!(payee(name: "Dormant Dora", email: "dora@example.com"), LONG_AGO)
-      claim(person, status: Status::PAID, ago: LONG_AGO)
+      expense = claim(person, status: Status::PAID, ago: LONG_AGO)
 
       assert_equal 1, BankDetailsRetention.erase_stale!
 
@@ -41,6 +38,8 @@ module Reimbursements
       assert_equal "", details.sort_code
       assert_equal "", details.account_number
       assert_not details.verified
+      assert_equal "Dormant Dora", person.name
+      assert_equal person.id, expense.reload.person_id
     end
 
     test "keeps the details of a payee who claimed inside the retention period" do
@@ -51,8 +50,7 @@ module Reimbursements
       assert_equal "66374958", person.reload.account_number
     end
 
-    # The whole point of holding the details. Age is irrelevant while a claim
-    # can still be paid into that account.
+    # Age is irrelevant while a claim can still be paid into that account.
     (Status.all - [ Status::PAID, Status::REJECTED ]).each do |status|
       test "never clears details while a #{status} claim is outstanding, however old" do
         person = backdate!(payee(name: "Waiting Wren #{status}", email: "wren-#{status}@example.com"), LONG_AGO)
@@ -63,13 +61,9 @@ module Reimbursements
       end
     end
 
-    # The asymmetry that decides every judgement call here: wrongly reading a
-    # claim as finished wipes details that are about to be paid, irreversibly,
-    # while wrongly reading one as live just keeps them a while longer. So a
-    # status this code does not recognise — a legacy row, a status added to the
-    # app later — has to block, not wave through. Status has an inclusion
-    # validation, but update_column and the pre-migration Airtable rows both
-    # go around it.
+    # Wrongly reading a claim as finished wipes details irreversibly; wrongly
+    # reading one as live only keeps them longer. So an unrecognised status
+    # (update_column and legacy rows bypass the inclusion validation) must block.
     test "an unrecognised status blocks clearing rather than being waved through" do
       person = backdate!(payee(name: "Legacy Lou", email: "lou@example.com"), LONG_AGO)
       expense = claim(person, status: Status::PAID, ago: LONG_AGO)
@@ -87,8 +81,6 @@ module Reimbursements
       assert_equal "", person.reload.account_number
     end
 
-    # Details entered but never used are the clearest case of data held for no
-    # reason, so the details' own age is the clock when there are no claims.
     test "clears details that were entered and never used" do
       person = backdate!(payee(name: "Never Nell", email: "nell@example.com"), LONG_AGO)
 
@@ -102,8 +94,7 @@ module Reimbursements
       assert_equal 0, BankDetailsRetention.erase_stale!
     end
 
-    # Re-verifying details is activity in its own right: finance checked them
-    # this month, so they are plainly still wanted.
+    # Re-verifying details is activity in its own right.
     test "recently touched details survive an old claim" do
       person = payee(name: "Rechecked Ravi", email: "ravi@example.com")
       claim(person, status: Status::PAID, ago: LONG_AGO)
@@ -131,25 +122,6 @@ module Reimbursements
       assert_match(/6 months/, notes)
       assert_match(/account \*\*\*\*4958/, notes, "the earlier audit trail is kept — it is the record of processing")
       assert_not_includes notes.sub("****4958", ""), "4958", "the cleared value itself is not written down"
-    end
-
-    # Nothing but the account details goes: the claims are the society's
-    # financial records and the payee row is what they hang off.
-    test "the payee and their claims are left untouched" do
-      person = backdate!(payee(name: "Dormant Dora", email: "dora3@example.com"), LONG_AGO)
-      expense = claim(person, status: Status::PAID, ago: LONG_AGO)
-
-      BankDetailsRetention.erase_stale!
-
-      assert Person.exists?(person.id)
-      assert_equal "Dormant Dora", person.reload.name
-      assert_equal person.id, expense.reload.person_id
-    end
-
-    test "a payee with no details on file is not counted as cleared" do
-      create_reimbursements_person(name: "No Details Ned", email: "ned@example.com")
-
-      assert_equal 0, BankDetailsRetention.erase_stale!
     end
 
     test "running twice clears nothing the second time" do

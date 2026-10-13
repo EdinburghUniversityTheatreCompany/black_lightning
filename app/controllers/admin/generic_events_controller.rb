@@ -6,12 +6,8 @@ class Admin::GenericEventsController < AdminController
   load_and_authorize_resource find_by: :slug
   skip_authorize_resource only: %i[update_debt_settings]
 
-  # Injection seam for tests, as Pretix::SyncPerformancesJob's is. A named
-  # constant so a teardown can put the real one back: class_attribute makes a
-  # wrong replacement stick for the rest of the process.
-  DEFAULT_PERFORMANCE_SYNC_BUILDER = -> { Pretix::PerformanceSync.new }
-
-  class_attribute :performance_sync_builder, default: DEFAULT_PERFORMANCE_SYNC_BUILDER
+  # Test seam, as Pretix::SyncPerformancesJob's is.
+  class_attribute :performance_sync_builder, default: -> { Pretix::PerformanceSync.new }
 
   def update
     # Set the previous user ids to see who the NEW debtors are.
@@ -20,10 +16,6 @@ class Admin::GenericEventsController < AdminController
     super
   end
 
-  # PATCH admin/shows/1/update_debt_settings
-  # PATCH admin/workshops/1/update_debt_settings
-  # PATCH admin/seasons/1/update_debt_settings
-  # PATCH admin/generic_events/1/update_debt_settings
   def update_debt_settings
     raise CanCan::AccessDenied unless can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
 
@@ -49,13 +41,8 @@ class Admin::GenericEventsController < AdminController
     redirect_to polymorphic_path([ :admin, get_resource ])
   end
 
-  # POST admin/shows/1/sync_performances
-  # POST admin/workshops/1/sync_performances
-  # POST admin/seasons/1/sync_performances
-  #
   # The recurring job is what makes this correct; the button only makes it
-  # immediate, for the producer who has just moved a date in the shop and wants
-  # to see it on the site now.
+  # immediate.
   def sync_performances
     event = get_resource
 
@@ -68,8 +55,7 @@ class Admin::GenericEventsController < AdminController
     report(event, performance_sync_builder.call.call(event))
     redirect_to polymorphic_path([ :admin, event ])
   rescue Pretix::Client::Error => e
-    # A wrong slug and a pretix outage both land here, and neither has touched a
-    # single performance -- the sync fetches before it writes.
+    # Nothing was written: the sync fetches before it writes.
     helpers.append_to_flash(:error, "Could not read this event's dates from pretix: #{e.message}")
     redirect_to polymorphic_path([ :admin, event ])
   end
@@ -77,9 +63,7 @@ class Admin::GenericEventsController < AdminController
   private
 
   def report(event, result)
-    # Not a failure: the producer has ticked the box before building the shop.
-    # The event's admin page carries the same sentence, which is why this only
-    # has to point at it.
+    # Not a failure: the box was ticked before the shop was built.
     return helpers.append_to_flash(:notice, event.pretix_sync_error) if result.missing_series?
 
     label = event.occurrence_label.downcase

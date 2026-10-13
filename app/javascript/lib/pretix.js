@@ -1,12 +1,12 @@
-// pretix's script builds every <pretix-widget> on the page once, at the moment it runs, and
-// nothing watches the DOM afterwards. Under Turbo that moment is always the wrong one: the
-// script is appended to the head *before* the new body is swapped in, so it can build against
-// the page being navigated away from — and on every later visit Turbo keeps the identical
-// <script> tag and never re-runs it, so nothing builds a widget again until a full reload.
+// pretix's script builds every <pretix-widget> once, when it runs, and watches nothing
+// afterwards. Under Turbo that is always the wrong moment: the script is appended to the head
+// *before* the new body is swapped in, so it can build against the outgoing page, and on later
+// visits Turbo keeps the identical tag and never re-runs it, so no widget builds until a full
+// reload.
 //
-// So the build is taken over here, the way pretix documents for single-page apps: its
-// self-build is switched off through pretixWidgetCallback and buildWidgets() is called once
-// the element is in place.
+// So the build is taken over here, as pretix documents for single-page apps: its self-build is
+// switched off through pretixWidgetCallback and buildWidgets() is called once the element is in
+// place.
 
 const STYLESHEET_PATH = "widget/v1.css"
 const SCRIPT_PATH = "widget/v1.en.js"
@@ -14,8 +14,8 @@ const SCRIPT_PATH = "widget/v1.en.js"
 let loading = null
 
 // Readiness is the builder, never window.PretixWidget itself: the bundle assigns that object
-// near its start and buildWidgets at its very end, so a script that throws halfway — or that
-// 200s with something other than the widget — leaves the object behind with nothing to build.
+// near its start and buildWidgets at its very end, so a script that throws halfway (or 200s
+// with something else) leaves the object behind with nothing to build.
 const readyWidget = () => (window.PretixWidget?.buildWidgets ? window.PretixWidget : null)
 
 export function loadPretix(baseUrl) {
@@ -51,13 +51,13 @@ export function loadPretix(baseUrl) {
   return loading
 }
 
-// Resolves with whether a widget was actually built, and never rejects: no caller is in a
-// position to handle a failure better than the shop link put in its place.
+// Resolves with whether a widget was built, and never rejects: the shop link put in its place
+// is the best a caller could do with a failure.
 //
-// A fresh element every time is not tidiness: building a widget *replaces* the <pretix-widget>
-// element with pretix's own markup, so an element can only ever be configured once. Turbo's
-// cached snapshot of a show page holds that spent markup — a widget that looks right and does
-// nothing — and the modal would otherwise keep showing the first show that was clicked.
+// A fresh element every time, because building *replaces* the <pretix-widget> element with
+// pretix's own markup, so an element can only be configured once. Turbo's cached snapshot
+// holds that spent markup (a widget that looks right and does nothing), and the modal would
+// keep showing the first show clicked.
 export async function buildWidget(container, { baseUrl, eventUrl, listType }) {
   const widget = document.createElement("pretix-widget")
   widget.setAttribute("event", eventUrl)
@@ -74,20 +74,20 @@ export async function buildWidget(container, { baseUrl, eventUrl, listType }) {
     return false
   }
 
-  // The page can have moved on while the script loaded. buildWidgets() defers its own DOM scan
-  // by a tick, so this is read slightly early rather than atomically — but a widget still
-  // waiting elsewhere is picked up by its own call.
+  // The page can have moved on while the script loaded. buildWidgets() defers its DOM scan by a
+  // tick, so this is read slightly early, but a widget still waiting elsewhere is picked up by
+  // its own call.
   if (!widget.isConnected) return false
 
-  // Captured once, when the bundle ran, which is now whichever page first needed a widget —
-  // so without this every sale for the rest of the session is attributed to that page.
+  // Captured once, when the bundle ran: without this every sale for the rest of the session is
+  // attributed to whichever page first needed a widget.
   pretix.widget_data.referer = location.href
   pretix.buildWidgets()
   return true
 }
 
-// The <noscript> fallback is no help when the shop is down but JavaScript is working fine, and
-// an empty box tells a visitor nothing about where else to buy a ticket.
+// <noscript> is no help when the shop is down but JavaScript works, and an empty box says
+// nothing about where else to buy a ticket.
 function renderShopLink(container, eventUrl) {
   const message = document.createElement("div")
   message.className = "pretix-widget-info-message"
@@ -102,8 +102,8 @@ function renderShopLink(container, eventUrl) {
 
 function ensureStylesheet(baseUrl) {
   const href = `${baseUrl}${STYLESHEET_PATH}`
-  // A show page links this itself and Turbo keeps head elements across visits, so match on what
-  // is loaded rather than on a marker of our own.
+  // A show page links this itself and Turbo keeps head elements across visits, so match on
+  // what is loaded rather than on a marker of our own.
   if (document.querySelector(`link[href="${href}"]`)) return
 
   const link = document.createElement("link")

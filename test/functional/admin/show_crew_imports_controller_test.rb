@@ -6,27 +6,13 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     @show = FactoryBot.create(:show)
   end
 
-  # Authorization tests
-
-  test "should get new" do
-    get :new, params: { show_id: @show.slug }
-    assert_response :success
-  end
-
-  test "should work with Season event type" do
-    season = FactoryBot.create(:season, slug: "bedfest-2026", name: "Bedfest 2026")
-
-    get :new, params: { season_id: season.slug }
-    assert_response :success
-    assert_includes assigns(:title), "Bedfest 2026"
-  end
-
-  test "should work with Workshop event type" do
-    workshop = FactoryBot.create(:workshop, slug: "lighting-workshop", name: "Lighting Workshop")
-
-    get :new, params: { workshop_id: workshop.slug }
-    assert_response :success
-    assert_includes assigns(:title), "Lighting Workshop"
+  test "should get new for a show, season or workshop" do
+    { show_id: @show, season_id: FactoryBot.create(:season), workshop_id: FactoryBot.create(:workshop) }.each do |param, event|
+      get :new, params: { param => event.slug }
+      assert_response :success
+      assert_includes assigns(:title), event.name
+      assert_select "a[href=?]", Rails.application.routes.url_helpers.polymorphic_path([ :admin, event ])
+    end
   end
 
   test "should return 404 for non-existent event" do
@@ -41,8 +27,6 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     get :new, params: { show_id: @show.slug }
     assert_response :forbidden
   end
-
-  # Preview tests
 
   test "preview with valid paste data shows categorized results" do
     user = FactoryBot.create(:user, student_id: "s1234567")
@@ -99,8 +83,6 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_equal "Director", assigns(:existing_team_members)[user.id]["new_position"]
   end
 
-  # Confirm tests
-
   test "confirm without cache data redirects with error" do
     post :confirm, params: { show_id: @show.slug, cache_key: "nonexistent_key" }
 
@@ -109,19 +91,9 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   test "confirm creates new user and adds to crew" do
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => [
-          { "row" => { "original_name" => "New Director", "first_name" => "New", "last_name" => "Director", "student_id" => "s9999999", "email" => "new@example.com", "position" => "Director" }, "existing_user_id" => nil, "index" => 0 }
-        ]
-      },
-      "existing_team_members" => {}
-    }, expires_in: 1.hour)
+    cache_key = write_crew_cache(create_new: [
+      import_entry(index: 0, original_name: "New Director", first_name: "New", last_name: "Director", student_id: "s9999999", email: "new@example.com", position: "Director")
+    ])
 
     assert_difference [ "User.count", "@show.team_members.count" ], 1 do
       post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "create" } }
@@ -134,22 +106,28 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert flash[:success].any? { |msg| msg.include?("created") }
   end
 
+  test "confirm names a row that cannot be created and still processes the others" do
+    FactoryBot.create(:user, email: "taken@example.com")
+    cache_key = write_crew_cache(create_new: [
+      import_entry(index: 0, original_name: "Good Person", first_name: "Good", last_name: "Person", student_id: "s9999999", email: "good@example.com", position: "Director"),
+      import_entry(index: 1, original_name: "Clash Person", first_name: "Clash", last_name: "Person", student_id: "s8888888", email: "taken@example.com", position: "Producer"),
+      import_entry(index: 2, original_name: "Last Person", first_name: "Last", last_name: "Person", student_id: "s7777777", email: "last@example.com", position: "Designer")
+    ])
+
+    assert_difference "User.count", 2 do
+      post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "create", "1" => "create", "2" => "create" } }
+    end
+
+    assert_redirected_to admin_show_path(@show)
+    assert_equal %w[Designer Director], @show.team_members.pluck(:position).sort
+    assert flash[:success].any? { |msg| msg.include?("2 users created") && msg.include?("Errors: Clash Person:") }
+  end
+
   test "confirm adds existing user to crew" do
     user = FactoryBot.create(:user, student_id: "s1234567")
-
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [
-          { "row" => { "original_name" => "Test User", "first_name" => "Test", "last_name" => "User", "student_id" => "s1234567", "email" => "test@example.com", "position" => "Producer" }, "existing_user_id" => user.id, "index" => 0 }
-        ],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {}
-    }, expires_in: 1.hour)
+    cache_key = write_crew_cache(exact_match_id: [
+      import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", first_name: "Test", last_name: "User", student_id: "s1234567", email: "test@example.com", position: "Producer")
+    ])
 
     assert_no_difference "User.count" do
       assert_difference "@show.team_members.count", 1 do
@@ -162,19 +140,9 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   test "confirm skips when action is skip" do
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => [
-          { "row" => { "original_name" => "Skip User", "first_name" => "Skip", "last_name" => "User", "student_id" => "s8888888", "email" => "skip@example.com", "position" => "Director" }, "existing_user_id" => nil, "index" => 0 }
-        ]
-      },
-      "existing_team_members" => {}
-    }, expires_in: 1.hour)
+    cache_key = write_crew_cache(create_new: [
+      import_entry(index: 0, original_name: "Skip User", first_name: "Skip", last_name: "User", student_id: "s8888888", email: "skip@example.com", position: "Director")
+    ])
 
     assert_no_difference [ "User.count", "@show.team_members.count" ] do
       post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "skip" } }
@@ -184,49 +152,36 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert flash[:success].any? { |msg| msg.include?("skipped") }
   end
 
-  test "confirm merges positions for existing team member" do
-    user, team_member, cache_key = setup_existing_team_member_cache
+  test "confirm merges, replaces or keeps an existing team member's position" do
+    { "merge" => "Producer / Director", "replace" => "Director", "skip" => "Producer" }.each do |action, expected|
+      user, team_member, cache_key = setup_existing_team_member_cache
 
-    post :confirm, params: { show_id: @show.slug, cache_key: cache_key, existing_actions: { user.id.to_s => "merge" } }
+      post :confirm, params: { show_id: @show.slug, cache_key:, existing_actions: { user.id.to_s => action } }
 
-    assert_redirected_to admin_show_path(@show)
-    team_member.reload
-    assert_equal "Producer / Director", team_member.position
-    assert flash[:success].any? { |msg| msg.include?("updated") }
+      assert_redirected_to admin_show_path(@show)
+      assert_equal expected, team_member.reload.position, action
+    end
   end
 
-  test "confirm replaces position for existing team member" do
-    user, team_member, cache_key = setup_existing_team_member_cache
+  test "confirm counts an existing team member skipped once" do
+    user, _team_member, cache_key = setup_existing_team_member_cache(on_team_row: true)
 
-    post :confirm, params: { show_id: @show.slug, cache_key: cache_key, existing_actions: { user.id.to_s => "replace" } }
+    post :confirm, params: { show_id: @show.slug, cache_key:, existing_actions: { user.id.to_s => "skip" } }
 
-    assert_redirected_to admin_show_path(@show)
-    team_member.reload
-    assert_equal "Director", team_member.position
+    assert flash[:success].any? { |msg| msg.include?("positions updated, 1 skipped") }
   end
 
-  test "confirm skips existing team member when action is skip" do
-    user, team_member, cache_key = setup_existing_team_member_cache
+  test "confirm redirects to the workshop's own page" do
+    workshop = FactoryBot.create(:workshop)
+    cache_key = write_crew_cache(event_id: workshop.id)
 
-    post :confirm, params: { show_id: @show.slug, cache_key: cache_key, existing_actions: { user.id.to_s => "skip" } }
+    post :confirm, params: { show_id: workshop.slug, cache_key: }
 
-    assert_redirected_to admin_show_path(@show)
-    team_member.reload
-    assert_equal "Producer", team_member.position # Unchanged
+    assert_redirected_to admin_workshop_path(workshop)
   end
 
   test "confirm clears cache after processing" do
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {}
-    }, expires_in: 1.hour)
+    cache_key = write_crew_cache
 
     post :confirm, params: { show_id: @show.slug, cache_key: cache_key }
 
@@ -234,19 +189,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   test "confirm rejects mismatched event_id" do
-    other_show = FactoryBot.create(:show)
-
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => other_show.id, # Different show
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {}
-    }, expires_in: 1.hour)
+    cache_key = write_crew_cache(event_id: FactoryBot.create(:show).id)
 
     post :confirm, params: { show_id: @show.slug, cache_key: cache_key }
 
@@ -257,22 +200,10 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   test "confirm adds selected user to crew when action is link_<id>" do
     user1 = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr")
     user2 = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr")
+    cache_key = write_crew_cache(fuzzy_match: [
+      import_entry(index: 0, existing_user_ids: [ user1.id, user2.id ], original_name: "Alex Kerr", first_name: "Alex", last_name: "Kerr", student_id: nil, email: nil, position: "Director")
+    ])
 
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [
-          { "row" => { "original_name" => "Alex Kerr", "first_name" => "Alex", "last_name" => "Kerr", "student_id" => nil, "email" => nil, "position" => "Director" }, "existing_user_ids" => [ user1.id, user2.id ], "index" => 0 }
-        ],
-        "create_new" => []
-      },
-      "existing_team_members" => {}
-    }, expires_in: 1.hour)
-
-    # Select user2 specifically
     assert_difference("TeamMember.count", 1) do
       post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "link_#{user2.id}" } }
     end
@@ -280,39 +211,25 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_path(@show)
     assert @show.team_members.find_by(user_id: user2.id).present?
     assert_equal "Director", @show.team_members.find_by(user_id: user2.id).position
-    # user1 should NOT have been added
     assert_nil @show.team_members.find_by(user_id: user1.id)
   end
 
   private
 
-  # Create an existing team member (position "Producer") on @show and write a
-  # crew-import cache entry proposing a "Director" position for them.
-  # Returns [user, team_member, cache_key].
-  def setup_existing_team_member_cache
+  def write_crew_cache(event_id: @show.id, existing: {}, **buckets)
+    cache_key = "crew_import_test_#{SecureRandom.uuid}"
+    write_import_cache(cache_key, { "event_id" => event_id, "categorized" => buckets.transform_keys(&:to_s), "existing_team_members" => existing })
+    cache_key
+  end
+
+  # A "Producer" on @show whose cached import row proposes "Director". Returns [user, team_member, cache_key].
+  # on_team_row also caches the exact-match row the preview leaves out for someone already on the team.
+  def setup_existing_team_member_cache(on_team_row: false)
     user = FactoryBot.create(:user, student_id: "s1234567")
     team_member = @show.team_members.create!(user: user, position: "Producer")
+    existing = { user.id.to_s => { "user_name" => user.name_or_email, "current_position" => "Producer", "new_position" => "Director" } }
+    exact = on_team_row ? [ import_entry(index: 0, existing_user_id: user.id, student_id: "s1234567", position: "Director") ] : []
 
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {
-        user.id.to_s => {
-          "user_id" => user.id,
-          "user_name" => user.name_or_email,
-          "current_position" => "Producer",
-          "new_position" => "Director",
-          "index" => 0
-        }
-      }
-    }, expires_in: 1.hour)
-
-    [ user, team_member, cache_key ]
+    [ user, team_member, write_crew_cache(existing:, exact_match_id: exact) ]
   end
 end

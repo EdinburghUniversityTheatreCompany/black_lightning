@@ -418,12 +418,9 @@ Doorkeeper.configure do
   #   Rails.logger.info(context.pre_auth.inspect)
   # end
 
-  # Signing in to the pretix shop goes through here, and it is the only moment
-  # we learn a member has a pretix customer account at all — pretix creates one
-  # on first login and offers no webhook to say so. Deferred, because on that
-  # first login pretix has not finished the token exchange yet and the customer
-  # does not exist when this fires. Immediacy only; the nightly reconcile is
-  # what actually keeps the two in step.
+  # A pretix shop login is the only moment we learn a member has a pretix customer account
+  # (pretix has no webhook for it). Deferred because pretix has not finished the token exchange
+  # when this fires; the nightly reconcile is what keeps the two in step.
   after_successful_authorization do |controller, _context|
     Pretix::LoginSync.call(controller)
   end
@@ -442,11 +439,8 @@ Doorkeeper.configure do
   # so that the user skips the authorization step.
   # For example if dealing with a trusted application.
   #
-  # Removed blanket skip_authorization block (Vuln 3: OAuth consent screen).
-  # Users must now explicitly consent to OAuth application access.
-  # skip_authorization do |resource_owner, client|
-  #   client.superapp? or resource_owner.admin?
-  # end
+  # No blanket skip_authorization: users must explicitly consent to each OAuth application
+  # (consent screen security fix).
 
   # Configure custom constraints for the Token Introspection request.
   # By default this configuration option allows to introspect a token by another

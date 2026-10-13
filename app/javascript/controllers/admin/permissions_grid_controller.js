@@ -4,13 +4,13 @@ import { Controller } from "@hotwired/stimulus"
 const NAME_RE = /^\[([^\]]+)\]\[([^\]]+)\](.+)$/
 
 export default class extends Controller {
-  static targets = ["modal", "dialog", "changeList", "changeCount", "changeCountText"]
+  static targets = ["modal", "changeList", "changeCount", "changeCountText"]
 
   #initialState = new Map()
   #confirmed = false
 
   connect() {
-    this.element.querySelectorAll('input[type="checkbox"]:not([disabled])').forEach(checkbox => {
+    this.#checkboxes.forEach(checkbox => {
       this.#initialState.set(this.#key(checkbox), checkbox.checked)
     })
   }
@@ -30,20 +30,18 @@ export default class extends Controller {
     this.#showModal(changes)
   }
 
-  cancelSubmit() {
-    this.#hideModal()
-  }
-
-  backdropClick(event) {
-    if (!this.dialogTarget.contains(event.target)) {
-      this.#hideModal()
-    }
-  }
-
   approveSubmit() {
     this.#confirmed = true
-    this.#hideModal()
+    this.modalTarget.close()
     this.element.requestSubmit()
+  }
+
+  get #checkboxes() {
+    return this.element.querySelectorAll('input[type="checkbox"]:not([disabled])')
+  }
+
+  #changed(checkbox) {
+    return checkbox.checked !== (this.#initialState.get(this.#key(checkbox)) ?? false)
   }
 
   #key(checkbox) {
@@ -57,9 +55,8 @@ export default class extends Controller {
   }
 
   #updateHighlights() {
-    this.element.querySelectorAll('input[type="checkbox"]:not([disabled])').forEach(checkbox => {
-      const changed = checkbox.checked !== (this.#initialState.get(this.#key(checkbox)) ?? false)
-      checkbox.closest("td")?.classList.toggle("permission-changed", changed)
+    this.#checkboxes.forEach(checkbox => {
+      checkbox.closest("td")?.classList.toggle("permission-changed", this.#changed(checkbox))
     })
   }
 
@@ -77,12 +74,9 @@ export default class extends Controller {
   }
 
   #gatherChanges() {
-    const rows = []
-    this.element.querySelectorAll('input[type="checkbox"]:not([disabled])').forEach(checkbox => {
-      const initial = this.#initialState.get(this.#key(checkbox)) ?? false
-      if (checkbox.checked === initial) return
+    const rows = [...this.#checkboxes].filter(checkbox => this.#changed(checkbox)).map(checkbox => {
       const { role, subject, action } = this.#parse(checkbox)
-      rows.push({ role, subject, action, type: checkbox.checked ? "added" : "removed" })
+      return { role, subject, action, type: checkbox.checked ? "added" : "removed" }
     })
     rows.sort((a, b) => a.role.localeCompare(b.role) || a.subject.localeCompare(b.subject) || a.action.localeCompare(b.action))
     return rows
@@ -93,13 +87,7 @@ export default class extends Controller {
     list.innerHTML = ""
     list.appendChild(this.#buildTable(changes))
 
-    this.modalTarget.classList.remove("hidden")
-    this.modalTarget.classList.add("flex")
-  }
-
-  #hideModal() {
-    this.modalTarget.classList.add("hidden")
-    this.modalTarget.classList.remove("flex")
+    this.modalTarget.showModal()
   }
 
   #buildTable(changes) {

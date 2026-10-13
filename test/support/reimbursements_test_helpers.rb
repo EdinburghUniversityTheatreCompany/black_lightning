@@ -1,14 +1,9 @@
-# Builders and fakes for reimbursements tests: database seed helpers for the
-# DatabaseStore-backed portal, plus fake external-service clients (Graph, HTTP
-# transport) and a fake modulus checker.
+# Seed builders and fake external services (Graph, modulus checker) for reimbursements tests.
 module ReimbursementsTestHelpers
-  # capture_honeybadger_notices moved to test/support/honeybadger_test_helpers.rb
-  # when the climate suite needed it too; included here so every existing test
-  # keeps calling it unqualified.
+  # So tests call capture_honeybadger_notices unqualified.
   include HoneybadgerTestHelpers
 
   # --- Database seed helpers -----------------------------------------------
-  # Create the real rows the DatabaseStore serves.
 
   def create_reimbursements_person(name: "Pat Producer", email: "pat@example.com",
                                    sort_code: nil, account_number: nil, verified: false,
@@ -21,10 +16,8 @@ module ReimbursementsTestHelpers
     person
   end
 
-  # A cost centre. notification_email is required by the model, so it defaults to
-  # a per-key .invalid address: that satisfies the validation and keeps the
-  # centre's recipients distinct from every other centre's, without handing the
-  # test a real-looking mailbox.
+  # notification_email is required, so it defaults to a per-key .invalid address: valid,
+  # distinct per centre, and not a real-looking mailbox.
   def create_reimbursements_cost_centre(key:, name:, eusa_code:,
                                         receive_mailbox: "in@example.com",
                                         send_mailbox: "out@example.com",
@@ -37,11 +30,9 @@ module ReimbursementsTestHelpers
                                        **attrs)
   end
 
-  # The SECOND cost centre, which the fixtures deliberately don't carry: a
-  # second fixture row makes CostCentre.default resolve to whichever label
-  # FixtureSet.identify hashes lower, and deletes the one-centre world the
-  # reconcile tests pin as a business rule. Every test that needs a two-centre
-  # portal builds it through here, so they agree on what the second pot is.
+  # The SECOND cost centre, never a fixture: a second row makes CostCentre.default resolve
+  # to whichever label FixtureSet.identify hashes lower, and deletes the one-centre world
+  # the reconcile tests pin. Every two-centre test builds it here.
   def create_second_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
                                                eusa_code: "BED", **attrs)
     create_reimbursements_cost_centre(key: key, name: name, eusa_code: eusa_code,
@@ -49,21 +40,23 @@ module ReimbursementsTestHelpers
                                       send_mailbox: "out@bedlamtheatre.invalid", **attrs)
   end
 
-  def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
-                                   budget_type: "Expense", initial_budget: nil, notes: nil,
-                                   owners: [], cost_centre: nil, financial_year: nil, area: nil)
-    budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code,
-                                            active: active, budget_type: budget_type,
-                                            initial_budget: initial_budget, notes: notes,
-                                            cost_centre: cost_centre,
-                                            financial_year: financial_year,
-                                            area: area)
+  def create_reimbursements_budget(name: "Props", nominal_code: "4000", owners: [], **attrs)
+    budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code, **attrs)
     Array(owners).each { |person| budget.own_owners << person }
     budget
   end
 
-  # An area — the parent a show's budget lines can hang off. cost_centre and
-  # financial_year default the way create_reimbursements_budget's do.
+  # 2026/2027 and 2027/2028, each running 6 April to 5 April as production's years do. +active:+
+  # is the label of the one to make active, if any.
+  def create_reimbursements_tax_years(active: nil)
+    [ 2026, 2027 ].map do |start|
+      label = "#{start}/#{start + 1}"
+      Reimbursements::FinancialYear.create!(label: label, active: label == active,
+                                            starts_on: Date.new(start, 4, 6),
+                                            ends_on: Date.new(start + 1, 4, 5))
+    end
+  end
+
   def create_reimbursements_area(name:, cost_centre: nil, financial_year: nil, **attrs)
     Reimbursements::Area.create!(
       name: name,
@@ -73,33 +66,25 @@ module ReimbursementsTestHelpers
     )
   end
 
-  # A nominal code. cost_centre: nil resolves through CostCentre.default — the
-  # fixture row in a one-centre test, but "order(:id).first" once a test has
-  # built a second centre (create_second_reimbursements_cost_centre): pass
-  # cost_centre: explicitly in any test with two centres in play.
+  # cost_centre: nil resolves through CostCentre.default, which is order(:id).first once a
+  # second centre exists: pass it explicitly in any two-centre test.
   #
-  # label: nil derives "Label for #{code}" rather than a fixed default: a
-  # fixed string like "Marketing" is a PLAUSIBLE REAL label (live Fringe data
-  # has three budget lines called exactly that), so two codes seeded through
-  # this helper with no label: would share one — and an assertion that reads
-  # a NominalCode's label back would pass whether it read the right code, the
-  # wrong code, or just hardcoded the string.
+  # label: nil derives "Label for #{code}", not a fixed default: two codes would share it,
+  # and a label assertion would pass on the wrong code or a hardcoded string.
   def create_reimbursements_nominal_code(code:, cost_centre: nil, label: nil, active: true)
     Reimbursements::NominalCode.create!(code: code, label: label || "Label for #{code}", active: active,
                                         cost_centre: cost_centre || Reimbursements::CostCentre.default)
   end
 
-  def create_reimbursements_expense(person: nil, budget: nil, batch: nil,
-                                    status: Reimbursements::Status::PENDING,
+  def create_reimbursements_expense(status: Reimbursements::Status::PENDING,
                                     amount: BigDecimal("12.5"),
                                     amount_excl_vat: BigDecimal("10.42"),
                                     description: "Fake blood",
                                     payment_reference: "PROPS PAT",
                                     receipt: true, **attrs)
     expense = Reimbursements::Expense.create!(
-      person: person, budget: budget, batch: batch, status: status, amount: amount,
-      amount_excl_vat: amount_excl_vat, description: description,
-      payment_reference: payment_reference, **attrs
+      status: status, amount: amount, amount_excl_vat: amount_excl_vat,
+      description: description, payment_reference: payment_reference, **attrs
     )
     attach_test_receipt(expense) if receipt
     expense
@@ -112,9 +97,35 @@ module ReimbursementsTestHelpers
     expense
   end
 
+  # A budget-import paste: the header row, then each of +rows+ behind the two leading Area
+  # columns, which it leaves blank (the area tests write their own headers). The header is
+  # DERIVED from TSV_HEADERS, never retyped, so an added column fails loudly: a hardcoded
+  # subset once hid a column shift from every test but the system one, which `bin/rails test`
+  # never runs.
+  def budget_import_sheet(*rows)
+    ([ ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t") ] + rows.map { |row| "\t\t#{row}" }).join("\n")
+  end
+
+  # A one-sheet .xlsx holding +rows+, as an upload: the importers read only its #path, so it
+  # serves a model test and a posted file alike.
+  def xlsx_upload(rows, sheet: "Sheet1")
+    require "caxlsx"
+    package = Axlsx::Package.new
+    package.workbook.add_worksheet(name: sheet) { |worksheet| rows.each { |row| worksheet.add_row row } }
+    file = Tempfile.new([ "upload", ".xlsx" ])
+    file.binmode
+    file.write(package.to_stream.read)
+    file.rewind
+    (@xlsx_tempfiles ||= []) << file # a collected Tempfile deletes its file
+    Rack::Test::UploadedFile.new(file.path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+  end
+
   def create_reimbursements_batch(date_sent: Date.new(2026, 5, 13), **attrs)
     Reimbursements::Batch.create!(date_sent: date_sent, **attrs)
   end
+
+  # The header row of EUSA's ledger export, as pasted into Reconcile.
+  ACTUALS_HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
 
   def create_reimbursements_actual(nominal_code: "439999", narrative: "Alice Producer",
                                    debit: BigDecimal("123.45"), **attrs)
@@ -122,37 +133,23 @@ module ReimbursementsTestHelpers
                                        debit: debit, **attrs)
   end
 
-  # A fuller ledger row than create_reimbursements_actual above, which is the
-  # older debit-only shorthand the reconcile tests were written against. This
-  # one stamps the columns an imported row really carries (date, period,
-  # source_month) and takes a +credit:+, since income is the side the
-  # apportionment work reads.
-  #
-  # +net+ is DERIVED from debit and credit rather than taken as an argument,
-  # because EusaActual.net derives the rollups' figure the same way. A stored
-  # net that disagreed with its own debit/credit would be a second source of
-  # truth for what a row is worth, which is exactly what a test must not seed.
+  # A fuller ledger row than the debit-only create_reimbursements_actual: it stamps the
+  # columns an imported row carries and takes a +credit:+. +net+ is derived from debit and
+  # credit, as EusaActual.net derives it, so a test cannot seed a second source of truth.
   def create_reimbursements_eusa_actual(nominal_code: "4100", narrative: "Stripe payout",
                                         debit: nil, credit: nil, date: Date.current,
-                                        period: "06", source_month: "2026-09", **attrs)
+                                        period: "06", **attrs)
     Reimbursements::EusaActual.create!(
       nominal_code: nominal_code, narrative: narrative, debit: debit, credit: credit,
-      net: (debit || 0) - (credit || 0), date: date, period: period,
-      source_month: source_month, **attrs
+      net: (debit || 0) - (credit || 0), date: date, period: period, **attrs
     )
   end
 
   # --- Query counting ------------------------------------------------------
 
-  # Counts the SQL a block issues, for the preload assertions that stop a
-  # rollup N+1ing a query per budget. Lives here rather than in one test file
-  # because three suites need it and jscpd gates duplication at 0.
-  #
-  # Schema-introspection queries (the first touch of a table in a test run)
-  # are excluded, or whichever test happens to run first absorbs them and the
-  # comparison between two sizes becomes noise instead of signal — measured:
-  # without this exclusion the SAME scenario read 45 queries first and 31
-  # second, entirely from schema-cache warmup.
+  # Counts the SQL a block issues, for the preload assertions. Schema queries are
+  # excluded: whichever test runs first absorbs them (45 queries against 31 for the same
+  # scenario), which makes size comparisons noise.
   def count_queries(&block)
     count = 0
     callback = lambda do |*, payload|
@@ -167,9 +164,7 @@ module ReimbursementsTestHelpers
 
   # --- Assertions ----------------------------------------------------------
 
-  # Every finance list's "Download CSV" answers the same shape: a text/csv
-  # attachment named reimbursements-<resource>-<today>.csv. One helper so the
-  # six index actions that offer an export assert it identically.
+  # A finance list's "Download CSV": text/csv named reimbursements-<resource>-<today>.csv.
   def assert_csv_download(slug)
     assert_response :success
     assert_includes response.media_type, "text/csv"
@@ -178,40 +173,54 @@ module ReimbursementsTestHelpers
     assert_match(/reimbursements-#{slug}-\d{4}-\d{2}-\d{2}\.csv/, disposition)
   end
 
-  # Grants the finance grid permission (:manage, :reimbursements_finance) to a
-  # user via the Business Manager role — the gate for every finance operator
-  # controller (Review, People, ExpenseEdits, …).
+  # Grants :manage, :reimbursements_finance through the Business Manager role.
   def grant_finance_permission(user)
-    role = ::Role.find_by(name: "Business Manager") || ::Role.create!(name: "Business Manager").tap do |r|
-      r.permissions << Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
-    end
-    user.add_role("Business Manager")
-    role
+    grant_role_permission(user, "Business Manager", "manage", "reimbursements_finance")
   end
 
-  # Grants the producer portal permission (:access, :reimbursements) via a
-  # Producer role — used to prove that portal access alone does NOT open the
-  # finance operator surfaces.
+  # Grants :access, :reimbursements through a Producer role, to prove portal access alone
+  # does not open the finance surfaces.
   def grant_producer_permission(user)
-    role = ::Role.find_by(name: "Producer") || ::Role.create!(name: "Producer").tap do |r|
-      r.permissions << Admin::Permission.create(action: "access", subject_class: "reimbursements")
-    end
-    user.add_role("Producer")
-    role
+    grant_role_permission(user, "Producer", "access", "reimbursements")
   end
 
-  # Modulus verdict keyed by account number, so tests don't depend on the
-  # gitignored Pay.UK rule files being present.
+  # --- Graph plumbing -------------------------------------------------------
+
+  # Delegates outbound_enabled? to the real Settings, so a suppression test can delete the
+  # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in the suite sets.
+  FakeGraphSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
+    def outbound_enabled?
+      Reimbursements::Settings.outbound_enabled?
+    end
+  end
+
+  # The real Graph body for a message handled or deleted by hand in Outlook.
+  GRAPH_ITEM_NOT_FOUND = { error: { code: "ErrorItemNotFound",
+                                    message: "The specified object was not found in the store." } }.to_json
+
+  def graph_settings
+    FakeGraphSettings.new("tenant-1", "client-1", "secret-1")
+  end
+
+  def graph_token_response(expires_in: 3600)
+    [ 200, { access_token: "tok-1", expires_in: expires_in }.to_json ]
+  end
+
+  # Runs the block with the suite's outbound opt-in switched off.
+  def without_outbound
+    original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+    yield
+  ensure
+    ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+  end
+
+  # Modulus verdict keyed by account number.
   class FakeModulusChecker
     def initialize(by_account = {})
       @by_account = by_account
     end
 
-    # A blank pair reads INVALID, as the REAL checker does — the algorithm has
-    # no digits to work on and fails. The fake used to answer OUTSIDE_SPEC here,
-    # which is the one case that mattered: it meant no test could ever see the
-    # "Modulus check failed ... likely a typo" banner that the live site drew
-    # over a payee with no bank details at all.
+    # A blank pair reads INVALID, as the real checker does.
     def check(sort_code, account_number)
       if sort_code.to_s.strip.empty? || account_number.to_s.strip.empty?
         return ::Reimbursements::ModulusCheck::INVALID
@@ -221,37 +230,34 @@ module ReimbursementsTestHelpers
     end
   end
 
-  # Stand-in for BatchProcessor in the job tests (nightly + interactive build):
-  # records each process(**kwargs) call and returns a canned Result.
-  # +success: false+ drives the failure path.
+  # Stand-in for BatchProcessor in BuildBatchJob tests: records each process call and
+  # returns a canned Result. +success: false+ drives a failure before the EUSA draft, whose
+  # link BatchProcessor leaves blank; pass +draft_link:+ too for a failure after it.
   class FakeBatchProcessor
     Result = Struct.new(:success, :eusa_draft_web_link, :total_amount, :bacs_date, :errors,
                         :batch_id, keyword_init: true)
     attr_reader :calls
 
-    def initialize(success: true, errors: [])
+    def initialize(success: true, errors: [], draft_link: success ? "https://outlook.example/draft-1" : "")
       @success = success
       @errors = errors
+      @draft_link = draft_link
       @calls = []
     end
 
     def process(**kwargs)
       @calls << kwargs
-      Result.new(success: @success, eusa_draft_web_link: "https://outlook.example/draft-1",
+      Result.new(success: @success, eusa_draft_web_link: @draft_link,
                  total_amount: kwargs[:expenses].sum { |e| e.amount || 0 },
                  bacs_date: kwargs[:bacs_date], errors: @errors,
                  batch_id: @success ? "recBat1" : nil)
     end
   end
 
-  # Records the operator alerts the job sends through the Graph notifier, plus
-  # the mailbox it was built for — a shared stand-in for Notifier across
-  # NightlyBatchJob/BuildBatchJob tests. +fail+ makes every send raise
-  # +fail_with+ (a plain Graph outage by default; pass
-  # ::GraphAuth::AuthError to drive the IT-escalation path);
-  # +fail_only+ names the alerts that should fail, leaving the rest working —
-  # the nightly sends two independent reminders per run, and whether a partly
-  # failed run is recorded is exactly what that asymmetry has to prove.
+  # Stand-in for Notifier in NightlyBatchJob/BuildBatchJob tests: records each alert and
+  # the mailbox it was built for. +fail+ makes every send raise +fail_with+ (pass
+  # ::GraphAuth::AuthError for the IT-escalation path); +fail_only+ fails just the named
+  # alerts, which is how the nightly's partly-failed-run recording is proved.
   class FakeNotifier
     attr_reader :calls, :mailbox
 
@@ -278,22 +284,15 @@ module ReimbursementsTestHelpers
     def failure(**k) = record(:failure, k)
   end
 
-  # Fake GraphClient for BatchProcessor / Build Batch / Notifier tests: records
-  # drafts, sent mail and uploads, with toggles to make the draft, a send, or
-  # uploads fail.
+  # Fake GraphClient: records drafts, sent mail and uploads, with toggles to fail each.
   class FakeGraphClient
     attr_reader :uploaded, :drafts, :send_mails, :deleted_messages
     attr_accessor :fail_draft, :fail_uploads, :fail_send, :fail_delete_message
-    # Recipients (email strings) whose send should raise, standing in for a
-    # Graph outage that hits some payees but not others.
+    # Recipients whose send raises: an outage hitting some payees but not others.
     attr_accessor :fail_send_to
-    # Filenames whose upload_to_folder call should raise, standing in for one
-    # receipt failing to back up to SharePoint while the rest of the batch
-    # (including other receipts and the BACS xlsx itself) succeeds.
+    # Filenames whose upload raises: one receipt failing to back up while the rest succeed.
     attr_accessor :fail_upload_for
-    # What draft_message? reports — true (the common case: still an unsent
-    # draft) by default; set false to simulate a draft that was already sent,
-    # deleted, or otherwise couldn't be confirmed.
+    # What draft_message? reports; false simulates a draft already sent, deleted or unconfirmable.
     attr_accessor :draft_still_exists
 
     def initialize
@@ -314,7 +313,7 @@ module ReimbursementsTestHelpers
       raise ::GraphAuth::Error, "SharePoint down" if fail_uploads
       raise ::GraphAuth::Error, "SharePoint down for #{filename}" if Array(fail_upload_for).include?(filename)
 
-      @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
+      @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, content: content }
       "https://sp.example/#{folder_id}/#{filename}"
     end
 
@@ -334,19 +333,23 @@ module ReimbursementsTestHelpers
       nil
     end
 
-    def send_mail(mailbox:, to:, subject:, html:)
+    def send_mail(mailbox:, to:, subject:, html:, reply_to: nil)
       raise ::GraphAuth::Error, "send failed" if fail_send
       if (Array(to) & Array(fail_send_to)).any?
         raise ::GraphAuth::Error, "send failed for #{to.inspect}"
       end
 
-      @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html }
+      @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html, reply_to: reply_to }
       nil
     end
   end
 
-  # The transport fake lives at test/support/fake_http.rb — it is shared with the
-  # climate clients and has nothing reimbursements-specific in it. Aliased here so
-  # the existing tests keep referring to it unqualified.
-  FakeHttp = ::FakeHttp
+  private
+
+  def grant_role_permission(user, name, action, subject)
+    ::Role.find_by(name: name) || ::Role.create!(name: name).tap do |role|
+      role.permissions << Admin::Permission.create(action: action, subject_class: subject)
+    end
+    user.add_role(name)
+  end
 end

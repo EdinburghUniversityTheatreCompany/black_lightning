@@ -44,12 +44,10 @@ FactoryBot.define do
     pretix_shown { [ true, false ].sample }
     pretix_view  { [ "list", "week", "month" ].sample }
 
-    # Use fixture venue - fixtures are loaded in tests
     venue_id { Venue.first&.id }
 
     transient do
       team_member_count { 0 }
-      video_link_count { 0 }
       picture_count { 0 }
       attach_image { false }
       attach_proposal { false }
@@ -57,21 +55,10 @@ FactoryBot.define do
       review_count { 0 }
     end
 
-    trait :with_associations do
-      team_member_count { 5 }
-      video_link_count { rand(3) }
-      picture_count { rand(3) }
-      attach_image { true }
-      attach_proposal { [ true, false ].sample }
-      tag_count { 1 }
-      review_count { 3 }
-    end
-
     image { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png") if attach_image }
 
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event) if evaluator.team_member_count > 0
-      create_list(:video_link, evaluator.video_link_count, item: event) if evaluator.video_link_count > 0
       create_list(:picture, evaluator.picture_count, gallery: event) if evaluator.picture_count > 0
       create_list(:review, evaluator.review_count, event: event) if evaluator.review_count > 0
 
@@ -91,7 +78,7 @@ FactoryBot.define do
     author { generate(:random_name) }
     price { generate(:random_name) }
 
-    # Don't set debt dates by default - prevents expensive sync_debts callbacks
+    # No debt configuration, so adding team members syncs no debts.
     maintenance_debt_start { nil }
     staffing_debt_start { nil }
     maintenance_debt_amount { nil }
@@ -101,19 +88,8 @@ FactoryBot.define do
       feedback_count { 0 }
     end
 
-    trait :with_debts do
-      maintenance_debt_start { 1.month.from_now }
-      staffing_debt_start { 1.month.from_now }
-      maintenance_debt_amount { 2 }
-      staffing_debt_amount { 2 }
-    end
-
     after(:create) do |show, evaluator|
       create_list(:feedback, evaluator.feedback_count, show: show) if evaluator.feedback_count > 0
-    end
-
-    trait :with_feedback do
-      feedback_count { 1 }
     end
   end
 

@@ -2,10 +2,6 @@
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 
 <p class="mb-4 text-gray-600">
-  <%# This was a sidebar link that silently downloaded a file: no sheet list,
-      no scope, and no way to choose one — and the scope inside the file was
-      mixed (Budgets followed the active year while everything else was all of
-      history) with nothing saying so. %>
   Everything the portal holds, as one spreadsheet, for the end-of-run handover to EUSA, an
   accountant, or next year's committee. The cover sheet records what the file covers.
 </p>
@@ -18,8 +14,8 @@
                   download_admin_reimbursements_export_path(request.query_parameters),
                   class: btn_classes(:primary) %>
       <span class="text-sm text-gray-600">
-        <%= @store_label = [ selected_financial_year&.label || "Every year",
-                             selected_cost_centre&.name || "every cost centre" ].join(" · ") %>
+        <%= [ selected_financial_year&.label || "Every year",
+              selected_cost_centre&.name || "every cost centre" ].join(" · ") %>
       </span>
     </div>
   <% end %>
@@ -34,18 +30,15 @@
         </tr>
       </thead>
       <tbody>
-        <% @sheets.each do |(exporter_class, _)| %>
-          <% name = exporter_class::SHEET_NAME %>
+        <% @counts.each do |exporter_class, count| %>
           <tr class="border-b border-gray-200">
-            <td class="px-3 py-2 font-medium"><%= name %></td>
+            <td class="px-3 py-2 font-medium"><%= exporter_class::SHEET_NAME %></td>
             <td class="px-3 py-2 text-right tabular-nums">
-              <% count = @counts[name].to_i %>
               <%# An empty sheet is stated here rather than discovered in Excel. %>
               <%= count.zero? ? content_tag(:span, "none", class: "text-gray-500") : count %>
             </td>
             <td class="px-3 py-2 text-gray-600">
-              <%= t("reimbursements.export_sheets.#{exporter_class::SLUG}",
-                    default: "One row per record.") %>
+              <%= t("reimbursements.export_sheets.#{exporter_class::SLUG}") %>
             </td>
           </tr>
         <% end %>
@@ -59,22 +52,5 @@
     year scopes <strong>Budgets, Areas and Forecast revisions</strong> only; Claims, the ledger
     and Batches always cover every year. Bank details are masked to their last four digits, and
     only the BACS spreadsheet EUSA is paid from carries full numbers.
-  </p>
-<% end %>
-
-<%= render CardComponent.new(title: "One list at a time", html_class: "mt-4") do %>
-  <p class="mb-0 text-sm text-gray-600">
-    Each finance list also downloads on its own as CSV, carrying whatever filters are on screen:
-    <%= link_to "claims", admin_reimbursements_expense_edits_path(cost_centre: selected_cost_centre&.key),
-                class: "underline" %>,
-    <%= link_to "the ledger", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key),
-                class: "underline" %>,
-    <%= link_to "budgets", admin_reimbursements_budgets_path(year: selected_financial_year&.key,
-                                                            cost_centre: selected_cost_centre&.key),
-                class: "underline" %>,
-    <%= link_to "people", admin_reimbursements_people_path, class: "underline" %> and
-    <%= link_to "batches", admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
-                class: "underline" %>.
-    A CSV holds one sheet's worth; this workbook holds them all at once.
   </p>
 <% end %>

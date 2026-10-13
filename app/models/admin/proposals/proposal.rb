@@ -25,10 +25,8 @@
 class Admin::Proposals::Proposal < ApplicationRecord
   include TeamMemberOrdering
 
-  # Length validations enforcing database column limits
   validates :show_title, length: { maximum: 255 }
-  validates :publicity_text, length: { maximum: 16777215 }
-  validates :proposal_text, length: { maximum: 16777215 }
+  validates :publicity_text, :proposal_text, length: { maximum: 16777215 }
   has_paper_trail
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
@@ -39,7 +37,9 @@ class Admin::Proposals::Proposal < ApplicationRecord
       :rejected,
       :successful,
       :unsuccessful ],
-    instance_methods: false, unscoped: true, default: :awaiting_approval
+    instance_methods: false, default: :awaiting_approval
+
+  statuses.each_key { |s| define_method(:"#{s}?") { !withdrawn? && status == s.to_sym } }
 
   belongs_to :call, class_name: "Admin::Proposals::Call"
 
@@ -72,30 +72,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   def status
     super.to_sym
-  end
-
-  def withdrawn?
-    withdrawn
-  end
-
-  def awaiting_approval?
-    !withdrawn? && status == :awaiting_approval
-  end
-
-  def approved?
-    !withdrawn? && status == :approved
-  end
-
-  def rejected?
-    !withdrawn? && status == :rejected
-  end
-
-  def successful?
-    !withdrawn? && status == :successful
-  end
-
-  def unsuccessful?
-    !withdrawn? && status == :unsuccessful
   end
 
   # Creates an instance of Admin::Answer for every question in the call.
@@ -215,10 +191,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
     # simplecov:enable
 
     Rails.logger.info "Created Show: #{@show.name} (#{@show.slug})"
-  end
-  # Convert to show asynchronously using ActiveJob
-  def convert_to_show_async
-    ProposalConversionJob.perform_later(id)
   end
 
   private

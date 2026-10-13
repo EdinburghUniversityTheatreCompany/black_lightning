@@ -95,21 +95,6 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(private_user, "another user with a private profile", @ability, [], allowed_actions + forbidden_actions)
   end
 
-  test "users can see debt status of users that are on the same proposal" do
-    skip "This permission is no longer granted, but the test is still there for future reference."
-    allowed_actions = %I[debt_status]
-    # show edit update destroy
-    forbidden_actions = %I[index read create check_membership]
-
-    proposal = FactoryBot.create(:proposal)
-    user = proposal.team_members.first.user
-    ability = Ability.new(user)
-
-    helper_test_actions(proposal.team_members.last.user, "an user with shared proposal", ability, allowed_actions, forbidden_actions)
-
-    helper_test_actions(@user, "an user without shared proposal", ability, [], allowed_actions + forbidden_actions)
-  end
-
   test "users have the correct proposal permissions before the submission deadline" do
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 4))
     helper_set_up_proposal
@@ -165,14 +150,12 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_set_up_proposal
     @proposal.status = :awaiting_approval
 
-    # The role NAME alone grants nothing any more. (@checker_ability was built by
-    # helper_set_up_proposal before this delete and holds its own rule set, so it is unaffected.)
+    # The role name alone grants nothing. (@checker_ability predates this delete and keeps its own rules.)
     named_only = FactoryBot.create(:user)
     named_only.add_role "Proposal Checker"
     Role.find_by(name: "Proposal Checker").permissions.delete(admin_permissions(:review_proposals))
     assert_not Ability.new(named_only).can?(:read, @proposal), "Holding a role called Proposal Checker without the permission must not grant review"
 
-    # Any role holding the permission does.
     other_role_user = FactoryBot.create(:user)
     Role.create!(name: "Artistic Panel").tap do |role|
       role.permissions << admin_permissions(:review_proposals)
@@ -180,7 +163,6 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     end
     assert Ability.new(other_role_user).can?(:read, @proposal), "A role holding the review permission must be able to read an awaiting proposal after the deadline"
 
-    # Committee reviews through the same permission (fixture), and loses it when it is unticked.
     assert Ability.new(users(:committee)).can?(:read, @proposal)
     roles(:committee).permissions.delete(admin_permissions(:review_proposals))
     assert_not Ability.new(users(:committee).reload).can?(:read, @proposal), "Committee without the permission must not review; the role name is not the gate"
@@ -207,16 +189,12 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     # 4B: ...and can no longer update proposals.
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
-    # Same for successful...
-
     situation = "after the editing deadline, but that is successful"
 
     @proposal.status = :successful
 
     helper_test_proposal(:read, @proposal, true, true, true, situation)
     helper_test_proposal(:update, @proposal, false, false, false, situation)
-
-    # Same for unsuccessful...
 
     situation = "after the editing deadline, but that is unsuccessful"
 
@@ -226,8 +204,6 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
     situation = "after the editing deadline, but that is withdrawn"
-
-    # Same for withdrawn...
 
     @proposal.withdrawn = true
 
@@ -339,10 +315,10 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     hexagon_team_member = hexagon_show.team_members.sample
     hexagon_team_member.position = "Hexagon"
-    team_member.save
+    hexagon_team_member.save
 
     hexagon_ability = Ability.new(hexagon_team_member.user)
-    helper_test_actions(other_show, "show where they are a hexagon", hexagon_ability, [], allowed_actions + forbidden_actions)
+    helper_test_actions(hexagon_show, "show where they are a hexagon", hexagon_ability, [], allowed_actions + forbidden_actions)
   end
 
   test "guests can only read reviews for public shows" do
@@ -406,58 +382,22 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     end
   end
 
-  test "producer on a future show can check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
+  test "producers on a current or future show can check_debt" do
+    [
+      [ "Producer", 1.week.from_now, true ],
+      [ "Co-Producer", 1.week.from_now, true ],
+      [ "Director / Producer", 1.week.from_now, true ],
+      [ "Director", 1.week.from_now, false ],
+      [ "Producer", 2.months.ago, false ]
+    ].each do |position, start_date, expected|
+      show = FactoryBot.create(:show, start_date: start_date, end_date: start_date + 1.week)
+      user = FactoryBot.create(:user)
+      FactoryBot.create(:team_member, user: user, teamwork: show, position: position)
 
-    ability = Ability.new(user)
-    assert ability.can?(:check_debt, Admin::Debt)
-  end
-
-  test "producer on a future show cannot index Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
-
-    ability = Ability.new(user)
-    assert ability.cannot?(:index, Admin::Debt)
-  end
-
-  test "producer on a past show cannot check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 2.months.ago, end_date: 1.month.ago)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
-
-    ability = Ability.new(user)
-    assert ability.cannot?(:check_debt, Admin::Debt)
-  end
-
-  test "non-producer on a future show cannot check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Director")
-
-    ability = Ability.new(user)
-    assert ability.cannot?(:check_debt, Admin::Debt)
-  end
-
-  test "co-producer on a future show can check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Co-Producer")
-
-    ability = Ability.new(user)
-    assert ability.can?(:check_debt, Admin::Debt)
-  end
-
-  test "compound position with producer on a future show can check_debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Director / Producer")
-
-    ability = Ability.new(user)
-    assert ability.can?(:check_debt, Admin::Debt)
+      ability = Ability.new(user)
+      assert_equal expected, ability.can?(:check_debt, Admin::Debt), "#{position} on a show starting #{start_date.to_date}"
+      assert ability.cannot?(:index, Admin::Debt) if expected
+    end
   end
 
   test "users can edit and read opportunities that they created" do
@@ -698,8 +638,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
       assert @ability.can?(permission.action.to_sym, subject), "The user cannot perform the action :#{permission.action} on #{permission.subject_class} even though it should be able to"
 
-      # For Role :read, :edit,
-      # check a non-trained role instance since all logged-in users can read trained roles and edit child roles.
+      # Role :read and :update need a non-trained instance: everyone can read trained roles, and edit child roles.
       check_subject = subject == Role && (permission.action.to_sym == :read || permission.action.to_sym == :update) ? other_role.first : subject
       assert other_ability.cannot?(permission.action.to_sym, check_subject), "The other user can perform the action :#{permission.action} on #{permission.subject_class} but it should not be able to"
     end
@@ -753,10 +692,9 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     @random_ability = Ability.new(FactoryBot.create(:user))
 
-    # Create proposals if the call doesn't have any
     if @call.proposals.empty?
       FactoryBot.create_list(:proposal, 2, :with_team_members, call: @call)
-      @call.reload  # Reload to get the newly created proposals
+      @call.reload
     end
     @proposal = @call.proposals.sample
     @proposal.status = :rejected

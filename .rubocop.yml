@@ -13,6 +13,7 @@ plugins:
 
 # Project-specific exclusions
 AllCops:
+  UseProjectIndex: true
   Exclude:
     - lib/generators/**/templates/**/*
     - db/schema.rb

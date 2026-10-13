@@ -6,22 +6,17 @@ module Admin
       include ReimbursementsTestHelpers
 
       setup do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-        users(:member).add_role("Producer")
+        grant_producer_permission(users(:member))
         @user = users(:member)
 
-        # The signed-in user's linked person owns @owned, not @not_owned.
         @owner = create_reimbursements_person(email: @user.email, name: "Olive Owner")
         @other = create_reimbursements_person(email: "other@example.com", name: "Sam Submitter")
         @stranger = create_reimbursements_person(email: "stranger@example.com", name: "Someone Else")
         @owned = create_reimbursements_budget(name: "Owned budget", owners: [ @owner ])
         @not_owned = create_reimbursements_budget(name: "Someone else's", owners: [ @stranger ])
-        # Pending claim by a non-owner on the owned budget -> awaits endorsement.
         @pending = create_reimbursements_expense(person: @other, budget: @owned,
                                                  status: ::Reimbursements::Status::PENDING,
                                                  description: "Van hire")
-        # Reject emails go through the Graph notifier; inject a recording fake.
         @graph = FakeGraphClient.new
         MyBudgetsController.notifier_builder =
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
@@ -30,11 +25,6 @@ module Admin
       teardown do
         MyBudgetsController.notifier_builder =
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
-      end
-
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
       end
 
       test "denies members without the reimbursements permission" do
@@ -54,8 +44,19 @@ module Admin
         assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path(@pending.record_id)
       end
 
-      # An owner endorses against the receipt, so the same in-page viewer as the
-      # Review queue: opened per claim, nothing fetched until it is.
+      # A row older than the column has no date to count a wait from.
+      test "a claim with no submitted date says nothing about how long it has waited" do
+        @pending.update_column(:submitted_at, nil)
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_select "div.items-baseline", text: /Sam Submitter/ do |row|
+          assert_no_match(/submitted|waiting/i, row.text)
+        end
+      end
+
+      # The same in-page viewer as the Review queue: nothing is fetched until it is opened.
       test "a claim awaiting endorsement offers the in-page receipt viewer, closed" do
         sign_in @user
         get :index
@@ -77,8 +78,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "don't own any budgets"
-        # The Budgets page is finance-gated, and this user is not finance, so
-        # naming it — as plain text or as a link — points at a 403.
+        # The Budgets page is finance-gated, so naming it to a non-finance user points at a 403.
         assert_includes response.body, "Ask the business manager"
         assert_not_includes response.body, admin_reimbursements_budgets_path
       end
@@ -136,8 +136,7 @@ module Admin
       end
 
       test "a stale endorsement (amount since edited) shows Endorse again, not Endorsed" do
-        # Endorsed at £5, but the claim's actual amount is 12.5 — the sign-off no
-        # longer covers it, so the owner is asked to endorse the current terms.
+        # Endorsed at £5, but the claim is 12.5: the sign-off no longer covers it.
         ::Reimbursements::OwnerEndorsement.create!(expense_record_id: @pending.record_id,
                                                    budget_record_id: @owned.record_id,
                                                    endorsed_by_person_id: @owner.record_id,

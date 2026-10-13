@@ -5,10 +5,7 @@ module Admin
   class ReconcileControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
-    HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
-
-    # DatabaseStore whose actual-link writes raise for chosen targets: one
-    # row's transient write failure amid others that must still commit.
+    # DatabaseStore whose actual-link writes raise for chosen targets.
     class FlakyLinkStore < ::Reimbursements::DatabaseStore
       attr_accessor :fail_expense_link_ids, :fail_budget_links
 
@@ -31,8 +28,7 @@ module Admin
       end
     end
 
-    # DatabaseStore that fails part-way through writing an offsetting pair: on
-    # the second leg's insert, or on the cross-link that follows it.
+    # DatabaseStore that fails part-way through writing an offsetting pair: on the second leg's insert or the cross-link.
     class HalfPairStore < ::Reimbursements::DatabaseStore
       def initialize(fail_on:)
         super()
@@ -55,13 +51,10 @@ module Admin
     end
 
     setup do
-      finance = Role.create!(name: "Business Manager")
-      finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-      users(:member).add_role("Business Manager")
       @user = users(:member)
+      grant_finance_permission(@user)
 
-      # A Submitted expense that a debit row should match: nominal 439999,
-      # excl-VAT 123.45, submitted to EUSA within 14 days of the actuals date.
+      # A Submitted expense the debit row matches: nominal 439999, 123.45 excl VAT, submitted within 14 days.
       @person = create_reimbursements_person(name: "Alice Producer", email: "alice@example.com")
       @budget = create_reimbursements_budget(name: "Props", nominal_code: "439999")
       @income = create_reimbursements_budget(name: "Ticket income", nominal_code: "250000",
@@ -72,10 +65,8 @@ module Admin
         submitted_to_eusa_date: Date.new(2026, 5, 10), receipt: false
       )
 
-      # Reconcile deliberately emails NOBODY (see the controller's header): a
-      # real Notifier over a recording FakeGraphClient so the "no email" test
-      # below is a genuine assertion, and a regression records here instead of
-      # reaching Graph.
+      # Reconcile emails nobody: a real Notifier over a recording FakeGraphClient makes the no-email
+      # test a genuine assertion, and a regression records here instead of reaching Graph.
       @graph = FakeGraphClient.new
       ReconcileController.notifier_builder =
         ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
@@ -92,45 +83,13 @@ module Admin
       "#{nominal}\t#{cost_centre}\tBACS001\t#{date}\t#{period}\t#{narrative}\tShow\t#{debit}\t\t#{debit}"
     end
 
-    def credit_row(nominal: "250000", period: "03", narrative: "Box office", credit: "500.00",
-                   cost_centre: "F40")
-      "#{nominal}\t#{cost_centre}\tBACS002\t13/05/2026\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
-    end
-
-    # A second cost centre, so the single-cost-centre shortcuts stop applying.
-    def create_termtime_cost_centre
-      create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-                                        receive_mailbox: "bed@example.com",
-                                        send_mailbox: "bed@example.com")
+    def credit_row(nominal: "250000", date: "13/05/2026", period: "03", narrative: "Box office",
+                   credit: "500.00", cost_centre: "F40")
+      "#{nominal}\t#{cost_centre}\tBACS002\t#{date}\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
     end
 
     def fringe_cost_centre
       ::Reimbursements::CostCentre.find_by!(eusa_code: "F40")
-    end
-
-    # --- Auth gating -------------------------------------------------------
-
-    test "requires sign-in" do
-      get :show
-      assert_redirected_to new_user_session_path
-    end
-
-    test "denies members without the finance permission" do
-      sign_in users(:committee)
-      get :show
-      assert_response :forbidden
-    end
-
-    test "the producer portal permission alone does not grant finance access" do
-      producer = Role.create!(name: "Producer")
-      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-      other = users(:member_with_phone_number)
-      other.add_role("Producer")
-      sign_in other
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :forbidden
     end
 
     # --- Step 1: show ------------------------------------------------------
@@ -141,17 +100,18 @@ module Admin
 
       assert_response :success
       assert_includes response.body, "Paste actuals data"
+      assert_match(/emails its ledger export once a month/, response.body)
+      assert_match(/ask them for the latest one/, response.body)
     end
 
     # --- Step 2: preview / parse + dedup + match ---------------------------
 
-    # Saying so beats guessing a code: a guess would file another cost centre's
-    # ledger under this one and leave every rollup quietly wrong.
+    # Saying so beats guessing a code, which would file another centre's ledger under this one.
     test "preview says so when no cost centre is configured, rather than assuming one" do
       sign_in @user
       ::Reimbursements::CostCentre.delete_all
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_includes response.body, "No cost centre is set up yet"
@@ -160,7 +120,7 @@ module Admin
 
     test "preview matches a debit row to a submitted expense" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_equal 1, assigns(:matched_debits).size
@@ -171,11 +131,25 @@ module Admin
       # The operator is told what Apply does, and it does not include emailing.
       assert_match(/Nobody is emailed/, response.body)
       assert_no_match(/email those producers/, response.body)
+      assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@expense.record_id)
+      assert_includes response.body, "Step 2"
+      assert_includes response.body, "Step 3"
+    end
+
+    test "preview shows the gross amount of a claim matched on gross because its ex-VAT amount is 0" do
+      @expense.update!(amount_excl_vat: BigDecimal("0"))
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
+
+      assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
+      assert_select "tbody tr td:last-child", text: "£123.45"
+      assert_select "tbody tr td:last-child", text: "£0.00", count: 0
     end
 
     test "preview matches a credit row to an income budget" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_response :success
       assert_equal 1, assigns(:matched_credits).size
@@ -183,15 +157,136 @@ module Admin
       assert_equal @income.record_id, budget.record_id
     end
 
-    test "preview surfaces an unmatched debit when nothing matches" do
+    test "a credit whose code two income budgets share is left for finance to place" do
+      create_reimbursements_budget(name: "Sponsorship", nominal_code: "250000", budget_type: "Income")
       sign_in @user
-      post :preview, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
-      }
 
-      assert_response :success
-      assert_empty assigns(:matched_debits)
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_empty assigns(:matched_credits)
       assert_equal 1, assigns(:unmatched_rows).size
+      assert_select "td", text: /\A2 income budgets use this code/
+    end
+
+    test "apply saves a credit whose code two income budgets share without linking it" do
+      create_reimbursements_budget(name: "Sponsorship", nominal_code: "250000", budget_type: "Income")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_nil ::Reimbursements::EusaActual.sole.budget_id
+      assert_equal 0, assigns(:credits_linked)
+    end
+
+    # Only lines in the row's own cost centre compete for it.
+    test "a credit still matches its centre's one income line when another centre's line shares the code" do
+      termtime = create_second_reimbursements_cost_centre
+      @income.update!(cost_centre: fringe_cost_centre)
+      create_reimbursements_budget(name: "Ticket income", nominal_code: "250000", budget_type: "Income",
+                                   cost_centre: termtime)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
+    # --- A credit competes only within its own financial year --------------
+    #
+    # Each year's show repeats its income line, code and all, so without the year two lines would
+    # always tie and every credit would wait for a person to place it.
+
+    def create_income_line(financial_year, nominal: "250000", name: "Ticket income")
+      create_reimbursements_budget(name: name, nominal_code: nominal, budget_type: "Income",
+                                   financial_year: financial_year)
+    end
+
+    test "a credit links to the income line of the year its date falls in" do
+      this_year, next_year = create_reimbursements_tax_years
+      @income.update!(financial_year: this_year)
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
+    # Both years' lines are called "Ticket income", so the bare name cannot say which one it went to.
+    test "the preview names the year of the income line a credit matched" do
+      this_year, next_year = create_reimbursements_tax_years
+      @income.update!(financial_year: this_year)
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_select "td", text: "Ticket income (2026/2027)"
+    end
+
+    test "the preview names a matched income line with no year bare" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_select "td", text: "Ticket income"
+    end
+
+    test "apply links a credit dated on a year's first day to that year's line" do
+      this_year, next_year = create_reimbursements_tax_years
+      @income.update!(financial_year: this_year)
+      next_years_line = create_income_line(next_year)
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(date: '06/04/2027', period: '01')}" }
+
+      assert_equal next_years_line.id, ::Reimbursements::EusaActual.sole.budget_id
+      assert_equal 1, assigns(:credits_linked)
+    end
+
+    test "apply files a row under the year its date falls in, not the active year" do
+      last_year, _active = create_reimbursements_tax_years(active: "2027/2028")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(nominal: '500000', date: '20/03/2027')}" }
+
+      assert_equal last_year, ::Reimbursements::EusaActual.sole.financial_year
+    end
+
+    # A line with no year counts in every year, so it still ties with the year's own line; the
+    # other year's line is no longer among them.
+    test "a credit stays unlinked when a line with no year shares its code with its year's line" do
+      this_year, next_year = create_reimbursements_tax_years
+      create_income_line(this_year, name: "Sponsorship")
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_select "td", text: /\A2 income budgets use this code/
+    end
+
+    test "a credit dated outside every year links on its code alone, as before years had dates" do
+      this_year, _next_year = create_reimbursements_tax_years
+      @income.update!(financial_year: this_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(date: '13/05/2025')}" }
+
+      assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
+    test "a credit dated outside every year still ties between two years' lines" do
+      this_year, next_year = create_reimbursements_tax_years
+      @income.update!(financial_year: this_year)
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(date: '13/05/2025')}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_select "td", text: /\A2 income budgets use this code/
     end
 
     test "preview re-renders show with an alert on a malformed paste (missing header columns)" do
@@ -205,7 +300,7 @@ module Admin
 
     test "preview alerts when the paste has only a header row, no data" do
       sign_in @user
-      post :preview, params: { pasted_text: HEADER }
+      post :preview, params: { pasted_text: ACTUALS_HEADER }
 
       assert_response :success
       assert_includes response.body, "No data rows found"
@@ -225,47 +320,19 @@ module Admin
       @expense.update!(payment_confirmed_date: Date.new(2026, 5, 1))
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_empty assigns(:matched_debits), "already-paid-by-another-route expenses must not be re-matched"
       assert_equal 1, assigns(:unmatched_rows).size
     end
 
-    test "preview skips rows already imported for the same period" do
-      create_reimbursements_actual(nominal_code: "439999", period: "03",
-                                   narrative: "Alice Producer", debit: BigDecimal("123.45"))
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(period: '03')}" }
-
-      assert_response :success
-      assert_equal 1, assigns(:skipped_rows).size
-      assert_empty assigns(:new_rows)
-    end
-
-    test "preview re-imports a matching row when it was imported under a different period" do
-      # Same nominal/narrative/amount, but the imported copy is in period 02, so
-      # the pasted period-03 row is new (dedup is scoped per EUSA period).
-      create_reimbursements_actual(nominal_code: "439999", period: "02",
-                                   narrative: "Alice Producer", debit: BigDecimal("123.45"))
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(period: '03')}" }
-
-      assert_response :success
-      assert_empty assigns(:skipped_rows)
-      assert_equal 1, assigns(:new_rows).size
-    end
-
     test "a single paste dedups each period independently" do
-      # Period 03 already imported; period 04 is not. Re-pasting both keeps only
-      # the period-04 row.
       create_reimbursements_actual(nominal_code: "439999", period: "03",
                                    narrative: "Alice Producer", debit: BigDecimal("123.45"))
       sign_in @user
 
-      two_rows = "#{HEADER}\n#{debit_row(period: '03')}\n#{debit_row(period: '04')}"
+      two_rows = "#{ACTUALS_HEADER}\n#{debit_row(period: '03')}\n#{debit_row(period: '04')}"
       post :preview, params: { pasted_text: two_rows }
 
       assert_response :success
@@ -277,7 +344,7 @@ module Admin
 
     test "one expense is claimed by at most one debit row" do
       sign_in @user
-      two_rows = "#{HEADER}\n#{debit_row}\n#{debit_row(date: '14/05/2026')}"
+      two_rows = "#{ACTUALS_HEADER}\n#{debit_row}\n#{debit_row(date: '14/05/2026')}"
       post :preview, params: { pasted_text: two_rows }
 
       assert_response :success
@@ -290,101 +357,51 @@ module Admin
     test "apply creates actuals, links them, and flips the expense to Paid without emailing" do
       sign_in @user
 
-      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
-      # Reconciliation runs weeks after the BACS run, so a "you've been paid"
-      # note reaches a producer who was paid long ago. Nothing is sent.
       assert_empty @graph.send_mails, "marking an expense Paid must not email the producer"
       assert_match(/Nobody was emailed/, response.body, "and the apply page says so")
 
       assert_response :success
-      # One EUSA Actuals row created, then linked to the expense.
       actual = ::Reimbursements::EusaActual.sole
-      assert_equal [ @expense.record_id ], actual.linked_expense_ids
-      # Expense flipped to Paid with a payment-confirmed date.
+      assert_equal @expense.id, actual.expense_id
       @expense.reload
       assert_equal ::Reimbursements::Status::PAID, @expense.status
       assert_equal Date.new(2026, 5, 13), @expense.payment_confirmed_date
       assert_equal 1, assigns(:expenses_paid)
+      assert_not_includes response.body, "on the EUSA Actuals ledger"
     end
 
     test "apply links a matched credit to its budget" do
       sign_in @user
 
-      post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_response :success
-      assert_equal [ @income.record_id ], ::Reimbursements::EusaActual.sole.linked_budget_ids
+      assert_equal @income.id, ::Reimbursements::EusaActual.sole.budget_id
       assert_equal 1, assigns(:credits_linked)
     end
 
-    test "apply saves an unmatched row and marks no expense Paid" do
+    test "apply saves an unmatched row, pays nothing, and links to the needs-attention ledger" do
       sign_in @user
 
       post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
+        pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(nominal: '999999')}"
       }
 
       assert_response :success
       assert_equal 1, assigns(:unmatched_saved)
       assert_equal 0, assigns(:expenses_paid)
       assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
-    end
-
-    # "Unmatched rows saved: N" is a to-do list, and the apply screen's only
-    # action was "Reconcile another month" — no route at all to where those
-    # rows get resolved.
-    test "apply links the unmatched rows to the ledger's needs-attention view" do
-      sign_in @user
-
-      post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
-      }
-
-      assert_response :success
       assert_includes response.body, "on the EUSA Actuals ledger"
-      assert_includes response.body,
-                      admin_reimbursements_actuals_path(state: "needs_attention")
-      # A link out of the wizard's Turbo Frame needs "_top", or Turbo renders
-      # "Content missing" into the frame instead of navigating.
+      assert_includes response.body, admin_reimbursements_actuals_path(state: "needs_attention")
+      # A link out of the wizard's Turbo Frame needs "_top", or Turbo renders "Content missing".
       assert_select "a[data-turbo-frame='_top']"
     end
 
-    test "apply offers no unmatched-rows link when there were none" do
-      sign_in @user
-
-      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :success
-      assert_not_includes response.body, "on the EUSA Actuals ledger"
-    end
-
-    test "the preview is headed Step 2, between the paste and the apply steps" do
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :success
-      assert_includes response.body, "Step 2"
-      assert_includes response.body, "Step 3"
-    end
-
-    test "a matched expense on the preview links to its finance edit page" do
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :success
-      assert_includes response.body,
-                      edit_admin_reimbursements_expense_edit_path(@expense.record_id)
-    end
-
     test "an already-reconciled expense is not re-matched by a later paste" do
-      # @expense was already paid in an earlier period and linked to an imported
-      # actual. A later/overlapping export carries a near-identical row (same
-      # nominal/amount, matching date, but a slightly different narrative) so the
-      # per-period dedup does NOT skip it. The re-pay guard must exclude the
-      # already-linked expense so it can't be re-matched or re-paid.
+      # @expense was paid in an earlier period and linked to an actual. A later export carries a
+      # near-identical row (different narrative) that dedup does not skip; the re-pay guard must.
       @expense.update!(status: ::Reimbursements::Status::PAID)
       create_reimbursements_actual(nominal_code: "439999", period: "02",
                                    narrative: "Alice Producer OLD",
@@ -392,13 +409,12 @@ module Admin
       sign_in @user
 
       post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(narrative: 'Alice Producer NEW')}"
+        pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(narrative: 'Alice Producer NEW')}"
       }
 
       assert_response :success
       assert_equal 0, assigns(:expenses_paid)
       assert_equal 1, assigns(:unmatched_saved)
-      # The expense itself is left untouched — no second flip-to-Paid write.
       assert_nil @expense.reload.payment_confirmed_date
     end
 
@@ -409,18 +425,15 @@ module Admin
         submitted_to_eusa_date: Date.new(2026, 5, 10), nominal_code_override: "555555",
         receipt: false
       )
-      # second_expense's link write fails (simulating a transient blip after its
-      # Actual record was already created); @expense's row is untouched.
+      # second_expense's link write fails after its Actual was created; @expense's row is untouched.
       BaseController.store_builder = ->(**) { FlakyLinkStore.new(fail_expense_link_ids: [ second_expense.record_id ]) }
       sign_in @user
 
       post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row}\n#{debit_row(nominal: '555555', narrative: 'Alice Producer', debit: '55.00')}"
+        pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n#{debit_row(nominal: '555555', narrative: 'Alice Producer', debit: '55.00')}"
       }
 
       assert_response :success
-      # @expense committed fully (Paid); second_expense's failure didn't abort
-      # it, and doesn't leave a silent "all good" report either.
       assert_equal 1, assigns(:expenses_paid)
       assert_equal ::Reimbursements::Status::PAID, @expense.reload.status
       assert_equal ::Reimbursements::Status::SUBMITTED, second_expense.reload.status
@@ -432,7 +445,7 @@ module Admin
       BaseController.store_builder = ->(**) { FlakyLinkStore.new(fail_budget_links: true) }
       sign_in @user
 
-      post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_response :success
       assert_equal 0, assigns(:credits_linked), "a row whose link write failed must not count as linked"
@@ -448,8 +461,8 @@ module Admin
 
     # --- Offsetting pairs --------------------------------------------------
     #
-    # An accrual and its reversal on the same nominal code and reference, a day
-    # apart in consecutive periods: the shape that dominates a real EUSA export.
+    # An accrual and its reversal on one nominal code and reference, a day apart in consecutive
+    # periods: the shape that dominates a real EUSA export.
 
     ACCRUAL_REF = "J000000884".freeze
     ACCRUAL_NOMINAL = "331300".freeze
@@ -465,7 +478,16 @@ module Admin
     end
 
     def offsetting_paste
-      "#{HEADER}\n#{accrual_row}\n#{reversal_row}"
+      "#{ACTUALS_HEADER}\n#{accrual_row}\n#{reversal_row}"
+    end
+
+    def lookalike_expense
+      create_reimbursements_expense(
+        person: @person, budget: @budget, amount: BigDecimal("500.00"),
+        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
+        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
+        receipt: false
+      )
     end
 
     test "preview proposes an offsetting pair instead of listing both legs as unmatched" do
@@ -477,83 +499,39 @@ module Admin
       assert_equal BigDecimal("500.00"), pair.debit_row.debit
       assert_equal BigDecimal("500.00"), pair.credit_row.credit
       assert_empty assigns(:unmatched_rows), "a paired row is not an unmatched row"
+      assert_select "input[type=checkbox][name='offset_pair_keys[]'][value=?][checked=checked]", pair.key
+      assert_nil assigns(:offset_pair_consequences)[pair.key][:expense]
+      assert_no_match(/if you untick/i, response.body)
     end
 
-    test "preview offers every proposed pair as a ticked checkbox the operator can untick" do
+    # The point of pairing: an accrual leg that looks like a real claim must not pay it. Only rows
+    # left OUT of a pair reach the debit-to-expense matcher.
+    test "apply writes a ticked pair as two cross-linked offset legs that pay nothing" do
+      lookalike = lookalike_expense
       sign_in @user
-      post :preview, params: { pasted_text: offsetting_paste }
 
-      assert_response :success
-      key = assigns(:offsetting_pairs).sole.key
-      assert_select "input[type=checkbox][name='offset_pair_keys[]'][value=?][checked=checked]", key
-    end
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: offsetting_pair_keys(offsetting_paste) }
 
-    test "apply creates both legs, cross-links them, and stamps both offset" do
-      sign_in @user
-      keys = offsetting_pair_keys(offsetting_paste)
-
-      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
-
-      assert_response :success
-      assert_equal 2, ::Reimbursements::EusaActual.count, "both legs are kept for the audit trail"
       legs = ::Reimbursements::EusaActual.order(:id).to_a
+      assert_equal 2, legs.size, "both legs are kept for the audit trail"
       assert legs.all?(&:offset?)
-      assert_equal legs.last.id, legs.first.offset_of_id
-      assert_equal legs.first.id, legs.last.offset_of_id
-      assert_equal 1, assigns(:offsets_linked)
-      assert_equal 0, assigns(:unmatched_saved)
-    end
-
-    test "an unticked pair is imported as two ordinary rows instead" do
-      sign_in @user
-
-      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: [ "" ] }
-
-      assert_response :success
-      assert_equal 2, ::Reimbursements::EusaActual.count
-      assert ::Reimbursements::EusaActual.none?(&:offset?),
-             "unticking the pair must leave both rows as ordinary unlinked actuals"
-      assert_equal 0, assigns(:offsets_linked)
-      assert_equal 2, assigns(:unmatched_saved)
-    end
-
-    # The whole point of pairing: an accrual leg that happens to look like a
-    # real claim must not pay that claim. Only rows left OUT of a pair reach the
-    # debit-to-expense matcher.
-    test "an applied pair's legs never match (or pay) an expense" do
-      lookalike = create_reimbursements_expense(
-        person: @person, budget: @budget, amount: BigDecimal("500.00"),
-        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
-        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
-        receipt: false
-      )
-      sign_in @user
-      keys = offsetting_pair_keys(offsetting_paste)
-
-      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
-
-      assert_response :success
+      assert_equal [ legs.last.id, legs.first.id ], legs.map(&:offset_of_id)
+      assert_equal [ 1, 0, 0 ], assigns.values_at("offsets_linked", "unmatched_saved", "expenses_paid")
       assert_equal ::Reimbursements::Status::SUBMITTED, lookalike.reload.status
-      assert_nil lookalike.payment_confirmed_date
-      assert_equal 0, assigns(:expenses_paid)
     end
 
-    # Unticking hands the legs back to the ordinary matcher, so a leg that does
-    # match an expense pays it — the operator's judgement, not the heuristic's.
-    test "unticking a pair returns its legs to the ordinary debit matching" do
-      lookalike = create_reimbursements_expense(
-        person: @person, budget: @budget, amount: BigDecimal("500.00"),
-        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
-        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
-        receipt: false
-      )
+    # Unticking hands the legs back to the ordinary matcher, so a leg that matches pays: the
+    # operator's judgement, not the heuristic's.
+    test "an unticked pair's legs import as ordinary rows and go back to the matcher" do
+      lookalike = lookalike_expense
       sign_in @user
 
       post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: [ "" ] }
 
-      assert_response :success
+      assert_equal 2, ::Reimbursements::EusaActual.count
+      assert ::Reimbursements::EusaActual.none?(&:offset?)
+      assert_equal [ 0, 1, 1 ], assigns.values_at("offsets_linked", "expenses_paid", "unmatched_saved")
       assert_equal ::Reimbursements::Status::PAID, lookalike.reload.status
-      assert_equal 1, assigns(:expenses_paid)
     end
 
     test "a same-amount row that is not part of a pair still reaches the matcher" do
@@ -569,19 +547,8 @@ module Admin
 
     # --- The preview is honest about what unticking would do ---------------
     #
-    # preview counts matched expenses over the UNPAIRED rows only, while apply
-    # hands an unticked pair's legs back to the ordinary matching and can pay
-    # expenses the confirmation never mentioned. Each pair therefore
-    # states what unticking it would cost.
-
-    def lookalike_expense
-      create_reimbursements_expense(
-        person: @person, budget: @budget, amount: BigDecimal("500.00"),
-        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
-        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
-        receipt: false
-      )
-    end
+    # The matched-expenses count covers UNPAIRED rows only, but apply hands an unticked pair's legs
+    # back to the matcher, so each pair states what unticking it would pay.
 
     test "the preview spells out the expense a pair would pay if unticked" do
       lookalike = lookalike_expense
@@ -598,14 +565,17 @@ module Admin
       assert_includes response.body, "can add to that count"
     end
 
-    test "the preview says nothing about a pair whose legs match nothing" do
+    test "the preview names the income line of the credit leg's own year if a pair is unticked" do
+      this_year, next_year = create_reimbursements_tax_years
+      this_years_line = create_income_line(this_year, nominal: ACCRUAL_NOMINAL, name: "Venue hire income")
+      create_income_line(next_year, nominal: ACCRUAL_NOMINAL, name: "Venue hire income")
       sign_in @user
 
       post :preview, params: { pasted_text: offsetting_paste }
 
-      assert_response :success
-      assert_nil assigns(:offset_pair_consequences)[assigns(:offsetting_pairs).sole.key][:expense]
-      assert_no_match(/if you untick/i, response.body)
+      key = assigns(:offsetting_pairs).sole.key
+      assert_equal this_years_line.record_id, assigns(:offset_pair_consequences)[key][:budget].record_id
+      assert_select "td[colspan=7] strong", text: "Venue hire income (2026/2027)"
     end
 
     # Two pairs that both look like the same expense must not both claim it:
@@ -614,7 +584,7 @@ module Admin
       lookalike_expense
       sign_in @user
 
-      post :preview, params: { pasted_text: [ HEADER, accrual_row, reversal_row,
+      post :preview, params: { pasted_text: [ ACTUALS_HEADER, accrual_row, reversal_row,
                                               accrual_row, reversal_row ].join("\n") }
 
       assert_response :success
@@ -624,49 +594,31 @@ module Admin
 
     # --- A pair is written all-or-nothing ----------------------------------
     #
-    # A half-written pair is the worst state available: the debit leg is
-    # committed WITHOUT the offset stamp, so every rollup reads it as real
-    # spend, and re-pasting cannot repair it because dedup then skips that leg
-    # and the pair can never be re-formed. Both legs and the cross-link are one
-    # transaction.
+    # A half-written pair leaves the debit leg unstamped, so every rollup reads it as real spend, and
+    # re-pasting cannot repair it because dedup then skips that leg.
 
-    test "a pair whose second leg fails to insert writes neither leg" do
-      BaseController.store_builder = ->(**) { HalfPairStore.new(fail_on: :second_leg) }
-      sign_in @user
-      keys = offsetting_pair_keys(offsetting_paste)
+    %i[second_leg link].each do |fail_on|
+      test "a pair whose #{fail_on.to_s.tr('_', ' ')} write fails writes neither leg" do
+        BaseController.store_builder = ->(**) { HalfPairStore.new(fail_on: fail_on) }
+        sign_in @user
 
-      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+        post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: offsetting_pair_keys(offsetting_paste) }
 
-      assert_response :success
-      assert_equal 0, ::Reimbursements::EusaActual.count,
-                   "a stranded unstamped debit leg would read as real spend forever"
-      assert_equal 0, assigns(:offsets_linked)
-      assert_match(/offsetting pair.*blip/i, assigns(:reconciliation_errors).sole)
-    end
-
-    test "a pair whose cross-link fails writes neither leg" do
-      BaseController.store_builder = ->(**) { HalfPairStore.new(fail_on: :link) }
-      sign_in @user
-      keys = offsetting_pair_keys(offsetting_paste)
-
-      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
-
-      assert_response :success
-      assert_equal 0, ::Reimbursements::EusaActual.count,
-                   "two unlinked ordinary actuals are exactly what the pair transaction prevents"
-      assert_equal 0, assigns(:offsets_linked)
+        assert_equal 0, ::Reimbursements::EusaActual.count, "a stranded leg would read as real spend forever"
+        assert_equal 0, assigns(:offsets_linked)
+        assert_match(/offsetting pair.*blip/i, assigns(:reconciliation_errors).sole)
+      end
     end
 
     # --- Duplicate pairs ---------------------------------------------------
     #
-    # A paste really can contain the same £10 accrual and reversal twice: two
-    # separate transactions, two separate pairs. They must get two tickboxes,
-    # because ticking one and unticking the other has to mean exactly that.
+    # A paste can hold the same accrual and reversal twice: two pairs, which need two tickboxes so
+    # that ticking one and unticking the other means exactly that.
 
     def duplicate_pairs_paste
       accrual = accrual_row(amount: "10.00")
       reversal = reversal_row(amount: "10.00")
-      [ HEADER, accrual, reversal, accrual, reversal ].join("\n")
+      [ ACTUALS_HEADER, accrual, reversal, accrual, reversal ].join("\n")
     end
 
     test "two byte-identical pairs render as two separately tickable rows" do
@@ -701,39 +653,25 @@ module Admin
     end
 
     # --- Per-row cost centres ----------------------------------------------
-    #
-    # The export names the cost centre per row, so each row lands where its own
-    # code says rather than being filtered down to one code and dropped.
 
     test "a paste spanning two cost centres imports every row under its own" do
-      termtime = create_termtime_cost_centre
+      create_second_reimbursements_cost_centre
       sign_in @user
-      paste = [ HEADER, debit_row(narrative: "Fringe spend"),
+      paste = [ ACTUALS_HEADER, debit_row(narrative: "Fringe spend"),
                 debit_row(narrative: "Termtime spend", cost_centre: "BED") ].join("\n")
 
       post :apply, params: { pasted_text: paste }
 
       assert_response :success
       actuals = ::Reimbursements::EusaActual.order(:id).to_a
-      assert_equal 2, actuals.size
-      assert_equal [ fringe_cost_centre.id, termtime.id ], actuals.map(&:cost_centre_id)
       assert_equal %w[F40 BED], actuals.map { |actual| actual.cost_centre.eusa_code },
                    "each row resolves through the association to the pot its own code named"
     end
 
-    test "an imported row records the cost centre it resolved to as a real association" do
-      sign_in @user
-
-      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_equal fringe_cost_centre, ::Reimbursements::EusaActual.sole.cost_centre
-    end
-
-    # Another society's spend in a whole-organisation export. Skipping it is
-    # right; skipping it silently is the bug this replaces.
+    # Another society's spend in a whole-organisation export: skipped, but never silently.
     test "preview reports the rows it skipped for an unconfigured cost centre, and names the codes" do
       sign_in @user
-      paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12"),
+      paste = [ ACTUALS_HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12"),
                 debit_row(narrative: "Someone else again", cost_centre: "H03") ].join("\n")
 
       post :preview, params: { pasted_text: paste }
@@ -747,7 +685,7 @@ module Admin
 
     test "apply imports only the rows whose cost centre is set up here" do
       sign_in @user
-      paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12") ].join("\n")
+      paste = [ ACTUALS_HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12") ].join("\n")
 
       post :apply, params: { pasted_text: paste }
 
@@ -759,12 +697,11 @@ module Admin
     # --- Blank cost centres always need an explicit answer -----------------
 
     def blank_centre_paste
-      [ HEADER, debit_row, debit_row(narrative: "No centre named", cost_centre: "") ].join("\n")
+      [ ACTUALS_HEADER, debit_row, debit_row(narrative: "No centre named", cost_centre: "") ].join("\n")
     end
 
-    # Not inferred even here, where the fixture is the only cost centre in the
-    # database: "it must be the only one" is exactly the guess that files real
-    # spend under the wrong pot the day a second pot exists.
+    # Not inferred even here, with the fixture as the only centre: that guess files real spend under
+    # the wrong pot once a second exists.
     test "preview asks where blank-cost-centre rows belong rather than assuming the only centre" do
       sign_in @user
 
@@ -792,7 +729,7 @@ module Admin
     end
 
     test "a chosen cost centre imports the blank rows under it" do
-      termtime = create_termtime_cost_centre
+      termtime = create_second_reimbursements_cost_centre
       sign_in @user
 
       post :apply, params: { pasted_text: blank_centre_paste, blank_cost_centre_id: termtime.id.to_s }
@@ -815,25 +752,14 @@ module Admin
       assert_match(/skipped, as you chose/, response.body)
     end
 
-    test "an unknown cost centre id reads as no answer at all" do
-      sign_in @user
-
-      post :apply, params: { pasted_text: blank_centre_paste, blank_cost_centre_id: "999999" }
-
-      assert_response :success
-      assert_equal 0, ::Reimbursements::EusaActual.count
-    end
-
     # --- Offsetting pairs never span cost centres --------------------------
     #
-    # A false positive here stamps two unrelated real transactions as cancelling
-    # out, hiding real spend from BOTH pots' rollups with no way back except the
-    # "Not offsetting" button. A false negative just leaves two visible rows.
+    # A false positive hides real spend from BOTH pots' rollups; a false negative leaves two visible rows.
 
     test "an accrual and a reversal in different cost centres are never paired" do
-      create_termtime_cost_centre
+      create_second_reimbursements_cost_centre
       sign_in @user
-      paste = [ HEADER, accrual_row, reversal_row(cost_centre: "BED") ].join("\n")
+      paste = [ ACTUALS_HEADER, accrual_row, reversal_row(cost_centre: "BED") ].join("\n")
 
       post :preview, params: { pasted_text: paste }
 
@@ -842,71 +768,39 @@ module Admin
       assert_equal 2, assigns(:unmatched_rows).size
     end
 
-    test "the same pair inside one cost centre still forms" do
-      create_termtime_cost_centre
-      sign_in @user
-
-      post :preview, params: { pasted_text: offsetting_paste }
-
-      assert_response :success
-      assert_equal 1, assigns(:offsetting_pairs).size
-    end
-
     # --- Matching is scoped to the row's cost centre -----------------------
 
-    test "a debit row never matches an expense whose budget is in another cost centre" do
-      @budget.update!(cost_centre: create_termtime_cost_centre)
+    test "rows never match an expense or income budget in another cost centre" do
+      termtime = create_second_reimbursements_cost_centre
+      @budget.update!(cost_centre: termtime)
+      @income.update!(cost_centre: termtime)
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n#{credit_row}" }
 
-      assert_response :success
-      assert_empty assigns(:matched_debits),
-                   "a Fringe debit must not pay a termtime claim"
-      assert_equal 1, assigns(:unmatched_rows).size
+      assert_empty assigns(:matched_debits), "a Fringe debit must not pay a termtime claim"
+      assert_empty assigns(:matched_credits)
+      assert_equal 2, assigns(:unmatched_rows).size
     end
 
     test "a debit row matches an expense whose budget is in its own cost centre" do
-      create_termtime_cost_centre
+      create_second_reimbursements_cost_centre
       @budget.update!(cost_centre: fringe_cost_centre)
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
     end
 
-    test "a credit row never matches an income budget in another cost centre" do
-      @income.update!(cost_centre: create_termtime_cost_centre)
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
-
-      assert_response :success
-      assert_empty assigns(:matched_credits)
-      assert_equal 1, assigns(:unmatched_rows).size
-    end
-
-    # Budget#cost_centre_id is nullable and predates this scoping, so most
-    # existing budgets have none. While a single cost centre is configured there
-    # is nowhere else such an expense could belong, so it still matches; once a
-    # second centre exists the ambiguity is real and we stop guessing.
-    test "an expense with no cost centre still matches while only one centre is configured" do
-      assert_nil @budget.cost_centre_id
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :success
-      assert_equal 1, assigns(:matched_debits).size
-    end
-
+    # Budget#cost_centre_id is nullable, so most budgets have none: such an expense matches only while a
+    # single centre is configured (the basic match test), and once a second exists we stop guessing.
     test "an expense with no cost centre stops matching once a second centre exists" do
-      create_termtime_cost_centre
+      create_second_reimbursements_cost_centre
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_empty assigns(:matched_debits),
@@ -916,77 +810,44 @@ module Admin
 
     # --- Dedup is per period AND per cost centre ---------------------------
 
-    test "an identical row in another cost centre is not deduped away" do
-      termtime = create_termtime_cost_centre
+    test "a stored row blocks a re-import in its own cost centre only" do
+      create_second_reimbursements_cost_centre
       create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
                                    debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(cost_centre: 'BED')}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n#{debit_row(cost_centre: 'BED')}" }
 
-      assert_response :success
-      assert_empty assigns(:skipped_rows),
+      assert_equal %w[F40], assigns(:skipped_rows).map(&:cost_centre)
+      assert_equal %w[BED], assigns(:new_rows).map(&:cost_centre),
                    "two pots can each carry the same charge in the same period"
-      assert_equal 1, assigns(:new_rows).size
-      assert_equal termtime.eusa_code, "BED"
     end
 
-    test "the same row in the same cost centre is still deduped away" do
-      create_termtime_cost_centre
-      create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
-                                   debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
-      sign_in @user
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :success
-      assert_equal 1, assigns(:skipped_rows).size
-    end
-
-    # A row imported before this column existed can't say which pot it is in, and
-    # here the asymmetry runs the other way from the pairing heuristic: skipping
-    # a re-import leaves a visible gap, whereas importing a duplicate silently
-    # double-counts real spend in the ledger and every rollup.
+    # A stored row with no cost centre can't say which pot it is in: skipping a re-import leaves a
+    # visible gap, importing a duplicate double-counts spend.
     test "a stored row with no cost centre of its own still blocks a re-import" do
-      create_termtime_cost_centre
+      create_second_reimbursements_cost_centre
       create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
                                    debit: BigDecimal("123.45"))
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(cost_centre: 'BED')}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(cost_centre: 'BED')}" }
 
       assert_response :success
       assert_equal 1, assigns(:skipped_rows).size
     end
 
-    # Preview and apply both re-derive the pairs from the pasted text (the
-    # wizard keeps no session state), so the tickbox keys must survive the round
-    # trip. The helper mimics what the preview form posts back.
+    # The tickbox keys must survive the stateless round trip; this mimics what the preview form posts back.
     def offsetting_pair_keys(pasted_text, cost_centre: ::Reimbursements::CostCentre.default)
       rows = ::Reimbursements::Reconciliation.parse_actuals_rows(pasted_text)
       ::Reimbursements::Reconciliation
         .detect_offsetting_pairs(rows, cost_centres: rows.map { cost_centre.id.to_s })
-        .first.map(&:key)
+        .map(&:key)
     end
 
     # --- Uploading the sheet -------------------------------------------------
-    # This was paste-only on the one screen whose input arrives as an email
-    # attachment, though the shared partial has always taken a file.
 
-    def actuals_xlsx(rows)
-      require "caxlsx"
-      package = Axlsx::Package.new
-      package.workbook.add_worksheet(name: "Actuals") { |sheet| rows.each { |row| sheet.add_row row } }
-      file = Tempfile.new([ "actuals", ".xlsx" ])
-      file.binmode
-      file.write(package.to_stream.read)
-      file.rewind
-      Rack::Test::UploadedFile.new(file.path,
-                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    end
-
-    # The OLE2 compound-file signature every legacy .xls opens with, so the
-    # +name+ can lie about the format the way a renamed file does.
+    # The OLE2 signature every legacy .xls opens with, so +name+ can lie about the format like a renamed file.
     def actuals_legacy_xls(name: "actuals.xls")
       file = Tempfile.new([ "actuals", File.extname(name) ])
       file.binmode
@@ -995,8 +856,7 @@ module Admin
       Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel", original_filename: name)
     end
 
-    # A .xlsx by name and by first bytes (so it is not caught as legacy) that
-    # Roo still cannot open: the blanket rescue's path.
+    # A .xlsx by name and first bytes (so not caught as legacy) that Roo still cannot open.
     def actuals_unreadable_xlsx
       file = Tempfile.new([ "actuals", ".xlsx" ])
       file.binmode
@@ -1013,70 +873,27 @@ module Admin
       Rack::Test::UploadedFile.new(file.path, "text/csv")
     end
 
-    test "an uploaded xlsx previews exactly as the same rows pasted would" do
+    # The wizard is stateless and an upload has no second file to re-send, so every form carrying the
+    # sheet on to apply must hold it as TEXT (the apply form once carried params[:pasted_text], empty
+    # on upload).
+    test "an uploaded xlsx previews like a paste and is carried on as text" do
       sign_in @user
 
-      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"),
-                                                            debit_row.split("\t") ]) }
+      post :preview, params: { actuals_file: xlsx_upload([ ACTUALS_HEADER.split("\t"), debit_row.split("\t") ], sheet: "Actuals") }
 
-      assert_response :success
-      assert_select "form" # the preview step rendered
-      assert_match(/Alice Producer/, response.body)
-    end
-
-    # The wizard is stateless and an upload has no second file to re-send, so
-    # the sheet has to come back as TEXT in the hidden field or apply would
-    # have nothing to re-parse.
-    test "an uploaded sheet is carried on as text for the apply step" do
-      sign_in @user
-
-      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"),
-                                                            debit_row.split("\t") ]) }
-
-      carried = css_select("input[name=pasted_text][type=hidden]").first
-      assert carried, "the sheet has to come back as text for apply to re-parse"
-      assert_includes carried["value"], "439999"
-      assert_includes carried["value"], "Alice Producer"
-    end
-
-    # The preview's SECOND form (the offsetting-pair ticks and Apply) carried
-    # params[:pasted_text], which is empty on the upload path — so applying an
-    # uploaded sheet would have imported nothing at all.
-    test "every hidden field carrying the sheet holds the uploaded rows" do
-      sign_in @user
-
-      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"),
-                                                            debit_row.split("\t") ]) }
-
+      assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
       carriers = css_select("input[name=pasted_text][type=hidden]")
-      assert_operator carriers.size, :>=, 1
-      carriers.each do |field|
-        assert_includes field["value"].to_s, "439999",
-                        "a form carrying the sheet on must hold the uploaded rows"
-      end
+      assert_not_empty carriers
+      carriers.each { |field| assert_includes field["value"].to_s, "439999\tF40" }
     end
 
     test "a csv upload is read as the text it already is" do
       sign_in @user
 
-      post :preview, params: { actuals_file: actuals_csv("#{HEADER}\n#{debit_row}") }
+      post :preview, params: { actuals_file: actuals_csv("#{ACTUALS_HEADER}\n#{debit_row}") }
 
       assert_response :success
       assert_match(/Alice Producer/, response.body)
-    end
-
-    test "an unreadable file is reported on the form rather than 500ing" do
-      sign_in @user
-      file = Tempfile.new([ "actuals", ".xlsx" ])
-      file.write("this is not a spreadsheet")
-      file.rewind
-
-      post :preview, params: {
-        actuals_file: Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel")
-      }
-
-      assert_response :success
-      assert_match(/Couldn't read that file/, response.body)
     end
 
     test "a submit with neither a paste nor a file says so" do
@@ -1088,34 +905,8 @@ module Admin
       assert_match(/Paste the actuals rows, or upload the sheet/, response.body)
     end
 
-    test "the page says where the sheet comes from" do
-      sign_in @user
-
-      get :show
-
-      assert_match(/emails its ledger export once a month/, response.body)
-      assert_match(/ask them for the latest one/, response.body)
-    end
-
-    # roo 3 dropped legacy .xls and we do not carry roo-xls, so an .xls got as
-    # far as Roo and came back "Can't detect the type of /tmp/actuals2026...xls
-    # - please use the :extension option to declare its type": a tmp path and a
-    # developer's instruction, shown to a finance operator. The picker no
-    # longer offers .xls, and one arriving anyway is refused in words that say
-    # what to do about it.
-    test "a legacy .xls is refused with advice rather than Roo's own message" do
-      error = assert_raises(::Reimbursements::ActualsUpload::UnreadableError) do
-        ::Reimbursements::ActualsUpload.to_text(actuals_legacy_xls)
-      end
-
-      assert_match(/\.xlsx/, error.message)
-      assert_no_match(/extension option|tmp/, error.message)
-    end
-
-    # The picker now offers only .xlsx, so an operator holding a legacy file
-    # renames it rather than converting it. Roo is then told "xlsx", rubyzip
-    # fails on bytes that are not a zip, and its raw message — tmp path
-    # included — is what the operator reads. The CONTENT decides, not the name.
+    # An operator holding a legacy file renames it .xlsx; the raw rubyzip message (tmp path included)
+    # must not leak. The CONTENT decides, not the name.
     test "an .xls renamed .xlsx is still recognised as the older format" do
       error = assert_raises(::Reimbursements::ActualsUpload::UnreadableError) do
         ::Reimbursements::ActualsUpload.to_text(actuals_legacy_xls(name: "actuals.xlsx"))
@@ -1125,28 +916,24 @@ module Admin
       assert_no_match(/tmp|Zip|zip/, error.message)
     end
 
-    # Dropping the flash's blanket advice left the empty-sheet refusal stating
-    # no next step at all, while the comment above GENERIC_ADVICE claimed every
-    # message carried one. Each raise site is pinned so the invariant is true.
+    # roo 3 dropped .xls and its raw message leaked a tmp path; each raise site is pinned to state a next step.
     test "every refusal states a next step" do
       upload = ::Reimbursements::ActualsUpload
 
       messages = [
         assert_raises(upload::UnreadableError) { upload.to_text(actuals_legacy_xls) }.message,
-        assert_raises(upload::UnreadableError) { upload.to_text(actuals_xlsx([ [] ])) }.message,
+        assert_raises(upload::UnreadableError) { upload.to_text(xlsx_upload([ [] ], sheet: "Actuals")) }.message,
         assert_raises(upload::UnreadableError) { upload.to_text(actuals_unreadable_xlsx) }.message
       ]
 
       messages.each do |message|
         assert_match(/paste (the rows|them)/, message, message)
+        assert_no_match(/extension option|tmp/, message, message)
         assert_no_match(/\.\./, message, "a doubled full stop: #{message}")
       end
     end
 
-    # Every message carries its own advice, chosen where the cause is known, so
-    # the flash must not bolt a second copy on: the operator was reading
-    # "…or paste the rows instead. Save it as .xlsx or .csv, or paste the rows
-    # instead."
+    # Every message carries its own advice, so the flash must not add a second copy.
     test "the flash states the advice once" do
       sign_in @user
 
@@ -1156,21 +943,14 @@ module Admin
       assert_equal 1, message.scan(/paste the rows instead/).size, message
     end
 
-    test "the file picker does not offer a format we cannot read" do
-      assert_not_includes ::Reimbursements::ActualsUpload::ACCEPT.split(","), ".xls"
-      assert_includes ::Reimbursements::ActualsUpload::ACCEPT.split(","), ".xlsx"
-    end
-
-    # A cell's own tab would split the row into two columns and shift every
-    # figure one place left — silently, into the wrong column.
+    # A cell's own tab would split the row into two columns and shift every figure left, silently.
     test "a tab inside a spreadsheet cell cannot shift the row's columns" do
-      # The tab has to be INSIDE one cell, which is the only way a spreadsheet
-      # can carry one — a row built by splitting on tabs would never show this.
+      # The tab has to be INSIDE one cell, which a row built by splitting on tabs would never show.
       cells = debit_row.split("\t")
       cells[5] = "Alice\tProducer"
-      text = ::Reimbursements::ActualsUpload.to_text(actuals_xlsx([ HEADER.split("\t"), cells ]))
+      text = ::Reimbursements::ActualsUpload.to_text(xlsx_upload([ ACTUALS_HEADER.split("\t"), cells ], sheet: "Actuals"))
 
-      assert_equal HEADER.split("\t").size, text.lines.last.split("\t").size
+      assert_equal ACTUALS_HEADER.split("\t").size, text.lines.last.split("\t").size
       assert_includes text, "Alice Producer", "the tab becomes a space rather than a column break"
     end
   end

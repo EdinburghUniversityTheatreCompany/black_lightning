@@ -27,7 +27,8 @@
       check after changing it.
     </p>
 
-    <%= f.input :notification_email, label: "Notification email",
+    <%# as: :string: a type="email" field refuses a list of addresses, so Save would do nothing. %>
+    <%= f.input :notification_email, as: :string, label: "Notification email",
           placeholder: "finance@bedlamfringe.co.uk",
           wrapper_html: { class: (@cost_centre.notification_recipients_empty? ? "mb-2" : "mb-4") },
           hint: "This cost centre's own finance mailbox. It gets the nightly reminders: claims " \
@@ -77,11 +78,7 @@
   <% end %>
 <% end %>
 
-<%# The Microsoft 365 setup steps moved to their OWN page: they are needed once
-    per cost centre, by somebody with Exchange or SharePoint admin rights who is
-    usually not the person editing these settings, and a wall of PowerShell and
-    Graph JSON sat between the routine controls an operator edits weekly. %>
-<%= render AlertComponent.new(type: :info, html_class: "mb-4") do %>
+<%= render AlertComponent.new(type: :info) do %>
   Setting this cost centre up for the first time?
   <%= link_to "What IT has to do in Microsoft 365",
               microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key),
@@ -99,13 +96,13 @@
                 method: :post, class: btn_classes(:secondary, :sm),
                 data: { turbo_submits_with: "Testing…" } %>
   <div id="access_check_results" aria-live="polite">
-    <%= render "access_checks", checks: @access_checks %>
+    <%= render "admin/reimbursements/shared/checks", checks: @access_checks %>
   </div>
 <% end %>
 
 <%= render CardComponent.new(title: "SharePoint destinations", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
-    Where the nightly and Build Batch upload renamed receipts and the BACS request xlsx. Browse to a
+    Where Build Batch uploads renamed receipts and the BACS request xlsx. Browse to a
     folder and choose it; the drive and folder are stored so uploads land in the same place every time.
   </p>
   <%= render "folder_picker", purpose: "receipts", label: "Receipts folder",
@@ -127,4 +124,4 @@
               class: btn_classes(:secondary, :sm) %>
 <% end %>
 
-<%= render "nominal_codes", nominal_codes_locals(@cost_centre) %>
+<%= render "nominal_codes", cost_centre: @cost_centre %>

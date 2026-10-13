@@ -1,8 +1,7 @@
 require "test_helper"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  # Undoes the parallelize inherited from ActiveSupport::TestCase. Browser
-  # startup dominates these, so 8 workers measured no faster than 1.
+  # Undoes the inherited parallelize: browser startup dominates, so 8 workers measured no faster.
   parallelize(workers: 1)
 
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |driver_options|
@@ -12,16 +11,9 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
   include Warden::Test::Helpers
 
-  # Set a date input value reliably in headless Chrome.
-  #
-  # Chrome's <input type="date"> is segment-based (dd|mm|yyyy) and its built-in
-  # required validation ignores programmatically set values (el.value = ...) —
-  # it only trusts values entered via user interaction. Trying to send keystrokes
-  # is also unreliable because click→send_keys has a race condition.
-  #
-  # Solution: set the value via JS and remove the required attribute so Chrome
-  # won't block the form. Rails' own presence validation still guards the value
-  # server-side — browser_validations = true is redundant for server-validated fields.
+  # Chrome's segmented date input ignores a programmatically set value when checking
+  # `required`, and click->send_keys races. So set it by JS and drop `required`;
+  # presence is still validated server-side.
   def set_date_field(label, date)
     field_id = find_field(label)[:id]
     page.execute_script(<<~JS)
@@ -31,28 +23,46 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     JS
   end
 
-  def tom_select(text, from:)
-    select_id, option_value = tom_select_option(text, from: from)
-    execute_script("document.getElementById('#{select_id}').tomselect.setValue('#{option_value}')")
-  end
+  # Resolved by the browser, so it compares like with like whatever colour space the theme uses.
+  THEME_COLOUR = <<~JS.freeze
+    ((variable) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${variable})`;
+      document.body.appendChild(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    })(arguments[0])
+  JS
 
-  # The MULTIPLE variant: setValue replaces every choice, addItem adds one.
-  def tom_select_add(text, from:)
-    select_id, option_value = tom_select_option(text, from: from)
-    execute_script("document.getElementById('#{select_id}').tomselect.addItem('#{option_value}')")
+  def theme_colour(variable) = evaluate_script(THEME_COLOUR, variable)
+
+  def style_of(element, property) = evaluate_script("getComputedStyle(arguments[0])[arguments[1]]", element, property)
+
+  def colour_of(element) = style_of(element, "color")
+
+  def tom_select(text, from:) = tom_select_call("setValue", text, from)
+
+  # For multiple selects: setValue replaces every choice, addItem adds one.
+  def tom_select_add(text, from:) = tom_select_call("addItem", text, from)
+
+  # Clicks through the widget as a person does; Tom Select fires a native change, so Stimulus
+  # actions on the <select> run. +search+ types into a remote select's dropdown first.
+  def tom_select_click(option_text, select_id:, search: nil)
+    wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
+    wrapper.find(".ts-control").click
+    wrapper.find(".ts-dropdown input").set(search) if search
+    wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first, wait: 5).click
   end
 
   private
 
-  # Tom Select hides the native <select> and rewrites the label's `for` to its
-  # own control element, hence the "-ts-control" strip.
-  def tom_select_option(text, from:)
-    label = find("label", text: from)
-    select_id = label["for"].sub(/-ts-control$/, "")
-    option_value = evaluate_script(
-      "Array.from(document.getElementById('#{select_id}').options).find(o => o.text.trim() === '#{text.gsub("'", "\\'")}')?.value"
-    )
-    raise "tom_select: option '#{text}' not found in select '#{select_id}'" if option_value.nil?
-    [ select_id, option_value ]
+  # Tom Select rewrites the label's `for` to its own "-ts-control" element.
+  def tom_select_call(method, text, from)
+    select_id = find("label", text: from)["for"].delete_suffix("-ts-control")
+    value = evaluate_script("Array.from(document.getElementById(arguments[0]).options).find(o => o.text.trim() === arguments[1])?.value", select_id, text)
+    raise "tom_select: option '#{text}' not found in select '#{select_id}'" if value.nil?
+
+    execute_script("document.getElementById(arguments[0]).tomselect.#{method}(arguments[1])", select_id, value)
   end
 end

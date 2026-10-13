@@ -25,11 +25,9 @@
 #  index_admin_editable_blocks_on_ordering  (ordering)
 #
 class Admin::EditableBlock < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :content, length: { maximum: 16777215 }
-  validates :group, length: { maximum: 255 }
-  validates :url, length: { maximum: 255 }
+  validates :group, :url, length: { maximum: 255 }
   include MdHelper
 
   resourcify
@@ -49,7 +47,7 @@ class Admin::EditableBlock < ApplicationRecord
   scope :for_subpage, ->(subpage_type) { where("url LIKE ?", "#{subpage_type}%") }
 
   def self.groups
-    select("`group`").distinct.map(&:group).reject(&:blank?)
+    distinct.pluck(:group).compact_blank
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -64,14 +62,12 @@ class Admin::EditableBlock < ApplicationRecord
 
   private
 
+  # Old and new url, every prefix of each: get_subpage_editable_blocks caches by the full
+  # subpage_type path (e.g. "admin/resources"), not the first segment.
   def clear_navbar_cache
-    return if url.blank?
-
-    # Clear cache for each URL prefix, since get_subpage_editable_blocks caches
-    # by the full subpage_type path (e.g. "admin/resources"), not just the first segment.
-    parts = url.split("/")
-    parts.length.times do |i|
-      Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}")
+    [ url, url_previously_was ].compact_blank.uniq.each do |u|
+      parts = u.split("/")
+      parts.length.times { |i| Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}") }
     end
   end
 end

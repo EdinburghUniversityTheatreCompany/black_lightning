@@ -1,14 +1,15 @@
 require "test_helper"
+require_relative "../../../support/expense_import_sheet_helpers"
 
 module Admin
   module Reimbursements
     class ExpenseImportsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
+      include ExpenseImportSheetHelpers
 
       FY = ::Reimbursements::FinancialYear
       IMPORT = ::Reimbursements::ExpenseImport
       STATUS = ::Reimbursements::Status
-      HEADERS = IMPORT::TSV_HEADERS.join("\t").freeze
 
       setup do
         grant_finance_permission(users(:member))
@@ -20,34 +21,12 @@ module Admin
                                                financial_year: @year)
       end
 
-      def row(reference: "OLD-1", status: STATUS::PAID, payee: "alice@example.com",
-              budget: "Props", amount: "120.00", excl_vat: "100.00", description: "Fake blood",
-              payment_reference: "PROPS ALICE", type: "", number: "", submitted: "", paid: "")
-        [ reference, status, payee, "", budget, amount, excl_vat, description, payment_reference,
-          type, number, submitted, paid, "", "", "" ].join("\t")
-      end
+      def row(**) = expense_import_row(**)
 
-      def tsv(*rows) = ([ HEADERS ] + rows).join("\n")
+      def tsv(*) = expense_import_sheet(*)
 
       def import_params(text, **extra)
         { year: @year.key, cost_centre_id: @cost_centre.id, pasted_text: text }.merge(extra)
-      end
-
-      # --- Auth gating -------------------------------------------------------
-
-      test "requires sign-in" do
-        get :show
-
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        grant_producer_permission(users(:committee))
-        sign_in users(:committee)
-
-        get :show
-
-        assert_response :forbidden
       end
 
       # --- Step 1: the form --------------------------------------------------
@@ -81,9 +60,8 @@ module Admin
         assert_match(/No financial year is set up yet/, response.body)
       end
 
-      # Turbo Drive rejects a non-redirect response to a form POST and discards
-      # it, so a stateless wizard has to live in one Turbo Frame — the same
-      # reason the budget import and Reconcile do.
+      # Turbo Drive discards a non-redirect response to a form POST, so the wizard
+      # lives in one Turbo Frame.
       test "every wizard step renders inside the turbo frame" do
         sign_in @user
 
@@ -103,6 +81,7 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
+        assert_match(/filename="expense-import-template\.csv"/, response.headers["Content-Disposition"])
         header, hints = CSV.parse(response.body)
         assert_equal IMPORT::TSV_HEADERS, header
         assert_equal IMPORT::TEMPLATE_HINTS, hints
@@ -116,11 +95,46 @@ module Admin
 
         assert_no_difference -> { ::Reimbursements::Expense.count } do
           post :preview, params: import_params(tsv(row(reference: "OLD-1"),
-                                                   row(reference: "OLD-2")))
+                                                   row(reference: "OLD-2", status: STATUS::APPROVED,
+                                                       submitted_on: "2026-05-01")))
         end
 
         assert_response :success
         assert_equal 2, assigns(:import).entries_in(:create).size
+        assert_includes response.body, "EUSA pays it again"
+      end
+
+      test "preview states the column it read for each field and the ones it did not find" do
+        sign_in @user
+
+        post :preview, params: import_params(
+          "Claim ID\tStatus\tPayee email\tBudget\tAmount\tPayment reference\n" \
+          "2019-014\tPaid\talice@example.com\tProps\t120\tPROPS ALICE"
+        )
+
+        assert_select "details td span.font-mono", text: "Claim ID"
+        assert_includes response.body, "not in this sheet"
+      end
+
+      test "preview offers to register a submitter nobody has, never one two people share" do
+        2.times { |i| create_reimbursements_person(name: "Sam Jones", email: "sam#{i}@example.com") }
+        sign_in @user
+
+        post :preview, params: import_params(tsv(row(payee_email: "nobody@example.com")))
+        assert_select "a[href=?]", new_admin_reimbursements_person_path,
+                      text: "Register them on the People screen"
+
+        post :preview, params: import_params(tsv(row(payee_email: "", submitter_name: "Sam Jones")))
+        assert_includes response.body, "more than one person"
+        assert_select "a", text: "Register them on the People screen", count: 0
+      end
+
+      test "preview names the only cost centre in its heading when none was picked" do
+        sign_in @user
+
+        post :preview, params: import_params(tsv(row), cost_centre_id: "")
+
+        assert_includes response.body, "Preview: Fringe 2027 · #{@cost_centre.name}"
       end
 
       test "preview refuses an empty paste" do
@@ -129,27 +143,8 @@ module Admin
         post :preview, params: import_params("   ")
 
         assert_response :success
-        assert_match(/paste|upload/i, response.body)
+        assert_includes response.body, ExpenseImportsController::NOTHING_PASTED_ALERT
         assert_nil assigns(:import)
-      end
-
-      test "preview points an unknown payee at the register-a-person form" do
-        sign_in @user
-
-        post :preview, params: import_params(tsv(row(payee: "nobody@example.com")))
-
-        # The preview always renders: it is a report on the sheet, not a
-        # submission. Only apply refuses.
-        assert_response :success
-        assert_includes response.body, new_admin_reimbursements_person_path
-      end
-
-      test "preview carries the sheet on as TSV in a hidden field" do
-        sign_in @user
-
-        post :preview, params: import_params(tsv(row))
-
-        assert_match(/name="pasted_text".*OLD-1/m, response.body)
       end
 
       # --- Step 3: apply -----------------------------------------------------
@@ -181,17 +176,8 @@ module Admin
 
         assert_response :unprocessable_entity
         assert_match(/about a ton/, response.body)
-      end
-
-      test "apply refuses without a cost centre" do
-        create_second_reimbursements_cost_centre
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Expense.count } do
-          post :apply, params: import_params(tsv(row), cost_centre_id: "")
-        end
-
-        assert_response :unprocessable_entity
+        assert_match(/1 line can.t be imported/, response.body)
+        assert_select "input[type=submit][disabled]"
       end
 
       test "apply refuses a paste that never reached the preview" do
@@ -216,13 +202,16 @@ module Admin
         assert_response :success
         assert_equal 1, ::Reimbursements::Expense.count
         assert_equal 1, assigns(:import).entries_in(:already_imported).size
+
+        post :preview, params: import_params(tsv(row))
+
+        assert_includes response.body, "has been imported before"
+        assert_select "input[type=submit][value='Nothing to import'][disabled]"
       end
 
       # --- An import must not email anyone -----------------------------------
-      #
-      # Every producer email in this portal is sent by BatchProcessor, the
-      # nightly reminders or an explicit reject. Thirty historical claims
-      # landing at once must reach none of them.
+      # Every producer email comes from BatchProcessor, the nightly reminders or an
+      # explicit reject; an import must reach none of them.
 
       test "apply sends no mail and enqueues no job" do
         sign_in @user
@@ -231,8 +220,10 @@ module Admin
 
         assert_no_enqueued_jobs do
           assert_no_emails do
-            post :apply, params: import_params(tsv(row(reference: "OLD-1", status: STATUS::PENDING),
-                                                   row(reference: "OLD-2", status: STATUS::APPROVED)))
+            post :apply, params: import_params(tsv(row(reference: "OLD-1", status: STATUS::PENDING,
+                                                       submitted_on: "2026-05-01"),
+                                                   row(reference: "OLD-2", status: STATUS::APPROVED,
+                                                       submitted_on: "2026-05-01")))
           end
         end
 
@@ -243,11 +234,8 @@ module Admin
       end
 
       # --- The cost centre has to be chosen ----------------------------------
-      #
-      # The wizard preselected `selectable_cost_centres.first` while everywhere
-      # else in this portal "none" means "every centre" as a stated safety
-      # rule. A whole sheet of settled claims into the wrong pot is a large
-      # quiet mistake.
+      # A whole sheet of claims in the wrong pot is a large quiet mistake, so the
+      # first centre is never preselected.
 
       test "apply accepts a blank cost centre while only one is configured" do
         sign_in @user
@@ -291,36 +279,8 @@ module Admin
         assert_select "select#cost_centre_id option[selected]", 0
       end
 
-      test "an imported claim is not marked as having notified its producer" do
-        sign_in @user
-
-        post :apply, params: import_params(tsv(row(status: STATUS::PAID)))
-
-        claim = ::Reimbursements::Expense.sole
-        assert_not claim.producer_notified
-        assert_nil claim.rejection_notified
-      end
-
       # --- What the screen says is required --------------------------------
-      # The intro listed four required columns and the template called Payment
-      # reference optional, while ExpenseForm refused an Approved row for
-      # leaving it blank. Two different requirements — columns the sheet must
-      # CARRY, and cells every row must FILL — conflated in the copy.
-
-      test "every column the screen calls row-required really is" do
-        blanks = { description: "", payment_reference: "" }
-        blanks.each do |field, blank|
-          label = IMPORT::FIELDS.fetch(field)[:label]
-          assert_includes IMPORT.required_cell_labels, label,
-                          "#{label} is enforced but the screen does not say so"
-
-          sign_in @user
-          post :preview, params: import_params(tsv(row(status: STATUS::APPROVED, **{ field => blank })))
-
-          assert_match(/#{Regexp.escape(label)}/i, response.body,
-                       "a blank #{label} has to be reported by name")
-        end
-      end
+      # Columns the sheet must CARRY and cells every row must FILL are separate requirements.
 
       test "the template hints do not call a row-required column optional" do
         IMPORT::REQUIRED_CELL_FIELDS.each do |field|

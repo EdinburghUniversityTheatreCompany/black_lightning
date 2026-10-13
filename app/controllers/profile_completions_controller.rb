@@ -26,7 +26,6 @@ class ProfileCompletionsController < ApplicationController
     @user.complete_profile!
     @user.send_welcome_email
 
-    # Sign in the user if they're not already signed in
     sign_in(@user) unless user_signed_in?
 
     helpers.append_to_flash(:success, "Your profile has been completed successfully!")
@@ -36,12 +35,11 @@ class ProfileCompletionsController < ApplicationController
   private
 
   def find_user_for_profile_completion
-    # Token-based access: user arrives via email link with token param
+    # From the emailed link.
     if params[:token].present?
       user = User.find_by_profile_completion_token(params[:token])
       raise ActiveRecord::RecordNotFound, "Invalid or expired profile completion token" unless user
 
-      # If someone is logged in, they must be the same user as the token holder
       if current_user.present? && current_user != user
         raise CanCan::AccessDenied, "This profile completion link belongs to a different user."
       end
@@ -49,9 +47,7 @@ class ProfileCompletionsController < ApplicationController
       return user
     end
 
-    # Session-based access: logged-in user with incomplete profile
     if current_user.present?
-      # User has already completed their profile
       if current_user.profile_complete?
         raise CanCan::AccessDenied, "You have already completed your profile."
       end
@@ -59,7 +55,6 @@ class ProfileCompletionsController < ApplicationController
       return current_user
     end
 
-    # No token and not logged in
     raise CanCan::AccessDenied, "You need to be logged in or have a valid profile completion link to access this page."
   end
 

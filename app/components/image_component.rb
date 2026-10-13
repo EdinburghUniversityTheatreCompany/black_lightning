@@ -1,15 +1,13 @@
 class ImageComponent < ViewComponent::Base
-  # full_width is a styling decision, priority a performance one. They were one
-  # flag once and the performance half was backwards, costing a measured 1552ms
-  # of homepage LCP; loading stays unset unless priority is passed, so it falls
-  # through to config.action_view.image_loading.
+  # full_width is styling, priority is loading: only an LCP element passes priority. Loading
+  # stays unset otherwise, so it falls through to config.action_view.image_loading.
   def initialize(image:, variant: nil, full_width: true, priority: false, alt: nil,
                  srcset_variants: nil, image_options: {}, proxy: false)
     @image = image
     @variant = variant
     @full_width = full_width
     @priority = priority
-    @alt = alt
+    @alt = alt.to_s # Always emitted (WCAG 1.1.1); empty marks the image decorative.
     @srcset_variants = srcset_variants
     @image_options = image_options
     @proxy = proxy
@@ -39,19 +37,11 @@ class ImageComponent < ViewComponent::Base
     @proxy ? helpers.active_storage_proxy_url(resolved) : resolved
   end
 
-  # Always an alt attribute. Every image on the site was missing one entirely, a
-  # WCAG 2.2 1.1.1 failure; an explicit empty alt at least marks an image as
-  # decorative, which is right for the ones a caption already covers. Passed from
-  # the template rather than merged in here so it is visible at the img tag.
-  def alt_text
-    @alt.to_s
-  end
-
   def image_options
     options = @image_options.merge(dimensions)
     options = options.merge(class: "w-full h-auto #{options[:class]}") if @full_width
     options = options.merge(loading: "eager", fetchpriority: "high") if @priority
-    options = options.merge(srcset_options(options)) if srcset?
+    options = options.merge(srcset_options) if srcset?
     options
   end
 
@@ -63,18 +53,16 @@ class ImageComponent < ViewComponent::Base
     end
   end
 
-  # A phone downloading a 960px card into a 412px viewport is roughly 2.3x the
-  # pixels it can show. Offering the smaller variants that already exist lets the
-  # browser pick; the URLs have to be proxied ones, so this needs proxy.
+  # Lets the browser pick a smaller variant on a phone. Needs proxy: srcset URLs must be proxied.
   def srcset?
     @srcset_variants.present? && @proxy
   end
 
-  def srcset_options(options)
+  def srcset_options
     candidates = @srcset_variants.map do |v|
       "#{helpers.active_storage_proxy_url(@image.variant(v))} #{v[:resize_to_fill][0]}w"
     end
 
-    { srcset: candidates.join(", "), sizes: options.delete(:sizes) || "(max-width: 768px) 100vw, 33vw" }
+    { srcset: candidates.join(", "), sizes: "(max-width: 768px) 100vw, 33vw" }
   end
 end

@@ -44,14 +44,9 @@ module ActiveStorageHelper
     end
   end
 
-  # format:, not convert:. Rails derives ActiveStorage::Variation#content_type from the :format
-  # key alone; :convert is passed through to image_processing, so the bytes really were WebP
-  # while every variant was served declaring image/png or image/jpeg. Browsers sniff the bytes
-  # and cope, which is why it went unnoticed -- Facebook's and LinkedIn's og:image validators
-  # read the header instead.
-  #
-  # Note this changes the variation key, so every variant URL changes and the whole set
-  # regenerates on first request after deploy.
+  # format:, not convert:. Rails derives a variant's content_type from :format alone, and
+  # og:image validators read that header rather than sniffing the bytes.
+  # Changing a variant re-keys every URL and regenerates the whole set on first request.
   def thumb_variant(scale_factor = 1)
     { loader: { n: -1 }, resize_to_fill: [ 192 * scale_factor, 100 * scale_factor ], format: "webp", saver: { Q: 80 } }
   end

@@ -24,8 +24,9 @@ export default class extends Controller {
     this.inputTarget.focus()
   }
 
+  // titleText, not title: the message carries a person's name, which they edit themselves.
   #showResult(type, message, imageUrl = null) {
-    const options = { icon: type, title: message }
+    const options = { icon: type, titleText: message }
     if (imageUrl) {
       Object.assign(options, { imageUrl, imageWidth: 150, imageHeight: 150, imageAlt: "User Avatar" })
     }

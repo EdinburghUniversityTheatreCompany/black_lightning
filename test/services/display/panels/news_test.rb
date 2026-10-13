@@ -7,10 +7,6 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
     FactoryBot.create(:news, show_public: true, publish_date: published_at, title: title)
   end
 
-  test "is unavailable when there is no published news" do
-    assert_not Display::Panels::News.new.available?
-  end
-
   test "lists the most recent published items, newest first" do
     older = headline("Older", 3.days.ago)
     newest = headline("Newest", 1.day.ago)
@@ -28,31 +24,8 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
     assert_not Display::Panels::News.new.available?
   end
 
-  # The slide is read from across a room in about twelve seconds, so the list is
-  # bounded by the space it has rather than by a fixed count.
-  test "fills to a line budget rather than a fixed number of headlines" do
-    8.times { |i| headline("Short #{i}", (i + 1).days.ago) }
-
-    listed = Display::Panels::News.new.locals[:articles]
-
-    assert_operator listed.size, :<=, Display::Panels::News::MAX_ITEMS
-    assert_operator listed.size, :>, 1, "short headlines should not be cut down to one"
-  end
-
-  test "a headline long enough to wrap crowds out the ones below it" do
-    long = "EUTC Week 14 Newsletter - GM4, Rocky Horror Murder Mystery, " \
-           "Turin/Bedlam Exchange Project \"Getting Naked For You\""
-    # Distinct titles: News slugs from the title and must be unique.
-    4.times { |i| headline("#{long} #{i}", (i + 1).days.ago) }
-
-    listed = Display::Panels::News.new.locals[:articles]
-
-    assert_operator listed.size, :<, 4, "wrapping headlines should yield fewer items, not overflow"
-    assert_operator listed.size, :>=, 1, "at least the newest headline is always shown"
-  end
-
-  # The real bedlamtheatre.co.uk/news headlines: all four fit, coming to 648px of
-  # the 680px the list has. This is what a too-low CHARS_PER_LINE breaks first.
+  # The real bedlamtheatre.co.uk/news headlines: 648px of the list's 680px. A too-low
+  # CHARS_PER_LINE breaks this first.
   test "the four real newsletter headlines all fit on the slide" do
     [
       "EUTC Week 14 Newsletter - GM4, Rocky Horror Murder Mystery, " \
@@ -66,8 +39,7 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
     assert_equal 4, Display::Panels::News.new.locals[:articles].size
   end
 
-  # The other direction: a headline charged fewer lines than it renders as is how
-  # the QR code gets pushed off screen.
+  # A headline charged fewer lines than it renders as pushes the QR off screen.
   test "headline line counts match what the browser renders" do
     panel = Display::Panels::News.new
 
@@ -84,21 +56,13 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
     end
   end
 
-  test "a single headline is always shown however long it is" do
-    # 255 is the column's cap, so this is the longest headline that can exist.
-    headline("A" * 250)
+  # The budget keeps the QR on screen, so it counts each item's date line too.
+  test "short headlines fill the cap, and an outsized headline costs one of them" do
+    8.times { |i| headline("Short headline #{i}", (i + 1).days.ago) }
 
-    assert_equal 1, Display::Panels::News.new.locals[:articles].size
-  end
-  # The budget is what keeps the QR code on screen, so it has to count each
-  # item's date line as well as its headline.
-  test "four one-line headlines fit, and an outsized headline costs one of them" do
-    4.times { |i| headline("Short headline #{i}", (i + 1).days.ago) }
+    assert_equal Display::Panels::News::MAX_ITEMS, Display::Panels::News.new.locals[:articles].size
 
-    assert_equal 4, Display::Panels::News.new.locals[:articles].size
-
-    # Four items only overflow once they need seven lines between them, so it
-    # takes a headline near the column's 255 cap to push the fourth off.
+    # It takes a headline near the column's 255 cap to push the fourth off.
     ::News.delete_all
     headline("A" * 250, 1.day.ago)
     3.times { |i| headline("Short headline #{i}", (i + 2).days.ago) }

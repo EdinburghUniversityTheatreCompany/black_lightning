@@ -6,12 +6,15 @@ module Admin
                                         payee: "Pat Producer")
       end
 
-      # The state a claim is in before anyone has entered details for its payee.
       def no_details_on_file
         render BankDetailsComponent.new(sort_code: "", account_number: "")
       end
 
-      # A third-party payee on an Invoice claim, where only half the trio made it in.
+      def international
+        render BankDetailsComponent.new(iban: "DE89370400440532013000", payee: "Studio Bühne")
+      end
+
+      # Only half the details made it in.
       def partial_details
         render BankDetailsComponent.new(sort_code: "08-99-99", account_number: "",
                                         payee: "Acme Lighting Hire")

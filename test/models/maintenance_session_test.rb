@@ -26,7 +26,7 @@ class MaintenanceSessionTest < ActiveSupport::TestCase
     session = MaintenanceSession.new(date: Date.current)
     over_max = MaintenanceSession::MAX_CREDITS_PER_ATTENDEE + 50
 
-    # Assign without saving: the cap is enforced as records are built in memory.
+    # Unsaved: the cap applies as the credits are built.
     session.maintenance_credits_attributes = { "0" => { user_id: users(:member).id, quantity: over_max.to_s } }
 
     assert_equal MaintenanceSession::MAX_CREDITS_PER_ATTENDEE, session.maintenance_credits.size
@@ -40,15 +40,15 @@ class MaintenanceSessionTest < ActiveSupport::TestCase
       maintenance_credits_attributes: { "0" => { user_id: user.id, quantity: "3" } })
 
     assert_equal 3, session.maintenance_credits.count
-    # Reallocation still ran (once, after the batch) and matched every debt to an attendance.
+    # Reallocation ran once, after the batch, and matched every debt.
     assert_equal 3, Admin::MaintenanceDebt.where(user: user).where.not(maintenance_credit_id: nil).count
-    # The thread-local suppression flag is not left set after the save.
+    # The suppression flag does not leak past the save.
     assert_nil User.suppress_maintenance_reallocation
   end
 
   test "attendees_for_form reflects unsaved built attendances (form re-render after a failed save)" do
     session = MaintenanceSession.create!(date: Date.current)
-    # Assign without saving, as a failed save (e.g. blank date) would leave the form.
+    # Unsaved, as a failed save leaves them.
     session.maintenance_credits_attributes = { "0" => { user_id: users(:member).id, quantity: "2" } }
 
     lines = session.attendees_for_form

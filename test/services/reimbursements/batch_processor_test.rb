@@ -1,12 +1,12 @@
 require "test_helper"
+require "rubyXL" # BacsXlsx requires it lazily; this test parses the uploaded spreadsheet itself
 
 module Reimbursements
   class BatchProcessorTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # DatabaseStore with injectable write failures.
-    # +ambiguous_batch_create+ models a lost RESPONSE, not a lost request:
-    # the batch really persists but the first call still raises.
+    # DatabaseStore with injectable write failures. +ambiguous_batch_create+ is
+    # a lost RESPONSE: the batch persists but the first call still raises.
     class FlakyStore < DatabaseStore
       attr_accessor :fail_batch_creates, :ambiguous_batch_create, :update_failer
 
@@ -41,14 +41,11 @@ module Reimbursements
       @bob = create_reimbursements_person(name: "Bob", email: "bob@example.com",
                                           sort_code: "20-20-20", account_number: "50502366")
       @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
-      expenses.respond_to?(:call) ? expenses.call : (expenses || default_expenses)
+      (expenses || method(:default_expenses)).call
       store = FlakyStore.new
+      # The real Notifier sends producer emails through this fake (graph.send_mails).
       graph = FakeGraphClient.new
-      # The default Notifier sends producer notifications through this same
-      # FakeGraphClient (recorded in graph.send_mails), exercising the real
-      # producer template render.
-      # A no-op sleeper: retry back-off is real in production but must not
-      # slow down every retry test in this file.
+      # A no-op sleeper, so the retry back-off does not slow the tests.
       processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre,
                                      sleeper: ->(_seconds) { })
       [ processor, store, graph ]
@@ -71,10 +68,6 @@ module Reimbursements
     end
 
     # --- Mixed and international batches ------------------------------------
-    #
-    # EUSA's international form is a SINGLE-payment document, so an
-    # international claim cannot join the 200-row BACS spreadsheet: it gets its
-    # own file, attached to the same draft.
 
     def international_expense(auto_number: 21, **attrs)
       create_reimbursements_expense(
@@ -91,31 +84,21 @@ module Reimbursements
       graph.drafts.first[:attachments]
     end
 
-    class RecordingBacsXlsx < BacsXlsx
-      attr_reader :authorisation
-
-      def generate(rows, **authorisation)
-        @authorisation = authorisation
-        super
-      end
-    end
-
     test "prints the cost centre's budget holder on the BACS authorisation form" do
       cost_centre = configured_cost_centre
       cost_centre.authoriser_name = "Jo Producer"
       cost_centre.authoriser_designation = "Fringe Treasurer"
-      _processor, store, graph = build_scenario(cost_centre: cost_centre)
-      xlsx = RecordingBacsXlsx.new
-      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, xlsx: xlsx,
-                                     sleeper: ->(_seconds) { })
+      processor, store, graph = build_scenario(cost_centre: cost_centre)
 
       run_batch(processor, store)
 
-      assert_equal({ centre_name: "Bedlam Fringe", authoriser_name: "Jo Producer",
-                     authoriser_designation: "Fringe Treasurer" }, xlsx.authorisation)
+      bacs = graph.uploaded.find { |upload| upload[:filename].include?("BACS-request") }
+      form = RubyXL::Parser.parse_buffer(bacs[:content])["AUTHORISATION FORM"]
+      assert_equal [ "Bedlam Fringe", "Jo Producer", "Fringe Treasurer" ],
+                   [ form[3][3].value, form[15][2].value, form[16][2].value ]
     end
 
-    test "a mixed batch attaches the BACS sheet plus one form per international claim" do
+    test "a mixed batch attaches and backs up the BACS sheet plus one form per international claim" do
       processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
       result = run_batch(processor, store)
 
@@ -123,6 +106,10 @@ module Reimbursements
       names = attached_filenames(graph)
       assert_includes names, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
       assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
+
+      uploaded = graph.uploaded.map { |u| u[:filename] }
+      assert_includes uploaded, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
+      assert_includes uploaded, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
     end
 
     test "two international claims get a form each, told apart by claim number" do
@@ -137,57 +124,26 @@ module Reimbursements
       assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#22.xlsx"
     end
 
-    # A spreadsheet holding a header, an example row and no data reads to EUSA
-    # as a request to pay nobody.
-    test "an all-international batch attaches NO BACS spreadsheet" do
+    # The rail changes the paperwork, not the bookkeeping.
+    test "an all-international batch attaches one form and no BACS sheet, and goes through the same post-draft path" do
       processor, store, graph = build_scenario(expenses: -> { international_expense })
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert_not(attached_filenames(graph).any? { |name| name.include?("BACS-request") },
-                 "an empty BACS sheet would ask EUSA to pay nobody")
-      assert_equal 1, attached_filenames(graph).count { |name| name.include?("international-payment") }
-    end
-
-    test "every payment document is backed up to SharePoint" do
-      processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
-      run_batch(processor, store)
-
-      uploaded = graph.uploaded.map { |u| u[:filename] }
-      assert_includes uploaded, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
-      assert_includes uploaded, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
-    end
-
-    # The claim still reaches Submitted, is linked to the batch and notifies its
-    # producer exactly as a UK one does — the rail changes the paperwork, not
-    # the bookkeeping.
-    test "an international claim goes through the same post-draft path as a UK one" do
-      processor, store, _graph = build_scenario(expenses: -> { international_expense })
-      result = run_batch(processor, store)
+      names = attached_filenames(graph)
+      # An empty BACS sheet would ask EUSA to pay nobody.
+      assert_not(names.any? { |name| name.include?("BACS-request") })
+      assert_equal 1, names.count { |name| name.include?("international-payment") }
 
       expense = store.expenses.first
       assert_equal Status::SUBMITTED, expense.status
       assert_equal result.batch_id, expense.batch_id
-      assert_equal 1, result.producer_notifications_sent
-    end
+      assert_equal 1, graph.send_mails.size
 
-    # EUSA's bank pays the supplier in euros; our budgets count the GBP figure.
-    # A covering email quoting GBP beside a form saying EUR reads as a
-    # discrepancy in the paperwork.
-    test "the EUSA email states the foreign amount for an international row" do
-      processor, store, graph = build_scenario(expenses: -> { international_expense })
-      run_batch(processor, store)
+      # EUSA's bank pays in euros; GBP beside a form saying EUR reads as a discrepancy.
       body = graph.drafts.first[:html]
-
       assert_includes body, "€266.69"
       assert_includes body, "international payment request form"
-    end
-
-    test "a UK-only batch says nothing about international payments" do
-      processor, store, graph = build_scenario
-      run_batch(processor, store)
-
-      assert_not_includes graph.drafts.first[:html], "international payment request form"
     end
 
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
@@ -198,24 +154,22 @@ module Reimbursements
       assert result.success, result.errors.inspect
       assert_empty result.errors
 
-      # EUSA draft in the send mailbox, addressed to EUSA, with xlsx + both receipts attached.
       draft = graph.drafts.sole
       assert_equal "send@bedlamfringe.co.uk", draft[:mailbox]
       assert_equal [ "finance@eusa.ed.ac.uk" ], draft[:to]
       assert_includes draft[:subject], "F40"
+      assert_not_includes draft[:html], "international payment request form", "a UK-only batch says nothing about it"
       xlsx = draft[:attachments].find { |name| name.end_with?(".xlsx") }
       assert_equal "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx", xlsx
       assert_equal 3, draft[:attachments].size, "xlsx + one receipt per expense"
 
-      # Batch record created (storing the draft's message id so a reopen can
-      # later verify/delete the stale draft) and both expenses flipped to
-      # Submitted + linked.
       batch = Batch.sole
       assert_equal "msg-1", batch.draft_message_id
-      # Graph hands the webLink back ONCE, here, and it cannot be derived from
-      # the message id afterwards — so a batch written without it can never
-      # show the operator the draft they still have to send.
+      # Graph returns the webLink only once, so the batch must keep it.
       assert_equal "https://outlook.example/draft-1", batch.draft_web_link
+      assert_equal "https://sp.example/fldB/2026-05-13-bedlam-fringe-BACS-request-F40.xlsx",
+                   batch.sharepoint_backup_url
+      assert_nil batch.notes, "the link has its own field; the Detail page already prints it"
       [ @expense_a, @expense_b ].each do |expense|
         expense.reload
         assert_equal Status::SUBMITTED, expense.status
@@ -223,10 +177,7 @@ module Reimbursements
         assert expense.receipts_offloaded
       end
 
-      # One producer email per payee, sent via Graph from the send mailbox, and
-      # each expense stamped producer_notified.
       assert_equal 2, graph.send_mails.size
-      assert_equal 2, result.producer_notifications_sent
       graph.send_mails.each do |mail|
         assert_equal "send@bedlamfringe.co.uk", mail[:mailbox]
         assert_includes mail[:subject], "submitted for payment"
@@ -238,12 +189,9 @@ module Reimbursements
       alice_mail = graph.send_mails.find { |mail| mail[:to] == [ "alice@example.com" ] }
       assert_includes alice_mail[:html],
                       %(href="https://www.example.com/admin/reimbursements/expenses/#{@expense_a.record_id}">#11</a>)
-      assert_equal 2, result.receipts_uploaded, "one receipt per expense; the xlsx isn't counted here"
     end
 
-    # Three shows' receipts landed in one SharePoint folder differing only by
-    # description, and the producer's own email named a category with no show.
-    # Everything here reads Budget#display_name.
+    # Each surface reads Budget#display_name, so each names the show.
     test "a batch's receipt filenames, producer email and EUSA draft all name the show" do
       processor, store, graph = build_scenario
       @budget.update!(area: create_reimbursements_area(name: "Cogito"))
@@ -251,16 +199,27 @@ module Reimbursements
       run_batch(processor, store)
 
       graph.uploaded.reject { |upload| upload[:filename].end_with?(".xlsx") }.each do |upload|
-        # "Cogito Props", not "Cogito: Props": FilenameSanitizer strips the
-        # colon (it is illegal on Windows and in SharePoint) to a space. The
-        # show is still named, which is what this guards.
+        # FilenameSanitizer turns the colon (illegal in SharePoint) into a space.
         assert_includes upload[:filename], "Cogito Props",
                         "a receipt filename that names no show is indistinguishable from another show's"
       end
-      # The table CELL in each mail, not the body: both templates carry other
-      # prose a substring match could land in.
+      # The table CELL: both templates carry other prose a substring could match.
       assert_includes table_cells(graph.send_mails.first[:html]), "Cogito: Props"
       assert_includes table_cells(graph.drafts.sole[:html]), "Cogito: Props"
+    end
+
+    # SharePoint replaces a file uploaded under a name already in the folder, while
+    # receipts_offloaded tells each producer their copy is backed up.
+    test "every receipt in a batch uploads under its own name" do
+      processor, store, graph = build_scenario
+      attach_test_receipt(@expense_a, filename: "second.pdf")
+
+      run_batch(processor, store)
+
+      names = graph.uploaded.map { |upload| upload[:filename] }.reject { |name| name.end_with?(".xlsx") }
+      assert_equal 3, names.size
+      assert_equal names.uniq, names, "two claims on one line with one description, and one claim's two receipts"
+      assert(names.all? { |name| name.include?("#11") || name.include?("#12") }, names.inspect)
     end
 
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do
@@ -271,6 +230,7 @@ module Reimbursements
 
       assert_not result.success
       assert(result.errors.any? { |e| e.include?("EUSA draft creation failed") })
+      assert_empty result.eusa_draft_web_link, "no link, so the failure email offers a rebuild"
       assert_equal 0, Batch.count, "no batch when draft fails"
       assert_equal Status::APPROVED, @expense_a.reload.status, "expenses must stay Approved when the draft fails"
       assert_equal Status::APPROVED, @expense_b.reload.status
@@ -283,28 +243,23 @@ module Reimbursements
 
       result = run_batch(processor, store)
 
-      # The draft is live, so the run is NOT a clean failure: it surfaces the
-      # orphan loudly (naming the draft link) rather than pretending nothing ran.
       assert_not result.success
       assert_equal 1, graph.drafts.size, "the EUSA draft was created"
+      assert_predicate result.eusa_draft_web_link, :present?, "the failure email must say not to rebuild"
       assert(result.errors.any? { |e| e.include?("ORPHAN DRAFT") && e.include?(result.eusa_draft_web_link) })
       assert_equal 0, Batch.count, "no batch record was written"
 
-      # The expenses were marked Submitted anyway, so they leave the Approved
-      # queue — nothing for a rebuild to re-draft.
+      # Submitted anyway, so a rebuild has nothing to re-draft.
       assert_equal Status::SUBMITTED, @expense_a.reload.status
       assert_equal Status::SUBMITTED, @expense_b.reload.status
       store.bust_expenses!
       approved_now = store.expenses.select { |e| e.status == Status::APPROVED }
       assert_empty approved_now, "no expense stays Approved with a live draft"
 
-      # Producers are still notified on the orphan-draft path — the expense IS
-      # Submitted and the payee's money IS on its way, orphan Batch record or not.
+      # Producers are still notified: their money IS on its way.
       assert_equal 2, graph.send_mails.size
-      assert_equal 2, result.producer_notifications_sent
 
-      # Rebuild: the operator's approved set is now empty, so a second process
-      # makes NO second draft — the guarantee that prevents a duplicate payment.
+      # The guarantee against a duplicate payment: a rebuild makes no second draft.
       rebuild = processor.process(expenses: approved_now, bacs_date: Date.new(2026, 5, 13),
                                   sender_name: "F", eusa_recipient: "finance@eusa.ed.ac.uk")
       assert_not rebuild.success
@@ -319,15 +274,14 @@ module Reimbursements
 
       assert_not result.success, "one expense couldn't be marked Submitted: must not report success"
       assert_equal 1, graph.drafts.size, "the EUSA draft was still created and is live"
+      assert_predicate result.eusa_draft_web_link, :present?, "the failure email must say not to rebuild"
       assert(result.errors.any? { |e| e.include?("DOUBLE-DRAFT RISK") && e.include?("11") },
              result.errors.inspect)
 
-      # @expense_b still made it through cleanly; @expense_a is the one that failed.
       assert_equal Status::SUBMITTED, @expense_b.reload.status
       assert_equal Status::APPROVED, @expense_a.reload.status
 
-      # @expense_a's payee (Alice) must not be notified — mark_submitted excluded
-      # her expense, so notify_producers never saw it.
+      # Alice's expense was excluded, so she is not notified.
       assert_equal [ "bob@example.com" ], graph.send_mails.map { |mail| mail[:to] }.flatten
     end
 
@@ -351,7 +305,7 @@ module Reimbursements
 
     test "receipts_offloaded is only stamped true when the receipt upload actually succeeded" do
       processor, store, graph = build_scenario
-      graph.fail_uploads = true # every SharePoint upload (BACS xlsx + every receipt) fails
+      graph.fail_uploads = true # the BACS xlsx and every receipt
 
       result = run_batch(processor, store)
 
@@ -364,16 +318,10 @@ module Reimbursements
       end
     end
 
-    # Driven through the REAL GraphClient rather than the fake, because the fake
-    # has no outbound gate to exercise. A dev shell
-    # holding real Azure credentials that clicks Build Batch must not PUT a
-    # spreadsheet of full sort codes and account numbers into production
-    # SharePoint. And the suppressed path has to stay coherent: BatchProcessor must
-    # NOT come away believing the files exist, or an operator reading
-    # receipts_offloaded could delete the only copy of a receipt that was never
-    # backed up.
+    # Through the REAL GraphClient, which owns the outbound gate: a dev shell with
+    # real Azure credentials must not PUT full bank details into production
+    # SharePoint, nor record receipts_offloaded for files never written.
     test "a batch built with outbound disabled issues no Graph request and offloads nothing" do
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
       build_scenario
       store = FlakyStore.new
       http = FakeHttp.new([]) # any request at all would raise "no queued response"
@@ -381,20 +329,17 @@ module Reimbursements
       processor = BatchProcessor.new(store: store, graph: graph, cost_centre: configured_cost_centre,
                                     sleeper: ->(_seconds) { })
 
-      result = run_batch(processor, store)
+      result = without_outbound { run_batch(processor, store) }
 
       assert_empty http.requests,
                    "no Graph request may leave a non-production environment, token exchange included"
       assert_equal "", result.bacs_sharepoint_url
-      assert_equal 0, result.receipts_uploaded
       assert(result.errors.any? { |e| e.include?("SharePoint upload failed for") },
              "the suppression is surfaced, not silent: #{result.errors.inspect}")
       store.expenses.each do |expense|
         assert_not expense.receipts_offloaded,
                    "a suppressed upload must never be recorded as an offloaded receipt"
       end
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "a BACS-xlsx SharePoint upload failure doesn't block sending to EUSA or the receipt uploads" do
@@ -415,7 +360,7 @@ module Reimbursements
     end
 
     test "a single failed receipt upload doesn't corrupt the URL map for that expense or affect others" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       @multi = create_reimbursements_expense(person: @alice, budget: @budget,
                                              status: Status::APPROVED, auto_number: 11, receipt: false)
       attach_test_receipt(@multi, filename: "receipt1.pdf")
@@ -425,11 +370,11 @@ module Reimbursements
 
       failing_filename = FilenameSanitizer.build_receipt_filename(
         bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
-        original_filename: "receipt2.pdf", index: 2
+        auto_number: 11, original_filename: "receipt2.pdf", index: 2
       )
       succeeding_filename = FilenameSanitizer.build_receipt_filename(
         bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
-        original_filename: "receipt1.pdf", index: 1
+        auto_number: 11, original_filename: "receipt1.pdf", index: 1
       )
       graph.fail_upload_for = [ failing_filename ]
 
@@ -448,20 +393,21 @@ module Reimbursements
              "the other expense's single receipt uploaded fine and must be unaffected"
     end
 
-    test "producer_notifications_sent flag is only set when at least one send succeeded" do
+    test "a producer notification failure is collected, doesn't fail the batch and leaves it unflagged" do
       processor, store, graph = build_scenario
       graph.fail_send = true # the draft succeeds; every producer send fails
 
       result = run_batch(processor, store)
 
-      assert result.success, result.errors.inspect
-      assert_equal 0, result.producer_notifications_sent
+      assert result.success, "the batch (draft + submit) still succeeds when a notification send fails"
+      assert_empty graph.send_mails
+      assert(result.errors.any? { |e| e.include?("Producer notification failed") })
       assert_not Batch.sole.producer_notifications_sent,
                  "must not claim notifications were sent when every send failed"
     end
 
     test "producer_notifications_sent flag is set when there was nothing left to notify" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
                                     auto_number: 11, producer_notified: true)
       create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
@@ -494,7 +440,7 @@ module Reimbursements
 
     test "a transient batch-write failure is retried and the batch still records" do
       processor, store, = build_scenario
-      # Fail the first Batch write (nothing persisted), then let the retry through.
+      # The first Batch write fails with nothing persisted.
       calls = 0
       store.define_singleton_method(:create_batch!) do |attrs|
         calls += 1
@@ -511,9 +457,7 @@ module Reimbursements
 
     test "a retried create_batch after an ambiguous failure reuses the batch instead of duplicating it" do
       processor, store, graph = build_scenario
-      # The create actually persists but the caller still sees an error on the
-      # first attempt (a network read timeout after the write already
-      # committed) — the retry must find and reuse it, not duplicate it.
+      # The first create commits but still raises (a read timeout after the write).
       store.ambiguous_batch_create = true
 
       result = run_batch(processor, store)
@@ -523,13 +467,9 @@ module Reimbursements
       assert_equal 1, graph.drafts.size, "still only one EUSA draft"
     end
 
-    # The approve blocker (ReviewSupport) is the ONLY other place that asks
-    # whether we know where the money goes, and it runs on the approval path
-    # alone. A claim that reached Approved another way — the settled-claim
-    # import, a console fix — walks straight past it, and nothing downstream
-    # re-checks: bacs_document builds a row per expense from the EFFECTIVE
-    # payee/sort/account, and a blank person yields blank strings for all
-    # three. 140 production claims sat in exactly that state in September 2026.
+    # The approve blocker runs on the approval path only, so a claim that reached
+    # Approved another way (an import, a console fix) can arrive with no bank
+    # details. 140 production claims sat in that state in September 2026.
     test "refuses to process a claim with no bank details" do
       processor, store, graph = build_scenario(expenses: lambda {
         @expense_a = create_reimbursements_expense(person: @alice, budget: @budget,
@@ -543,11 +483,28 @@ module Reimbursements
       result = run_batch(processor, store)
 
       assert_not result.success
-      assert(result.errors.any? { |e| e.include?("no bank details") },
-             "the failure must say what is wrong: #{result.errors.inspect}")
-      assert(result.errors.any? { |e| e.include?("12") },
-             "the failure must name the claim: #{result.errors.inspect}")
+      assert_includes result.errors, "1 claim has no bank details and cannot be paid. Fix #12 in the payee's " \
+                                     "People record or the claim's override, or move it out of Approved."
       assert_empty graph.drafts, "nothing may reach EUSA"
+    end
+
+    # A payee's People record holds no IBAN or BIC, so an international claim is told to fill
+    # in its own.
+    test "the no-bank-details failure names each rail's own fix" do
+      processor, store, graph = build_scenario(expenses: lambda {
+        payeeless = create_reimbursements_person(name: "No Bank", email: "nobank@example.com",
+                                                 sort_code: "", account_number: "")
+        create_reimbursements_expense(person: payeeless, budget: @budget, status: Status::APPROVED,
+                                      auto_number: 12)
+        international_expense(auto_number: 21, iban_override: "", bic_override: "")
+      })
+
+      result = run_batch(processor, store)
+
+      assert_includes result.errors, "2 claims have no bank details and cannot be paid. Fix #12 in the payee's " \
+                                     "People record or the claim's override, and #21 in the claim's payee IBAN " \
+                                     "and BIC, or move them out of Approved."
+      assert_empty graph.drafts
     end
 
     test "refuses to process when SharePoint folders are not configured" do
@@ -563,11 +520,7 @@ module Reimbursements
     end
 
     test "a receipt-content failure fails the batch cleanly with no draft created" do
-      # collect_receipts runs before create_draft (the CARDINAL RULE boundary).
-      # On this backend receipts come from ActiveStorage blobs, so the outage
-      # is a missing/unreadable blob file; process's method-level rescue
-      # reports it as a normal failed Result — nothing has happened yet, so
-      # this is safe: no draft, no batch, no Submitted status change.
+      # Receipts are read before the draft, so a missing blob fails cleanly.
       processor, store, graph = build_scenario
       @expense_a.receipt_files.each { |attachment| attachment.blob.service.delete(attachment.blob.key) }
 
@@ -580,8 +533,7 @@ module Reimbursements
       assert_not_empty result.errors
       assert_empty graph.drafts
       assert_equal 0, Batch.count
-      # Nothing at all was written — not just the status: the failure happened
-      # at the receipt-collection boundary, before any bookkeeping.
+      # Nothing at all was written, not just the status.
       assert_equal before_a, @expense_a.reload.updated_at
       assert_equal before_b, @expense_b.reload.updated_at
       assert_equal Status::APPROVED, @expense_a.status
@@ -598,7 +550,7 @@ module Reimbursements
     end
 
     test "skips producers already notified for this (reopened) batch" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
                                     auto_number: 11, producer_notified: true)
       create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
@@ -612,7 +564,7 @@ module Reimbursements
     end
 
     test "several expenses for the same payee are grouped into one notification email" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       alice1 = create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
                                              auto_number: 11, amount: BigDecimal("12.50"),
                                              description: "Fake blood")
@@ -626,7 +578,6 @@ module Reimbursements
 
       assert result.success, result.errors.inspect
       assert_equal 2, graph.send_mails.size, "one email per payee, not per expense"
-      assert_equal 2, result.producer_notifications_sent, "counted per notification sent, not per expense"
 
       alice_mail = graph.send_mails.find { |mail| Array(mail[:to]) == [ "alice@example.com" ] }
       assert_includes alice_mail[:subject], "2 expenses submitted for payment"
@@ -643,20 +594,6 @@ module Reimbursements
              "both of Alice's expenses are stamped, not just one per notification"
     end
 
-    test "a producer notification Graph failure is collected but doesn't fail the batch" do
-      processor, store, graph = build_scenario
-      graph.fail_send = true # the draft (create_draft) still succeeds; only sends fail
-
-      result = run_batch(processor, store)
-
-      assert result.success, "the batch (draft + submit) still succeeds when a notification send fails"
-      assert_empty graph.send_mails
-      assert_equal 0, result.producer_notifications_sent
-      assert(result.errors.any? { |e| e.include?("Producer notification failed") })
-      # The EUSA draft and the expense submissions still happened.
-      assert_equal 1, Batch.count
-    end
-
     test "a payee whose notification send fails is not stamped producer_notified" do
       processor, store, graph = build_scenario
       graph.fail_send_to = [ "alice@example.com" ] # Bob's send still succeeds
@@ -665,8 +602,7 @@ module Reimbursements
 
       assert result.success, result.errors.inspect
       assert(result.errors.any? { |e| e.include?("Producer notification failed for alice@example.com") })
-      # Only Bob was emailed and only Bob is stamped notified — Alice, whose send
-      # failed, stays un-notified so a rebuild re-notifies her.
+      # Alice stays un-notified, so a rebuild re-notifies her.
       assert_equal [ "bob@example.com" ], graph.send_mails.map { |m| m[:to] }.flatten
       assert @expense_b.reload.producer_notified
       assert_not @expense_a.reload.producer_notified

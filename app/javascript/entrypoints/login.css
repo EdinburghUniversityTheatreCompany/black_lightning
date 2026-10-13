@@ -193,22 +193,8 @@ fieldset {
     border-top: 3px solid #dc3545;
 }
 
-/* AdminLTE login-specific styles */
-.login-logo,
-.register-logo {
-    font-size: 2.1rem;
-    font-weight: 300;
-    margin-bottom: .9rem;
-    text-align: center;
-}
-
-.login-logo a,
-.register-logo a {
-    color: #495057;
-}
-
-.login-page,
-.register-page {
+/* Login layout */
+.login-page {
     align-items: center;
     background-color: #e9ecef;
     display: flex;
@@ -217,40 +203,13 @@ fieldset {
     justify-content: center;
 }
 
-.login-box,
-.register-box {
+.login-box {
     width: 360px;
 }
 
 @media (max-width: 576px) {
-
-    .login-box,
-    .register-box {
+    .login-box {
         margin-top: .5rem;
         width: 90%;
     }
-}
-
-.login-box .card,
-.register-box .card {
-    margin-bottom: 0;
-}
-
-.login-card-body,
-.register-card-body {
-    background-color: #fff;
-    border-top: 0;
-    color: #666;
-    padding: 20px;
-}
-
-.login-box-msg,
-.register-box-msg {
-    margin: 0;
-    padding: 0 20px 20px;
-    text-align: center;
-}
-
-.social-auth-links {
-    margin: 10px 0;
 }

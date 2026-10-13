@@ -4,24 +4,30 @@ module Admin
     # DB-computed readers pinned, as the reimbursements unit tests build them.
     class AreaClaimsComponentPreview < ViewComponent::Preview
       def default
-        render AreaClaimsComponent.new(claims: claims, counts: counts, tab: "all", finance: false)
+        render AreaClaimsComponent.new(claims: claims, counts: counts, tab: "all", finance: false, area: area)
       end
 
       def as_finance
-        render AreaClaimsComponent.new(claims: claims, counts: counts, tab: "all", finance: true)
+        render AreaClaimsComponent.new(claims: claims, counts: counts, tab: "all", finance: true, area: area)
       end
 
       # The median area in production has no claims at all.
       def no_claims_yet
-        render AreaClaimsComponent.new(claims: [], counts: empty_counts, tab: "all", finance: false)
+        render AreaClaimsComponent.new(claims: [], counts: empty_counts, tab: "all", finance: false, area: area)
       end
 
       private
 
+      # The tabs link to an area's page.
+      def area = ::Reimbursements::Area.new(id: 1, name: "Imps")
+
+      # Paged, as the controller passes it: the table renders a pager.
       def claims
-        [ claim(246, ::Reimbursements::Status::APPROVED, 97, "Video recordings"),
-          claim(100, ::Reimbursements::Status::SUBMITTED, 16.76, "Imps cards shipping fee"),
-          claim(39, ::Reimbursements::Status::PAID, 196.91, "Imps Retreat - Food Shop") ]
+        Kaminari.paginate_array(
+          [ claim(246, ::Reimbursements::Status::APPROVED, 97, "Video recordings"),
+            claim(100, ::Reimbursements::Status::SUBMITTED, 16.76, "Imps cards shipping fee"),
+            claim(39, ::Reimbursements::Status::PAID, 196.91, "Imps Retreat - Food Shop") ]
+        ).page(1)
       end
 
       def counts

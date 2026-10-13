@@ -5,45 +5,49 @@ class SlugGeneratorTest < ApplicationSystemTestCase
     login_as users(:admin)
   end
 
-  test "auto-generates slug from name field on input" do
-    visit new_admin_news_path
-
-    fill_in "event_name", with: "My Test Event"
-
-    assert_equal "my-test-event", find_field("event_slug").value
-  end
-
-  test "stops auto-generating slug once user manually edits it" do
-    visit new_admin_news_path
-
-    fill_in "event_name", with: "My Test Event"
-    assert_equal "my-test-event", find_field("event_slug").value
-
-    fill_in "event_slug", with: "custom-slug"
-    fill_in "event_name", with: "Different Name"
-
-    assert_equal "custom-slug", find_field("event_slug").value
-  end
-
-  test "handles accented characters and special punctuation correctly" do
+  test "slug follows the name until edited by hand, and again once cleared" do
     visit new_admin_news_path
 
     fill_in "event_name", with: "Café & Restaurant"
+    assert_field "event_slug", with: "cafe-restaurant"
 
-    assert_equal "cafe-restaurant", find_field("event_slug").value
+    fill_in "event_slug", with: "custom-slug"
+    fill_in "event_name", with: "Different Name"
+    assert_field "event_slug", with: "custom-slug"
+
+    fill_in "event_slug", with: ""
+    fill_in "event_name", with: "Second Title"
+    assert_field "event_slug", with: "second-title"
   end
 
-  test "resumes auto-generating after slug is cleared" do
+  test "a new event's slug follows its name" do
+    visit new_admin_show_path
+
+    fill_in "event_name", with: "Brand New Show"
+    assert_field "event_slug", with: "brand-new-show"
+  end
+
+  test "a new item re-rendered after a failed save still follows its name" do
     visit new_admin_news_path
 
     fill_in "event_name", with: "First Title"
-    fill_in "event_slug", with: "manual-override"
-    assert_equal "manual-override", find_field("event_slug").value
+    # Past the browser's required check, so the server answers with the form.
+    page.execute_script("document.querySelector('form#new_news').noValidate = true")
+    click_on "Create News"
+    assert_text "Please review the problems below"
+    assert_field "event_slug", with: "first-title"
 
-    # Clearing the slug puts auto-generation back in control
-    fill_in "event_slug", with: ""
     fill_in "event_name", with: "Second Title"
+    assert_field "event_slug", with: "second-title"
+  end
 
-    assert_equal "second-title", find_field("event_slug").value
+  # The slug is the event's URL, so a rename must not move it.
+  test "renaming an existing event leaves its slug alone" do
+    show = FactoryBot.create(:show, name: "Original Name")
+    visit edit_admin_show_path(show)
+
+    fill_in "event_name", with: "Renamed Show"
+    assert_field "event_name", with: "Renamed Show"
+    assert_field "event_slug", with: "original-name"
   end
 end

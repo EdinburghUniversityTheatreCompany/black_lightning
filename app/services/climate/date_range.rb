@@ -1,10 +1,8 @@
 module Climate
   ##
-  # The dashboard's URL state: +?from=2026-08-01&to=2026-08-06+.
-  #
-  # An unusable range is clamped and SAID SO (the controller flashes it) rather
-  # than silently rendering a different range as though it were the one asked
-  # for, as the reimbursements year selector does when it falls back.
+  # The dashboard's URL state: +?from=2026-08-01&to=2026-08-06+. An unusable
+  # range is clamped and SAID SO (the controller flashes it), never silently
+  # rendered as a different range.
   class DateRange
     DEFAULT_DAYS = 7
     MAX_DAYS = 366
@@ -13,12 +11,12 @@ module Climate
 
     # Either may be absent: a bare /admin/climate means the last week. That
     # default is deliberately NOT written back into the URL, so the clean link
-    # keeps meaning "recent" while the presets emit explicit dates and keep
-    # meaning the same thing tomorrow.
+    # keeps meaning "recent" while the presets emit explicit dates.
     def self.from_params(params)
       to = parse_date(params[:to]) || Date.current
       from = parse_date(params[:from]) || (to - (DEFAULT_DAYS - 1).days)
-      new(from: from, to: to, requested: { from: params[:from], to: params[:to] })
+      unreadable = [ params[:from], params[:to] ].any? { |value| value.present? && parse_date(value).nil? }
+      new(from: from, to: to, unreadable: unreadable)
     end
 
     def self.parse_date(value)
@@ -30,20 +28,18 @@ module Climate
     end
     private_class_method :parse_date
 
-    def initialize(from:, to:, requested: {})
-      @notice = nil
+    def initialize(from:, to:, unreadable: false)
       @from, @to = clamp(from, to)
-      note_unparseable(requested)
+      @notice ||= "That date could not be read, so the default range is shown instead." if unreadable
     end
 
     # "to 6 August" means the end of the 6th, not midnight at its start.
     def starts_at = from.beginning_of_day.in_time_zone
     def ends_at = to.end_of_day.in_time_zone
     def days = (to - from).to_i + 1
-    def duration = ends_at - starts_at
 
     def to_param = { from: from.iso8601, to: to.iso8601 }
-    def as_json(*) = { from: from.iso8601, to: to.iso8601 }
+    def as_json(*) = to_param
 
     private
 
@@ -59,13 +55,6 @@ module Climate
       end
 
       [ from, to ]
-    end
-
-    def note_unparseable(requested)
-      return if @notice.present?
-      return unless requested.values.any? { |value| value.present? && self.class.send(:parse_date, value).nil? }
-
-      @notice = "That date could not be read, so the default range is shown instead."
     end
   end
 end

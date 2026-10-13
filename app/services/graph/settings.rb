@@ -1,20 +1,10 @@
 module Graph
-  ##
-  # The Microsoft Graph app credentials, shared by every integration that talks
-  # to a shared mailbox.
-  #
-  # Reads +GRAPH_*+ first, then falls back to the +REIMBURSEMENTS_AZURE_*+ names
-  # the reimbursements portal has always used. The fallback is deliberate and
-  # not temporary: there is one Entra app registration for the organisation, so
-  # renaming the variables would have broken every existing ENV and production
-  # credential entry for no gain.
+  # The Graph app credentials shared by every mailbox integration, climate included. They live
+  # under +reimbursements:+ (or +REIMBURSEMENTS_AZURE_*+) because that is where production keeps
+  # them: there is one Entra app registration, and Reimbursements::Settings reads the same keys.
   module Settings
     extend ::Settings::Base
 
-    reads_from env: "GRAPH", credentials: :graph
-    # Not a temporary fallback: there is one Entra app registration for the
-    # organisation, so renaming these would break every existing ENV and
-    # production credential entry for no gain.
     reads_from env: "REIMBURSEMENTS", credentials: :reimbursements
 
     setting :azure_tenant_id, :azure_client_id, :azure_client_secret
@@ -23,10 +13,9 @@ module Graph
       settings_present?
     end
 
-    # Whether outbound side effects (replying, moving, marking read) actually
-    # happen. Production always; elsewhere only with the opt-in, because a dev
-    # machine holding real credentials would otherwise reply to real senders and
-    # move real mail. See Reimbursements::Settings for the fuller story.
+    # Whether replies, moves and mark-reads happen: production, or elsewhere only with the
+    # opt-in, since a dev machine holding real credentials would reply to real senders.
+    # See Reimbursements::Settings.
     def self.outbound_enabled?
       return true if Rails.env.production?
 

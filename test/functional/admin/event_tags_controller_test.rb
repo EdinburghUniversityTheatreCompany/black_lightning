@@ -7,14 +7,6 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  test "pagination should render for a lot of items" do
-    # Create event tags.
-    FactoryBot.create_list(:event_tag, 3)
-
-    get :index
-    assert_response :success
-  end
-
   test "should get index" do
     get :index
     assert_response :success

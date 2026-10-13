@@ -1,92 +1,76 @@
-##
-# App-only (client-credentials) Microsoft Graph auth + JSON request plumbing,
-# shared by Graph::MailboxClient (mail folders / receive) and the reimbursements
-# GraphClient (drafts, SharePoint, send). The same client-credentials token
-# serves every Graph call; the Entra app carries NO mail permission, and Exchange
-# scopes it to named mailboxes via RBAC for Applications (a management scope plus
-# a role assignment, see docs/graph-mailbox-rbac.md). SharePoint is separate:
-# RBAC cannot express it, so that stays an Entra grant.
+# App-only (client-credentials) Graph auth and JSON request plumbing, shared by
+# Graph::MailboxClient and Reimbursements::GraphClient. The Entra app carries NO mail
+# permission: Exchange scopes it to named mailboxes via RBAC for Applications
+# (docs/graph-mailbox-rbac.md). SharePoint stays an Entra grant, which RBAC cannot express.
 #
-# The including object must set +@http+ (a transport callable
-# +(method, uri, headers, body) -> [status, body_string]+), +@settings+
-# (responding to azure_tenant_id / azure_client_id / azure_client_secret) and
-# +@clock+ (a +-> { Time }+) in its initializer, and may set +@sleeper+ (a
-# +->(seconds)+, the test seam for the transient-retry pause).
+# The includer's initializer sets +@http+ (+(method, uri, headers, body) -> [status, body_string]+),
+# +@settings+ (azure_tenant_id / azure_client_id / azure_client_secret) and +@clock+, and may set
+# +@sleeper+ (+->(seconds)+, the test seam for the retry pause).
 module GraphAuth
   GRAPH_URL = "https://graph.microsoft.com/v1.0".freeze
   TOKEN_URL = "https://login.microsoftonline.com".freeze
 
-  # Graph's own gateway answers these for a moment now and then (HB 134482370:
-  # one 502 on each of two mailboxes, hours apart, both fine on the next poll).
-  # A GET is retried once after a pause; a write never is, because a 502 does
-  # not say whether the first attempt landed, and a replayed reply is a second
-  # email to a producer.
+  # Graph's gateway briefly answers these now and then. A GET is retried once; a write never,
+  # because a 502 does not say whether the first attempt landed and a replayed reply is a
+  # second email to a producer.
   TRANSIENT_STATUSES = [ 502, 503, 504 ].freeze
   TRANSIENT_RETRY_DELAY = 2
 
   class Error < StandardError; end
 
-  # Credential problems (expired/revoked client secret) — surfaced to the IT
-  # subcommittee rather than retried blindly.
+  # Credential problems (expired or revoked secret): alerted to IT rather than retried.
   class AuthError < Error; end
 
-  # A 404 from Graph (e.g. ErrorItemNotFound). On the mailbox mutation paths
-  # (MailboxClient#reply/#mark_read/#move) this just means the message was
-  # handled or deleted by hand in Outlook between the poll's listing and the
-  # mutation — nothing left to do, so those callers swallow it. Everywhere
-  # else it stays a real failure: NotFoundError < Error, so any existing
-  # `rescue Error` (or the job's generic rescue) still catches it and it
-  # continues to fail loudly.
+  # A 403: the token is good, but the app may not touch that resource (a mailbox outside the
+  # Exchange scope, a site with no Sites.Selected grant). An AuthError, so every rescue of one
+  # still catches it; only the Settings access check tells the two apart.
+  class AccessDeniedError < AuthError; end
+
+  # A 404 from Graph. The mailbox mutation paths swallow it only once a re-GET confirms the
+  # message is really gone (Graph::MailboxClient#swallow_only_if_gone); everywhere else it is a
+  # real failure, and a subclass of Error so existing rescues still catch it.
   class NotFoundError < Error; end
 
-  # An outbound Graph SIDE EFFECT was refused because this is not production
-  # and REIMBURSEMENTS_ENABLE_OUTBOUND is not set. Raised (rather than quietly
-  # returning a plausible value) by the calls whose suppressed result a caller
-  # must not mistake for success — see GraphClient#upload_to_folder and
-  # #delete_message. A subclass of Error so every existing `rescue Error` /
-  # best-effort rescue already contains it.
+  # An outbound side effect was refused (not production, REIMBURSEMENTS_ENABLE_OUTBOUND unset).
+  # Raised rather than returning a plausible value, so a suppressed result is never mistaken for
+  # success (GraphClient#upload_to_folder, #delete_message). A subclass of Error so best-effort
+  # rescues contain it.
   class OutboundSuppressedError < Error; end
 
   private
 
-  # Issue a Graph request and return the parsed JSON body ({} when empty).
-  # +path+ may be a "/..." Graph path or a full URL (Graph hands back absolute
-  # follow-up URLs). Raises AuthError on 401/403, Error on any other non-2xx.
+  # Returns the parsed JSON body ({} when empty). +path+ may be a "/..." path or a full URL
+  # (Graph returns absolute follow-up URLs). Raises AuthError on 401, AccessDeniedError on 403,
+  # Error on other non-2xx.
   def graph_request(http_method, path, params: nil, body: nil)
     uri = graph_uri(path, params)
-    status, response_body = send_graph_request(http_method, uri, body)
+    json = body&.to_json
+    status, response_body = send_graph_request(http_method, uri, json)
     if http_method == :get && TRANSIENT_STATUSES.include?(status)
       (@sleeper || method(:sleep)).call(TRANSIENT_RETRY_DELAY)
-      status, response_body = send_graph_request(http_method, uri, body)
+      status, response_body = send_graph_request(http_method, uri, json)
     end
 
-    raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
-    unless (200..299).cover?(status)
-      error_class = status == 404 ? NotFoundError : Error
-      raise error_class, "Graph #{http_method.to_s.upcase} #{path} failed (#{status}): " \
-                         "#{graph_error_detail(response_body)}"
-    end
-
-    response_body.blank? ? {} : JSON.parse(response_body)
+    parse_graph_response(status, response_body, "#{http_method.to_s.upcase} #{path}")
   end
 
-  def send_graph_request(http_method, uri, body)
-    headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => "application/json" }
-    @http.call(http_method, uri, headers, body&.to_json)
-  end
-
-  # Authed request whose body is sent verbatim (not JSON-encoded) under an
-  # explicit content type — for binary uploads (octet-stream file content).
-  # Returns the parsed JSON body.
-  def graph_raw_request(http_method, url, raw_body, content_type:)
+  def send_graph_request(http_method, uri, body, content_type: "application/json")
     headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => content_type }
-    status, response_body = @http.call(http_method, URI(url), headers, raw_body)
+    @http.call(http_method, uri, headers, body)
+  end
 
-    raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
+  # For binary uploads: the body is sent verbatim under an explicit content type.
+  def graph_raw_request(http_method, url, raw_body, content_type:)
+    status, response_body = send_graph_request(http_method, URI(url), raw_body, content_type: content_type)
+    parse_graph_response(status, response_body, "#{http_method.to_s.upcase} upload")
+  end
+
+  def parse_graph_response(status, response_body, label)
+    raise AccessDeniedError, "Graph rejected the token (403)" if status == 403
+    raise AuthError, "Graph rejected the token (401)" if status == 401
     unless (200..299).cover?(status)
       error_class = status == 404 ? NotFoundError : Error
-      raise error_class, "Graph #{http_method.to_s.upcase} upload failed (#{status}): " \
-                         "#{graph_error_detail(response_body)}"
+      raise error_class, "Graph #{label} failed (#{status}): #{graph_error_detail(response_body)}"
     end
 
     response_body.blank? ? {} : JSON.parse(response_body)
@@ -98,8 +82,7 @@ module GraphAuth
     uri
   end
 
-  # Graph puts the real reason (e.g. ErrorInvalidRecipients for a malformed
-  # address) in the JSON error body; surface it instead of an opaque status line.
+  # Surfaces Graph's reason (e.g. ErrorInvalidRecipients) instead of an opaque status line.
   def graph_error_detail(response_body)
     error = JSON.parse(response_body.to_s)["error"] || {}
     [ error["code"], error["message"] ].reject(&:blank?).join(": ").presence ||

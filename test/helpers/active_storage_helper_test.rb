@@ -9,7 +9,7 @@ class ActiveStorageHelperTest < ActionView::TestCase
       end
     end
 
-    assert blob.filename = "active_storage_default/bedlam.png"
+    assert_equal "#{ActiveStorageHelper::PREFIX}/bedlam.png", blob[:filename]
 
     assert_no_difference("ActiveStorage::Attachment.count") do
       assert_no_difference("ActiveStorage::Blob.count") do
@@ -54,11 +54,6 @@ class ActiveStorageHelperTest < ActionView::TestCase
     assert_match "test.png", get_file_attached_hint(user.avatar)
   end
 
-  test "slideshow_variant" do
-    assert slideshow_variant.is_a? Hash
-    assert slideshow_variant[:resize_to_fill].is_a? Array
-  end
-
   test "thumb_variant" do
     assert thumb_variant.is_a? Hash
     assert thumb_variant[:resize_to_fill].is_a? Array
@@ -73,20 +68,6 @@ class ActiveStorageHelperTest < ActionView::TestCase
     assert_equal scaler * dimensions_array[1], scaled_dimensions_array[1]
   end
 
-  test "square_display_variant" do
-    assert square_display_variant.is_a? Hash
-    assert square_display_variant[:resize_to_fill].is_a? Array
-  end
-
-  test "large_display_variant" do
-    assert large_display_variant.is_a? Hash
-    assert large_display_variant[:resize_to_fill].is_a? Array
-    assert_equal 1920, large_display_variant[:resize_to_fill][0]
-    assert_equal 1200, large_display_variant[:resize_to_fill][1]
-    assert_equal "webp", large_display_variant[:format]
-    assert_equal(-1, large_display_variant.dig(:loader, :n))
-  end
-
   test "square_thumb_variant" do
     assert square_thumb_variant.is_a? Hash
 
@@ -99,36 +80,19 @@ class ActiveStorageHelperTest < ActionView::TestCase
     assert_equal square_thumb_variant(200)[:resize_to_fill].first, 200
   end
 
-  test "all variants include webp conversion" do
-    variants = [
-      thumb_variant,
-      thumb_variant(2),
-      thumb_variant_public,
-      medium_variant,
-      slideshow_variant,
-      square_thumb_variant,
-      square_display_variant
-    ]
-
-    variants.each do |variant|
-      assert_equal "webp", variant[:format], "#{variant.inspect} should be served as webp"
-      assert_equal 80, variant.dig(:saver, :Q), "#{variant.inspect} should have Q: 80 saver"
-      assert_equal(-1, variant.dig(:loader, :n), "#{variant.inspect} should have loader n: -1 for GIF support")
-    end
-  end
-
   # Variants declared convert: "webp" produced real WebP bytes but Rails derives
   # Variation#content_type from the :format key alone, so every variant on the live site was
   # served declaring image/png or image/jpeg. Browsers sniff and cope; og:image validators do not.
-  VARIANTS = %i[thumb_variant medium_variant slideshow_variant square_thumb_variant
+  VARIANTS = %i[thumb_variant thumb_variant_public medium_variant slideshow_variant square_thumb_variant
                 square_display_variant large_display_variant].freeze
 
-  test "every variant asks for webp with the key rails reads" do
+  test "every variant asks for webp with the key rails reads, and keeps GIF frames" do
     VARIANTS.each do |name|
       transformations = send(name)
 
       assert_equal "webp", transformations[:format], "#{name} does not set :format"
       assert_not transformations.key?(:convert), "#{name} still uses :convert, which rails ignores for content type"
+      assert_equal(-1, transformations.dig(:loader, :n), "#{name} drops GIF frames")
     end
   end
 

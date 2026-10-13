@@ -7,10 +7,6 @@
 # Database name: primary
 #
 #  id                            :integer          not null, primary key
-#  avatar_content_type           :string(255)
-#  avatar_file_name              :string(255)
-#  avatar_file_size              :integer
-#  avatar_updated_at             :datetime
 #  bio                           :text(16777215)
 #  calendar_email                :string(255)
 #  calendar_token                :string(255)
@@ -62,27 +58,15 @@
 #  fk_rails_...  (reimbursements_person_id => reimbursements_people.id)
 #
 class User < ApplicationRecord
-  # Length validations enforcing database column limits
-  validates :email, length: { maximum: 255 }
-  validates :encrypted_password, length: { maximum: 255 }
-  validates :reset_password_token, length: { maximum: 255 }
-  validates :current_sign_in_ip, length: { maximum: 255 }
-  validates :last_sign_in_ip, length: { maximum: 255 }
-  validates :first_name, length: { maximum: 255 }
-  validates :last_name, length: { maximum: 255 }
-  validates :phone_number, length: { maximum: 255 }
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[avatar_content_type avatar_file_name avatar_file_size avatar_updated_at]
+
+  validates :email, :encrypted_password, :reset_password_token, :current_sign_in_ip, :last_sign_in_ip,
+            :first_name, :last_name, :phone_number, :username,
+            :remember_token, :student_id, :associate_id, :calendar_token, :calendar_email,
+            :profile_completion_salt, length: { maximum: 255 }
   validates :bio, length: { maximum: 16777215 }
-  validates :avatar_file_name, length: { maximum: 255 }
-  validates :avatar_content_type, length: { maximum: 255 }
-  validates :username, length: { maximum: 255 }
-  validates :remember_token, length: { maximum: 255 }
-  validates :student_id, length: { maximum: 255 }
-  validates :associate_id, length: { maximum: 255 }
-  validates :calendar_token, length: { maximum: 255 }
-  validates :calendar_email, length: { maximum: 255 }
-  validates :profile_completion_salt, length: { maximum: 255 }
   before_save :unify_numbers
-  before_save :ensure_calendar_token
   before_save :ensure_profile_completion_salt
   before_validation :extract_student_id_from_email, if: :email_changed?
 
@@ -106,6 +90,11 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
   has_secure_token :calendar_token
 
+  # complete_profile! rotates the salt, so a used link stops working.
+  generates_token_for :profile_completion, expires_in: 7.days do
+    profile_completion_salt
+  end
+
   # set our own validations
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: "Please enter a valid mobile number" }
   validates :email, presence: true
@@ -125,23 +114,19 @@ class User < ApplicationRecord
       allow_blank: true
     }
 
-  # The reimbursements payee this account is linked to. The legacy
-  # airtable_person_id column is import provenance only and never written.
+  # The linked reimbursements payee. airtable_person_id is import provenance, never written.
   belongs_to :reimbursements_person, class_name: "Reimbursements::Person",
              optional: true, inverse_of: :user
 
-  # A finance user's home cost centre: decorates their finance links only.
-  # Bare finance URLs still mean every centre.
+  # A finance user's home cost centre: decorates their finance links and the import wizards'
+  # preselect only. Bare finance URLs still mean every centre.
   belongs_to :reimbursements_cost_centre, class_name: "Reimbursements::CostCentre", optional: true
 
-  # Deleting an account is how an erasure request is served here, and it has to
-  # reach the bank details the account was linked to: the association above
-  # only nullifies, so without this the sort code and account number outlived
-  # the account indefinitely. The payee row and its claims stay — they are the
-  # society's financial records, kept because they have to be — and only the
-  # part that can move money goes. Bank details that are merely UNUSED are a
-  # separate, gentler sweep (Reimbursements::BankDetailsRetention).
+  # An erasure request is served by deleting the account, so this must reach the linked payee's
+  # bank details (the association above only nullifies). The payee and its claims stay as
+  # financial records.
   before_destroy :erase_reimbursements_bank_details
+  before_destroy { CachedDuplicate.where(user1_id: id).or(CachedDuplicate.where(user2_id: id)).delete_all }
 
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
@@ -173,8 +158,6 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, :username, with: ->(name) { name&.strip }
   normalizes :associate_id, with: ->(id) { id&.strip&.upcase }
 
-  scope :profile_incomplete, -> { where(profile_completed_at: nil) }
-  scope :profile_complete, -> { where.not(profile_completed_at: nil) }
   scope :order_by_last_name_first, -> { order(:last_name, :first_name) }
   scope :search_by_name, ->(q) { where("CONCAT(first_name, ' ', last_name) LIKE ?", "%#{q}%") }
 
@@ -183,19 +166,11 @@ class User < ApplicationRecord
     where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
   end
 
-  def self.by_first_name
-    reorder("first_name ASC")
-  end
-
+  # A non-string token (?token[]=x) would raise inside MessageVerifier.
   def self.find_by_profile_completion_token(token)
-    where(profile_completed_at: nil).each do |user|
-      found = find_signed(token, purpose: [ :profile_completion, user.profile_completion_salt ])
-      return found if found && found == user
-    end
+    return unless token.is_a?(String)
 
-    nil
-  rescue StandardError
-    nil
+    where(profile_completed_at: nil).find_by_token_for(:profile_completion, token)
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -251,8 +226,6 @@ class User < ApplicationRecord
     email
   end
 
-  # Returns the email address to use for calendar invites.
-  # Uses calendar_email override if set, otherwise falls back to main email.
   def calendar_email_for_invites
     calendar_email.presence || email
   end
@@ -311,7 +284,6 @@ class User < ApplicationRecord
   ##
 
   # The current and upcoming function share code, so please check them both if you change things.
-  # Optimized to use single database queries instead of chaining where().unfulfilled
   def debt_causing_maintenance_debts(on_date = Date.current)
     admin_maintenance_debts.unfulfilled_before_date(on_date)
   end
@@ -350,27 +322,9 @@ class User < ApplicationRecord
   end
 
   def self.in_debt(on_date = Date.current)
-    # Use database-level query instead of loading all users into memory
-    # A user is in debt if they have either:
-    # 1. Maintenance debts that are unfulfilled and past due, OR
-    # 2. Staffing debts that are unfulfilled and past due
-
-    maintenance_debt_subquery = Admin::MaintenanceDebt
-      .where(state: :normal)
-      .where.missing(:maintenance_credit)
-      .where("due_by < ?", on_date)
-      .select(:user_id)
-
-    staffing_debt_subquery = Admin::StaffingDebt
-      .where(admin_staffing_job: nil, state: :normal)
-      .where("due_by < ?", on_date)
-      .select(:user_id)
-
-    where(
-      id: maintenance_debt_subquery
-    ).or(
-      where(id: staffing_debt_subquery)
-    ).distinct
+    where(id: Admin::MaintenanceDebt.unfulfilled_before_date(on_date).select(:user_id))
+      .or(where(id: Admin::StaffingDebt.unfulfilled_before_date(on_date).select(:user_id)))
+      .distinct
   end
 
   # returns users who have been sent a notification since the given date
@@ -393,153 +347,53 @@ class User < ApplicationRecord
     results.sort_by { |tm| tm.teamwork.start_date || Date.current }
   end
 
-  # When true, per-credit maintenance reallocation is skipped. Set while a MaintenanceSession
-  # persists a batch of credits so the session can reallocate each affected user once instead
-  # of once per credit (see MaintenanceSession#reallocate_attendee_debts_once).
+  # Set while a MaintenanceSession persists a batch of credits, so each user reallocates once
+  # rather than once per credit (MaintenanceSession#reallocate_attendee_debts_once).
   thread_mattr_accessor :suppress_maintenance_reallocation, instance_accessor: false
 
-  # This method looks for all debts in the future and their credits, all unallocated credits, and all past debts without credits.
-  # It then matches all the soonest debt with credits.
+  # Pairs the soonest reallocatable debts with credits and unlinks the rest.
   def reallocate_maintenance_debts
     return if self.class.suppress_maintenance_reallocation
 
-    # Remove unnecessary reload calls and optimize query
-    # Preload maintenance_credit to prevent N+1 queries
-    debts = admin_maintenance_debts
-      .includes(:maintenance_credit)
-      .where("due_by >= ? ", Date.current)
-      .or(admin_maintenance_debts.includes(:maintenance_credit).where(maintenance_credit: nil))
-      .where(state: :normal)
-      .order(due_by: :asc)
-      .to_a
-
+    debts = reallocatable(admin_maintenance_debts, :maintenance_credit)
     credits = maintenance_credits
-      .includes(:maintenance_debt)
-      .where(admin_maintenance_debts: { id: [ nil ] + debts.map(&:id) })
-      .to_a
-
-    amount_of_pairs = [ debts.size, credits.size ].min
-
-    # Use transaction for bulk operations
-    ActiveRecord::Base.transaction do
-      # Prepare bulk updates
-      updates_to_link = []
-      updates_to_unlink = []
-
-      # Link them as far as there are pairs
-      (0...amount_of_pairs).each do |i|
-        if debts[i].maintenance_credit != credits[i]
-          updates_to_link << { id: debts[i].id, maintenance_credit_id: credits[i].id }
-        end
-      end
-
-      # Unlink the rest
-      (amount_of_pairs...debts.size).each do |i|
-        if debts[i].maintenance_credit.present?
-          updates_to_unlink << { id: debts[i].id, maintenance_credit_id: nil }
-        end
-      end
-
-      # Perform bulk updates using update_all (more appropriate since we're only updating existing records)
-      if updates_to_link.any?
-        updates_to_link.each do |update|
-          Admin::MaintenanceDebt.where(id: update[:id]).update_all(maintenance_credit_id: update[:maintenance_credit_id])
-        end
-      end
-
-      if updates_to_unlink.any?
-        debt_ids = updates_to_unlink.map { |u| u[:id] }
-        Admin::MaintenanceDebt.where(id: debt_ids).update_all(maintenance_credit_id: nil)
-      end
-    end
+              .includes(:maintenance_debt)
+              .where(admin_maintenance_debts: { id: [ nil ] + debts.map(&:id) })
+              .to_a
+    pair_debts(debts, credits, :maintenance_credit)
   end
 
-  # This method looks for all debts in the future and their staffing jobs, all unallocated staffing jobs, and all past debts without jobs.
-  # It then matches all the soonest debt with staffing jobs.
+  # Pairs the soonest reallocatable debts with staffing jobs and unlinks the rest.
   def reallocate_staffing_debts
-    # Remove unnecessary reload calls and optimize query
-    # Preload admin_staffing_job to prevent N+1 queries
-    debts = admin_staffing_debts
-      .includes(:admin_staffing_job)
-      .where("due_by >= ? ", Date.current)
-      .or(admin_staffing_debts.includes(:admin_staffing_job).where(admin_staffing_job: nil))
-      .where(state: :normal)
-      .order(due_by: :asc)
-      .to_a
-
-    # Find all jobs for this user that are currently not associated or associated with a debt (belonging to this user) already.
+    debts = reallocatable(admin_staffing_debts, :admin_staffing_job)
     jobs = staffing_jobs
-      .includes(:staffing_debt)
-      .where(admin_staffing_debts: { id: [ nil ] + debts.map(&:id) })
-      .to_a
-
-    # Filter out jobs that do not count towards debt
-    # Note: Cannot eager load polymorphic :staffable association, so this may cause N+1
-    # but it's acceptable given the complexity of the alternative
-    valid_jobs = jobs.select(&:counts_towards_debt?)
-
-    # The amount of pairs is how many combinations of debt and staffing job there are.
-    amount_of_pairs = [ debts.size, valid_jobs.size ].min
-
-    # Use transaction for bulk operations
-    ActiveRecord::Base.transaction do
-      # Prepare bulk updates
-      updates_to_link = []
-      updates_to_unlink = []
-
-      # Link them as far as there are pairs
-      (0...amount_of_pairs).each do |i|
-        if debts[i].admin_staffing_job != valid_jobs[i]
-          updates_to_link << { id: debts[i].id, admin_staffing_job_id: valid_jobs[i].id }
-        end
-      end
-
-      # Unlink the rest
-      (amount_of_pairs...debts.size).each do |i|
-        if debts[i].admin_staffing_job.present?
-          updates_to_unlink << { id: debts[i].id, admin_staffing_job_id: nil }
-        end
-      end
-
-      # Perform bulk updates using update_all (more appropriate since we're only updating existing records)
-      if updates_to_link.any?
-        updates_to_link.each do |update|
-          Admin::StaffingDebt.where(id: update[:id]).update_all(admin_staffing_job_id: update[:admin_staffing_job_id])
-        end
-      end
-
-      if updates_to_unlink.any?
-        debt_ids = updates_to_unlink.map { |u| u[:id] }
-        Admin::StaffingDebt.where(id: debt_ids).update_all(admin_staffing_job_id: nil)
-      end
-    end
+           .includes(:staffing_debt)
+           .where(admin_staffing_debts: { id: [ nil ] + debts.map(&:id) })
+           # counts_towards_debt? cannot be eager loaded (polymorphic staffable), so this runs per job.
+           .select(&:counts_towards_debt?)
+    pair_debts(debts, jobs, :admin_staffing_job)
   end
 
   ##
   # Merging Users
   ##
 
-  # Returns count of staffing jobs not linked to any debt
   def staffing_jobs_unlinked_count
     staffing_jobs.left_joins(:staffing_debt).where(admin_staffing_debts: { id: nil }).count
   end
 
-  # Returns count of staffing debts not linked to any job
   def staffing_debts_unlinked_count
     admin_staffing_debts.where(admin_staffing_job_id: nil, state: :normal).count
   end
 
-  # Returns count of maintenance debts not linked to any credit
   def maintenance_debts_unlinked_count
     admin_maintenance_debts.where(maintenance_credit_id: nil, state: :normal).count
   end
 
-  # Returns count of maintenance credits not linked to any debt
   def maintenance_credits_unlinked_count
     maintenance_credits.left_joins(:maintenance_debt).where(admin_maintenance_debts: { id: nil }).count
   end
 
-  # Returns count of team memberships that overlap with another user (same show/event)
   def overlapping_team_memberships_with(other_user)
     team_membership.where(
       teamwork_type: other_user.team_membership.select(:teamwork_type),
@@ -547,7 +401,7 @@ class User < ApplicationRecord
     ).count
   end
 
-  # Returns merge statistics for preview modal
+  # Counts for the merge preview modal.
   def merge_stats_as_source(target_user)
     overlaps = target_user.overlapping_team_memberships_with(self)
 
@@ -576,10 +430,14 @@ class User < ApplicationRecord
     }
   end
 
-  # Merges another user into this user, transferring all their associations.
-  # The source_user will be destroyed after a successful merge.
-  # keep_from_source: array of field names to copy from source user (e.g., ['name', 'email', 'student_id'])
-  # Returns a hash with { success: boolean, errors: [], transferred: {} }
+  KEEPABLE_FIELDS = {
+    "name" => %i[first_name last_name], "email" => %i[email], "phone_number" => %i[phone_number],
+    "student_id" => %i[student_id], "associate_id" => %i[associate_id]
+  }.freeze
+
+  # Merges source_user into this user and destroys it. keep_from_source names the fields to copy
+  # from the source (name, email, phone_number, student_id, associate_id, avatar).
+  # Returns { success:, errors:, transferred: }.
   def absorb(source_user, keep_from_source: [])
     return { success: false, errors: [ "Cannot merge user into itself" ] } if source_user&.id == id
     return { success: false, errors: [ "Source user not found" ] } if source_user.nil?
@@ -595,59 +453,34 @@ class User < ApplicationRecord
     }
 
     ActiveRecord::Base.transaction do
-      # Apply field preferences from source user
+      park_source_email = -> { source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk") }
+
       keep_from_source.each do |field|
-        case field.to_s
-        when "name"
-          self.first_name = source_user.first_name
-          self.last_name = source_user.last_name
-        when "email"
-          # Handle email swap to avoid uniqueness constraint
-          if source_user.email != email
-            source_email = source_user.email
-            source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
-            self.email = source_email
-          end
-        when "phone_number"
-          self.phone_number = source_user.phone_number
-        when "student_id"
-          self.student_id = source_user.student_id
-        when "associate_id"
-          self.associate_id = source_user.associate_id
-        when "avatar"
-          if source_user.avatar.attached?
-            avatar.purge if avatar.attached?
-            avatar.attach(source_user.avatar.blob)
-          end
-        end
+        KEEPABLE_FIELDS.fetch(field.to_s, []).each { |attr| public_send("#{attr}=", source_user.public_send(attr)) }
       end
-      # If source_user's email normalizes to the same value as ours (e.g. sms.ed.ac.uk vs ed.ac.uk),
-      # it will cause a spurious uniqueness conflict during save — move it out of the way first.
-      if source_user.email == email
-        source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
-      end
+      # Taking the source's email, or one that normalises to ours (sms.ed.ac.uk vs ed.ac.uk),
+      # would fail uniqueness on save, so move it aside first.
+      park_source_email.call if keep_from_source.include?("email") || source_user.email == email
       save! if changed?
 
-      # Handle email for legacy behavior (unknown_ email replacement) when not explicitly chosen
+      # Replace our unknown_ placeholder email with the source's real one.
       unless keep_from_source.include?("email")
         target_has_unknown = email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
         source_has_unknown = source_user.email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
 
         if target_has_unknown && !source_has_unknown
           source_email = source_user.email
-          # Skip if another user (not involved in this merge) already holds the normalized email
+          # Skip when a third user already holds the normalised email.
           unless User.where.not(id: [ id, source_user.id ]).exists?(email: source_email)
-            source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+            park_source_email.call
             update!(email: source_email)
           end
         end
       end
 
-      # 1. Transfer TeamMembers (with duplicate handling)
       source_user.team_membership.each do |tm|
         existing = team_membership.find_by(teamwork_type: tm.teamwork_type, teamwork_id: tm.teamwork_id)
         if existing
-          # Concatenate positions with '/' if they have different roles
           unless existing.position.include?(tm.position)
             existing.update!(position: "#{existing.position} / #{tm.position}")
           end
@@ -658,26 +491,17 @@ class User < ApplicationRecord
         end
       end
 
-      # 2. Transfer Staffing Jobs
       transferred[:staffing_jobs] = source_user.staffing_jobs.update_all(user_id: id)
 
-      # 3. Transfer Debts
       transferred[:maintenance_debts] = source_user.admin_maintenance_debts.update_all(user_id: id)
       transferred[:staffing_debts] = source_user.admin_staffing_debts.update_all(user_id: id)
 
-      # 4. Transfer Debt Notifications
       transferred[:debt_notifications] = source_user.admin_debt_notifications.update_all(user_id: id)
 
-      # 5. Transfer Maintenance Credits
       transferred[:maintenance_credits] = source_user.maintenance_credits.update_all(user_id: id)
 
-      # 6. Merge Roles (union)
       source_user.roles.each do |role|
-        # CRITICAL: admin role must never be absorbed.
-        # Non-admin users with :manage,User permission CAN absorb an admin and inherit their other roles.
-        # This is acceptable because absorb access is already gated by CanCanCan authorization,
-        # and we prevent the most critical escalation (admin status itself). If we need to prevent
-        # non-admins from absorbing admins entirely, that belongs in CanCanCan authorization, not here.
+        # Never absorb Admin. Stopping non-admins absorbing admins belongs in CanCanCan.
         next if role.name == "Admin"
         unless has_role?(role.name)
           add_role(role.name)
@@ -685,31 +509,20 @@ class User < ApplicationRecord
         end
       end
 
-      # 7. Handle MembershipCard - keep target's, destroy source's
-      source_user.membership_card&.destroy
-
-      # 8. Handle MarketingCreatives::Profile - keep target's if exists, otherwise transfer
       if marketing_creatives_profile.nil? && source_user.marketing_creatives_profile.present?
         source_user.marketing_creatives_profile.update!(user_id: id)
       else
         source_user.marketing_creatives_profile&.destroy
       end
 
-      # 9. Handle Avatar - keep target's if attached, otherwise transfer (unless explicitly chosen)
-      unless keep_from_source.include?("avatar")
-        if !avatar.attached? && source_user.avatar.attached?
-          avatar.attach(source_user.avatar.blob)
-        end
+      if source_user.avatar.attached? && (keep_from_source.include?("avatar") || !avatar.attached?)
+        avatar.attach(source_user.avatar.blob)
       end
 
-      # 10. Reallocate debts after transfer to properly link jobs/credits
       reallocate_maintenance_debts
       reallocate_staffing_debts
 
-      # 11. Remove cached duplicate records involving source user
-      CachedDuplicate.where(user1_id: source_user.id).or(CachedDuplicate.where(user2_id: source_user.id)).destroy_all
-
-      # 12. Destroy source user - reload first to clear cached associations
+      # Reload to drop the associations that were just moved.
       source_user.reload.destroy!
     end
 
@@ -722,51 +535,29 @@ class User < ApplicationRecord
   # Duplicate Detection
   ##
 
-  # Returns the academic years the user was active based on their event participation.
-  # Academic years run from September to August, so 2024-09-01 to 2025-08-31 is "2024/25".
-  # Returns an array of starting years, e.g. [2022, 2023, 2024] for someone active in 22/23, 23/24, 24/25.
-  def years_active
-    event_dates = team_membership.where(teamwork_type: "Event")
-                                 .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
-                                 .pluck("events.start_date", "events.end_date")
-    return [] if event_dates.empty?
+  def years_active = self.class.bulk_years_active_for([ id ]).fetch(id, [])
 
-    academic_years = Set.new
-    event_dates.each do |start_date, end_date|
-      next unless start_date && end_date
-      # Convert dates to academic years (Sept-Aug) using the helper
-      academic_years << ApplicationController.helpers.date_to_academic_year(start_date)
-      academic_years << ApplicationController.helpers.date_to_academic_year(end_date)
-    end
-    academic_years.to_a.sort
-  end
-
-  # Check if this user's years of activity overlap with another user's
-  # within the given threshold (default 4 years gap allowed).
-  # Returns true if they overlap or if either has no activity data.
-  # Optionally accepts a years_active_cache hash to avoid repeated DB queries.
-  def years_overlap?(other_user, threshold: 4, years_active_cache: nil)
+  # True when a year of ours is within 4 years of one of theirs. years_active_cache avoids
+  # repeated queries.
+  def years_overlap?(other_user, years_active_cache: nil)
     my_years = years_active_cache ? years_active_cache[id] : years_active
     their_years = years_active_cache ? years_active_cache[other_user.id] : other_user.years_active
     my_years ||= []
     their_years ||= []
     return true if my_years.empty? || their_years.empty? # No data = assume possible match
 
-    # Check if any year is within threshold of each other
-    my_years.any? { |y| their_years.any? { |ty| (y - ty).abs <= threshold } }
+    my_years.any? { |y| their_years.any? { |ty| (y - ty).abs <= 4 } }
   end
 
-  # Bulk load years_active for multiple users in ONE query.
-  # Returns a hash: { user_id => [year1, year2, ...], ... }
+  # Starting years of the academic years (September to August) in which each user had an event,
+  # e.g. [2022, 2023] for 22/23 and 23/24: { user_id => [year, ...] }, in one query.
   def self.bulk_years_active_for(user_ids)
     return {} if user_ids.empty?
 
-    # Single query to get all event dates for all users
     event_data = TeamMember.where(user_id: user_ids, teamwork_type: "Event")
                            .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
                            .pluck(:user_id, "events.start_date", "events.end_date")
 
-    # Group by user_id and compute academic years
     result = Hash.new { |h, k| h[k] = Set.new }
     event_data.each do |user_id, start_date, end_date|
       next unless start_date && end_date
@@ -774,79 +565,40 @@ class User < ApplicationRecord
       result[user_id] << ApplicationController.helpers.date_to_academic_year(end_date)
     end
 
-    # Convert Sets to sorted Arrays
     result.transform_values { |years| years.to_a.sort }
   end
 
-  # Mark another user as not a duplicate of this user
   def mark_not_duplicate(other_user)
     ids = not_duplicate_user_ids || []
     ids << other_user.id unless ids.include?(other_user.id)
     update!(not_duplicate_user_ids: ids)
   end
 
-  # Check if this user has been marked as not a duplicate of another user (in either direction)
+  # The mark may be on either user.
   def marked_not_duplicate?(other_user)
     (not_duplicate_user_ids || []).include?(other_user.id) ||
       (other_user.not_duplicate_user_ids || []).include?(id)
   end
 
-  # Fuzzy first name matching using StringSimilarity module
-  def self.fuzzy_first_name_match?(name1, name2, threshold: 0.6)
-    StringSimilarity.fuzzy_name_match?(name1, name2, threshold: threshold)
-  end
-
-  def self.fuzzy_last_name_match?(last_name1, last_name2, threshold: 0.6)
-    return false if last_name1.blank? || last_name2.blank?
-    StringSimilarity.fuzzy_name_match?(last_name1, last_name2, threshold: threshold)
-  end
-
-  # Find all potential duplicate user pairs
-  # Returns a hash with five buckets:
-  #   - same_id: Users with same student_id or associate_id (definite duplicates)
-  #   - fuzzy_name_overlapping: Last name exact + first name fuzzy + years overlap
-  #   - fuzzy_name_non_overlapping: Last name exact + first name fuzzy + years don't overlap
-  #   - fuzzy_both_overlapping: Both names fuzzy + years overlap (excludes exact last name matches)
-  #   - fuzzy_both_no_overlap: Both names fuzzy + no years overlap (excludes exact last name matches)
-  #
-  # Performance optimized: Uses batch loading to minimize database queries.
-  # Also returns years_active_cache for use in views to avoid re-querying.
+  # Potential duplicate pairs, in three buckets:
+  #   same_id: same student_id, associate_id or equivalent sms email (definite duplicates)
+  #   fuzzy_name_overlapping / fuzzy_name_non_overlapping: same last name, fuzzy first name,
+  #     split by whether their years of activity overlap
+  # The fuzzy_both buckets (fuzzy on both names) come from cached_duplicates, which
+  # RefreshFuzzyBothDuplicatesJob fills because that scan is O(n²); Admin::DuplicatesController sets them.
+  # Each fuzzy pair carries years_active_cache so views need not re-query.
   def self.find_potential_duplicates
-    duplicates = {
-      same_id: [],
-      fuzzy_name_overlapping: [],
-      fuzzy_name_non_overlapping: [],
-      fuzzy_both_overlapping: [],
-      fuzzy_both_no_overlap: []
-    }
+    duplicates = { same_id: [], fuzzy_name_overlapping: [], fuzzy_name_non_overlapping: [] }
 
-    # Use unscoped to avoid default ORDER BY conflicting with GROUP BY in MySQL
-    # Bucket 1: Same student_id (definite duplicates regardless of years)
-    duplicate_student_ids = unscoped.where.not(student_id: [ nil, "" ])
-                                    .group(:student_id)
-                                    .having("COUNT(*) > 1")
-                                    .pluck(:student_id)
-    if duplicate_student_ids.any?
-      users_by_student_id = where(student_id: duplicate_student_ids).group_by(&:student_id)
-      duplicate_student_ids.each do |sid|
-        duplicates[:same_id] << { users: users_by_student_id[sid], match_type: :student_id, id_value: sid }
+    %i[student_id associate_id].each do |column|
+      values = shared_values(column)
+      users_by_value = where(column => values).group_by(&column)
+      values.each do |value|
+        duplicates[:same_id] << { users: users_by_value[value], match_type: column, id_value: value }
       end
     end
 
-    # Bucket 1b: Same associate_id (definite duplicates regardless of years)
-    duplicate_associate_ids = unscoped.where.not(associate_id: [ nil, "" ])
-                                      .group(:associate_id)
-                                      .having("COUNT(*) > 1")
-                                      .pluck(:associate_id)
-    if duplicate_associate_ids.any?
-      users_by_associate_id = where(associate_id: duplicate_associate_ids).group_by(&:associate_id)
-      duplicate_associate_ids.each do |aid|
-        duplicates[:same_id] << { users: users_by_associate_id[aid], match_type: :associate_id, id_value: aid }
-      end
-    end
-
-    # Bucket 1c: Equivalent SMS email (s1234567@sms.ed.ac.uk == s1234567@ed.ac.uk)
-    # Catches legacy records that predate the @sms.ed.ac.uk normalization
+    # s1234567@sms.ed.ac.uk is s1234567@ed.ac.uk: legacy records predate the normalisation.
     sms_email_users = unscoped.where("email LIKE ?", "%@sms.ed.ac.uk").to_a
     sms_email_users.each do |sms_user|
       normalized_email = sms_user.email.sub("@sms.ed.ac.uk", "@ed.ac.uk")
@@ -856,42 +608,33 @@ class User < ApplicationRecord
       duplicates[:same_id] << { users: [ sms_user, counterpart ], match_type: :email, id_value: normalized_email }
     end
 
-    # Bucket 2 & 3: Same last name with fuzzy first name match
-    # Step 1: Get all last names that appear more than once
-    duplicate_last_names = unscoped.where.not(last_name: [ nil, "" ])
-                                   .group(:last_name)
-                                   .having("COUNT(*) > 1")
-                                   .pluck(:last_name)
+    duplicate_last_names = shared_values(:last_name)
 
     if duplicate_last_names.any?
-      # Step 2: Batch-load ALL users with duplicate last names in ONE query
       all_users = where(last_name: duplicate_last_names).to_a
-      users_by_last_name = all_users.group_by(&:last_name)
+      users_by_last_name = all_users.group_by { |u| u.last_name.downcase }
 
-      # Step 3: Bulk-load years_active for all these users in ONE query
       all_user_ids = all_users.map(&:id)
       years_active_cache = bulk_years_active_for(all_user_ids)
 
-      # Step 4: Process combinations using the cached data
       duplicate_last_names.each do |ln|
-        users = users_by_last_name[ln]
+        users = users_by_last_name[ln.downcase]
         users.combination(2).each do |u1, u2|
           next if u1.marked_not_duplicate?(u2)
-          next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)
+          next unless StringSimilarity.fuzzy_name_match?(u1.first_name, u2.first_name)
 
-          if u1.years_overlap?(u2, years_active_cache: years_active_cache)
-            duplicates[:fuzzy_name_overlapping] << { users: [ u1, u2 ], years_overlap: true, years_active_cache: years_active_cache }
-          else
-            duplicates[:fuzzy_name_non_overlapping] << { users: [ u1, u2 ], years_overlap: false, years_active_cache: years_active_cache }
-          end
+          bucket = u1.years_overlap?(u2, years_active_cache: years_active_cache) ? :fuzzy_name_overlapping : :fuzzy_name_non_overlapping
+          duplicates[bucket] << { users: [ u1, u2 ], years_active_cache: years_active_cache }
         end
       end
     end
 
-    # Bucket 4 & 5: Loaded from cached_duplicates table by controller
-    # (Background job computes these to avoid O(n²) performance issues)
-
     duplicates
+  end
+
+  # unscoped: the default ORDER BY clashes with GROUP BY in MySQL.
+  private_class_method def self.shared_values(column)
+    unscoped.where.not(column => [ nil, "" ]).group(column).having("COUNT(*) > 1").pluck(column)
   end
 
   ##
@@ -922,12 +665,10 @@ class User < ApplicationRecord
     end
   end
 
-  # Facts about the person, read from the role. These are NOT permissions: "who are the
-  # members" drives mailing lists, the membership report and the annual archive, and a grid
-  # checkbox on some other role must not be able to make its holders members by accident.
-  # What a member or committee member MAY DO is granted through the permission grid instead.
-  # A life member is deliberately not a member here — only pretix treats them as one, for
-  # ticket discounts (Pretix::MembershipSync::ENTITLING_ROLES).
+  # Facts read from the role, NOT permissions: they drive mailing lists, the membership report and
+  # the annual archive, so a grid checkbox on another role must not make its holders members.
+  # A life member is not a member here; only pretix treats them as one
+  # (Pretix::MembershipSync::ENTITLING_ROLES).
   def member?
     has_role?(:member)
   end
@@ -955,18 +696,12 @@ class User < ApplicationRecord
     profile_completed_at.present?
   end
 
-  def profile_incomplete?
-    !profile_complete?
-  end
-
   def complete_profile!
     # Reset salt to invalidate any existing tokens
     update!(profile_completed_at: Time.current, consented: Date.current, profile_completion_salt: SecureRandom.hex(8))
   end
 
-  def profile_completion_token
-    signed_id(purpose: [ :profile_completion, profile_completion_salt ], expires_in: 7.days)
-  end
+  def profile_completion_token = generate_token_for(:profile_completion)
 
   def send_welcome_email
     UsersMailer.welcome_email(self).deliver_later unless email.ends_with?("@bedlamtheatre.co.uk")
@@ -979,17 +714,29 @@ class User < ApplicationRecord
 
   private
 
-  # PersonLink resolves a user to a payee by the stored link FIRST and then by
-  # email, so erasure has to follow both — an email-matched payee that was never
-  # id-linked is exactly the case of someone who has not claimed in a long time.
+  # Future debts, plus past ones still unfulfilled, soonest first.
+  def reallocatable(debts, link)
+    debts.includes(link).where("due_by >= ?", Date.current)
+         .or(debts.includes(link).where(link => nil))
+         .where(state: :normal).order(due_by: :asc).to_a
+  end
+
+  # The i-th debt takes the i-th fulfilment; debts past the last one are unlinked.
+  def pair_debts(debts, fulfilments, link)
+    ActiveRecord::Base.transaction do
+      debts.each_with_index do |debt, i|
+        next if debt.public_send(link) == fulfilments[i]
+
+        debt.class.where(id: debt.id).update_all("#{link}_id" => fulfilments[i]&.id)
+      end
+    end
+  end
+
+  # PersonLink resolves a payee by the stored link, then by email, so erasure must follow both.
   def erase_reimbursements_bank_details
     person = reimbursements_person ||
              Reimbursements::Person.find_by(email: email.to_s.presence)
     person&.payment_details&.destroy!
-  end
-
-  def ensure_calendar_token
-    self.calendar_token ||= SecureRandom.base58(24)
   end
 
   def ensure_profile_completion_salt

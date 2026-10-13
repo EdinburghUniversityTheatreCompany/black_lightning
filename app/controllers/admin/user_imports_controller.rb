@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-##
-# Controller for bulk importing users (without activating membership).
-# Creates user accounts from spreadsheet/paste data with smart matching.
-##
+# Bulk-creates user accounts from pasted or uploaded data, without activating membership.
 class Admin::UserImportsController < AdminController
   include Importable
 
@@ -31,8 +28,7 @@ class Admin::UserImportsController < AdminController
     end
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    @cache_key = generate_import_cache_key("user_import")
-    write_import_cache(@cache_key, serialize_import(@import.categorized))
+    @cache_key = cache_import("user_import", serialize_import(@import.categorized))
     @title = "Review User Import"
   end
 
@@ -46,9 +42,8 @@ class Admin::UserImportsController < AdminController
     end
 
     actions = params[:actions] || {}
-    results = { created: 0, linked: 0, skipped: 0 }
+    results = { created: 0, linked: 0, skipped: 0, errors: [] }
 
-    # Process all buckets
     all_items = categorized.values.flatten
     all_items.each do |item|
       index = item["index"].to_s
@@ -57,18 +52,20 @@ class Admin::UserImportsController < AdminController
 
       case action
       when "create"
-        user = create_user_from_row(row)
-        user.send_welcome_email
+        create_user_from_row(row).send_welcome_email
         results[:created] += 1
       when "link", /\Alink_\d+\z/
-        # User already exists, no action needed (just acknowledging the link)
         results[:linked] += 1
       when "skip", nil
         results[:skipped] += 1
       end
+    rescue ActiveRecord::RecordInvalid => e
+      results[:errors] << "#{row[:original_name]}: #{e.record.errors.full_messages.to_sentence}"
     end
 
-    helpers.append_to_flash(:success, "Import complete: #{results[:created]} created, #{results[:linked]} linked to existing, #{results[:skipped]} skipped")
+    message = "Import complete: #{results[:created]} created, #{results[:linked]} linked to existing, #{results[:skipped]} skipped"
+    message += ". Errors: #{results[:errors].join('; ')}" if results[:errors].any?
+    helpers.append_to_flash(:success, message)
     redirect_to admin_users_path
   end
 end

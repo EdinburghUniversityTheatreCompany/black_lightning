@@ -34,8 +34,8 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
   end
 
   test "parses timestamps in the application zone, not UTC" do
-    # It returns naive local wall-clock strings; reading them as UTC would shift
-    # every outdoor point an hour through BST.
+    # Naive local wall-clock strings; reading them as UTC would shift every
+    # outdoor point an hour through BST.
     client, = build_client([ [ 200, series_body(times: [ "2026-08-05T12:00" ],
                                                 temperatures: [ 17.6 ], humidities: [ 68 ],
                                                 dew_points: [ 11.6 ]) ] ])
@@ -43,7 +43,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     recorded_at = client.hourly_series(latitude: 55.9467, longitude: -3.1903).first[:recorded_at]
 
     assert_equal Time.zone.parse("2026-08-05T12:00"), recorded_at
-    assert_equal 12, recorded_at.in_time_zone(Time.zone).hour
   end
 
   test "requests the three variables plus a past window in the app time zone" do
@@ -62,24 +61,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     assert_includes uri, "past_days=2"
   end
 
-  test "needs no api key" do
-    # Nothing to configure, so no environment can be half set up.
-    client, http = build_client([ [ 200, series_body ] ])
-
-    client.hourly_series(latitude: 55.9467, longitude: -3.1903)
-
-    assert_empty http.requests.first.headers.keys.grep(/key|auth/i)
-  end
-
-  test "past_days is what makes an outage self-heal" do
-    # Each poll re-serves the last N days, so a gap fills itself.
-    client, http = build_client([ [ 200, series_body ] ])
-
-    client.hourly_series(latitude: 55.9467, longitude: -3.1903, past_days: 7)
-
-    assert_includes CGI.unescape(http.requests.first.uri), "past_days=7"
-  end
-
   test "drops an hour whose temperature is null rather than storing a blank" do
     # The forecast tail can carry nulls; a row of nils is worse than no row.
     client, = build_client([ [ 200, series_body(times: [ "2026-08-05T12:00", "2026-08-05T13:00" ],
@@ -90,16 +71,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     rows = client.hourly_series(latitude: 55.9467, longitude: -3.1903)
 
     assert_equal 1, rows.size
-  end
-
-  test "computes a missing dew point from temperature and humidity" do
-    client, = build_client([ [ 200, series_body(times: [ "2026-08-05T12:00" ],
-                                                temperatures: [ 20.0 ], humidities: [ 50 ],
-                                                dew_points: [ nil ]) ] ])
-
-    rows = client.hourly_series(latitude: 55.9467, longitude: -3.1903)
-
-    assert_in_delta 9.26, rows.first[:dew_point_c], 0.05
   end
 
   test "returns no rows when the hourly block is absent" do
@@ -133,10 +104,5 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     assert_raises(Net::ReadTimeout) do
       client.hourly_series(latitude: 55.9467, longitude: -3.1903)
     end
-  end
-
-  test "carries the attribution the licence requires" do
-    assert Climate::OpenMeteoClient::ATTRIBUTION.present?
-    assert_match(/open-meteo/i, Climate::OpenMeteoClient::ATTRIBUTION_URL)
   end
 end

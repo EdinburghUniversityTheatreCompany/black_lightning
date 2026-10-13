@@ -1,13 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 import { getMetaValue } from "../helpers"
+import { confirmDialog } from "../lib/confirm"
 
-// Immediate receipt add/remove for the expense edit page. Files go straight
-// to the receipts endpoint as a plain multipart POST (not an ActiveStorage
-// direct upload) and the server's turbo stream replaces #receipts-gallery. Turbo
-// Drive is disabled app-wide, so streams are piped through
-// Turbo.renderStreamMessage by hand.
+// Immediate receipt add/remove for the expense edit page. Files go to the
+// receipts endpoint as a plain multipart POST (not an ActiveStorage direct
+// upload) via fetch, so the turbo-stream reply that replaces #receipts-gallery
+// is rendered by hand.
 export default class extends Controller {
-  static targets = ["input", "status"]
+  static targets = ["input", "status", "zone"]
   static values = { url: String }
 
   pick() {
@@ -20,11 +20,11 @@ export default class extends Controller {
 
   dragover(event) {
     event.preventDefault()
-    this.element.querySelector(".dropzone")?.classList.add("dz-drag-hover")
+    this.zoneTarget.classList.add("border-primary", "bg-primary/5")
   }
 
   dragleave() {
-    this.element.querySelector(".dropzone")?.classList.remove("dz-drag-hover")
+    this.zoneTarget.classList.remove("border-primary", "bg-primary/5")
   }
 
   drop(event) {
@@ -35,7 +35,7 @@ export default class extends Controller {
 
   async remove(event) {
     const { url, filename } = event.currentTarget.dataset
-    if (!(await this.#confirm(`Remove ${filename} from this expense?`))) return
+    if (!(await confirmDialog(`Remove ${filename} from this expense?`))) return
 
     this.#setStatus(`Removing ${filename}…`)
     await this.#request(url, { method: "DELETE" })
@@ -66,20 +66,6 @@ export default class extends Controller {
     } catch {
       this.#setStatus("Something went wrong. Refresh the page and try again.")
     }
-  }
-
-  async #confirm(message) {
-    if (!window.Swal) return window.confirm(message)
-
-    const result = await window.Swal.mixin({ buttonsStyling: true }).fire({
-      icon: "warning",
-      title: "Are you sure?",
-      html: message,
-      showCancelButton: true,
-      confirmButtonText: "Yes",
-      cancelButtonText: "Cancel",
-    })
-    return Boolean(result.value)
   }
 
   #setStatus(message) {

@@ -43,4 +43,17 @@ class Admin::EditableBlockTest < ActiveSupport::TestCase
 
     assert_equal "about/team", block.url
   end
+
+  test "moving or unlinking a block clears the navbar cache of its old section" do
+    block = FactoryBot.create(:editable_block, url: "about/team")
+
+    [ "get_involved/team", nil ].each do |new_url|
+      Rails.cache.write("navbar_editable_blocks/about", :stale)
+
+      block.update!(url: new_url)
+
+      assert_nil Rails.cache.read("navbar_editable_blocks/about")
+      block.update!(url: "about/team")
+    end
+  end
 end

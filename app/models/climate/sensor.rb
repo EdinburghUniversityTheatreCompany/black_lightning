@@ -24,10 +24,8 @@
 #
 module Climate
   ##
-  # A source of temperature/humidity readings. The crypt's Govee sensors and the
-  # outdoor weather feed are both rows here, differing only in how readings
-  # arrive: a Govee sensor is fed by CSV import, the outdoor row by an hourly
-  # poll. See the migration for why they share a table.
+  # A source of readings: a Govee sensor (fed by CSV import) or the outdoor
+  # weather feed (fed by an hourly poll).
   class Sensor < ApplicationRecord
     SOURCE_GOVEE = "govee".freeze
     SOURCE_OPEN_METEO = "open_meteo".freeze
@@ -37,10 +35,9 @@ module Climate
     PLACEMENT_OUTDOOR = "outdoor".freeze
     PLACEMENTS = [ PLACEMENT_INDOOR, PLACEMENT_OUTDOOR ].freeze
 
-    # A Govee sensor is only as fresh as the last CSV somebody imported, so its
-    # window is a day rather than minutes. The outdoor feed polls hourly.
+    # A Govee sensor is only as fresh as its last imported CSV, so its window is
+    # a day. The outdoor feed polls hourly.
     STALE_AFTER = { SOURCE_GOVEE => 26.hours, SOURCE_OPEN_METEO => 3.hours }.freeze
-    DEFAULT_STALE_AFTER = 26.hours
 
     has_many :readings, class_name: "Climate::Reading", dependent: :delete_all, inverse_of: :sensor
 
@@ -57,17 +54,12 @@ module Climate
     scope :active, -> { where(active: true) }
     scope :govee, -> { where(source: SOURCE_GOVEE) }
     scope :open_meteo, -> { where(source: SOURCE_OPEN_METEO) }
-    scope :outdoor, -> { where(placement: PLACEMENT_OUTDOOR) }
-    # Indoor sensors first, then the outdoor comparison line.
     scope :in_display_order, -> { order(Arel.sql("placement = 'outdoor'"), :position, :id) }
-    # Which sensors the condensation-risk and ventilation charts read.
-    scope :in_crypt, -> { where(in_crypt: true) }
 
-    # Ensured here rather than seeded by a data migration: test and CI databases
-    # are schema-LOADED, so a data migration would leave every environment
-    # except production without the row. The outdoor poll job calls this first.
-    #
-    # find_or_create_by only assigns on create, so a corrected location survives.
+    # Ensured in code, not seeded by a data migration: test and CI databases are
+    # schema-loaded, so a migration would never run there. The poll job calls this
+    # first. find_or_create_by only assigns on create, so a corrected location
+    # survives.
     def self.outdoor_source!
       find_or_create_by!(source: SOURCE_OPEN_METEO) do |sensor|
         sensor.placement = PLACEMENT_OUTDOOR
@@ -81,7 +73,6 @@ module Climate
       end
     end
 
-    def govee? = source == SOURCE_GOVEE
     def open_meteo? = source == SOURCE_OPEN_METEO
     def outdoor? = placement == PLACEMENT_OUTDOOR
 
@@ -91,19 +82,18 @@ module Climate
       @latest_reading = readings.order(recorded_at: :desc).first
     end
 
-    def stale_after = STALE_AFTER.fetch(source, DEFAULT_STALE_AFTER)
+    def stale_after = STALE_AFTER.fetch(source)
 
-    # No readings at all counts as stale, which is the same story for the operator.
-    def stale?(now = Time.current)
-      latest_reading.nil? || latest_reading.recorded_at < now - stale_after
+    # No readings at all counts as stale.
+    def stale?
+      latest_reading.nil? || latest_reading.recorded_at < stale_after.ago
     end
 
     def to_label = display_name
 
     private
 
-    # The Open-Meteo row models the air outside the building. Letting it be
-    # ticked would put the outdoor line into the crypt's own worst case.
+    # Ticked, the outdoor row would put the outdoor line into the crypt's worst case.
     def outdoor_feed_is_not_in_the_crypt
       errors.add(:in_crypt, "cannot be set on the outdoor feed") if in_crypt? && outdoor?
     end

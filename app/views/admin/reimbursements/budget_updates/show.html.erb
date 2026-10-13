@@ -42,9 +42,7 @@
               <td class="px-3 py-2">
                 <%= row[:label] %>
                 <% if row[:superseded] %>
-                  <%# Removing this update would not move the figure: a later
-                      revision already won. Saying so is the difference between
-                      an undo and a click that appears to do nothing. %>
+                  <%# Removing a superseded revision moves no figure; say so, or the undo looks broken. %>
                   <div class="text-xs text-gray-500">
                     A later revision has superseded this one, so removing it changes nothing here.
                   </div>
@@ -54,9 +52,7 @@
                 <% if row[:replaced] %>
                   <%= reimbursements_money(row[:replaced]) %>
                 <% elsif row[:initial] %>
-                  <%# The line's first forecast, so what it replaced was the
-                      committee's initial figure rather than an earlier
-                      revision — and that is what removing this falls back to. %>
+                  <%# A first forecast replaced the committee's initial figure, which is what removal falls back to. %>
                   <%= reimbursements_money(row[:initial]) %>
                   <span class="text-xs text-gray-500">(initial)</span>
                 <% else %>

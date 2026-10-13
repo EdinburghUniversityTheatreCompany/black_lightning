@@ -13,10 +13,6 @@
 #  doors_open_minutes_before :integer
 #  duration_minutes          :integer
 #  end_date                  :date
-#  image_content_type        :string(255)
-#  image_file_name           :string(255)
-#  image_file_size           :integer
-#  image_updated_at          :datetime
 #  is_public                 :boolean
 #  maintenance_debt_amount   :integer
 #  maintenance_debt_start    :date
@@ -67,14 +63,9 @@ class Season < Event
   # A season's occurrences are the hours the venue is open, not performances.
   OCCURRENCES_ARE_PERFORMANCES = false
 
-  # SCHEMA_TYPE stays the inherited TheaterEvent -- Mick's call, 2026-09-06.
-  # schema.org's Festival looks like the tidier label for a season, but what a
-  # season actually contains is staged theatre, and TheaterEvent is the type
-  # Google's event rich results are built around. Don't "correct" this.
-
-  # Validate uniqueness on Event Subtype basis instead of on the event.
-  # Otherwise, you cannot have two different types with the same slug.
-  validates :slug, uniqueness: { case_sensitive: false }
+  # SCHEMA_TYPE stays the inherited TheaterEvent, Mick's call: a season contains
+  # staged theatre, and Google's event rich results are built around that type.
+  # Don't "correct" it to Festival.
 
   has_many :events
 

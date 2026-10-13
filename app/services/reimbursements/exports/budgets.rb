@@ -2,33 +2,15 @@ module Reimbursements
   module Exports
     ##
     # Budgets with every rollup the budgets table and the nominal-code overview
-    # show, in the same order and with the same meanings:
+    # show, in the same order and with the same meanings.
     #
-    # * Initial / Current forecast — what was planned, and the latest logged
-    #   revision (blank when none has been logged).
-    # * Projected — the current plan: the latest forecast, falling back to the
-    #   initial figure.
-    # * Committed — Approved + Submitted + Paid; Pipeline — Pending only, kept
-    #   separate so Committed keeps its meaning.
-    # * Paid (portal) vs EUSA actual — the portal's view of settled spend beside
-    #   the EUSA ledger's. A divergence between the two is a reconciliation
-    #   signal, which is exactly why both travel in the export.
-    # * Expected outturn — the greater of the projection and what's already
-    #   spent or committed, so the number never drops below reality. EMPTY for an
-    #   Income budget: the same max there is best-case income, the opposite
-    #   direction, so a number would mislead (see Budget#expected_outturn).
-    # * Remaining (projected - committed) and Variance (projected - initial)
-    #   read the PLAN, not the forecast alone, so a line carrying only an
-    #   initial figure still reports both rather than two blanks. Remaining is
-    #   blank only when nobody set a figure at all (and for an income line with
-    #   no forecast — see Budget#remaining); Variance is blank without an
-    #   initial budget, and is legitimately negative when the plan came in
-    #   under the original.
-    # * Area — blank for the 14-of-31 live Fringe budgets that have none. Off
-    #   budget.area rather than store.areas: both collections this exporter is
-    #   handed already preload area: :owners for owner_names above.
-    #
-    # All amounts are excl-VAT, mirroring the BACS spreadsheet.
+    # * Committed, Pipeline and Paid (portal) are ex-VAT, as the budget screens show them.
+    # * Expected outturn is EMPTY for an Income budget: the "never below
+    #   reality" max reads as best-case income there (Budget#expected_outturn).
+    # * Remaining and Variance read the PLAN, not the forecast alone, so a line
+    #   carrying only an initial figure still reports both (Budget#remaining).
+    # * Area reads budget.area, not store.areas: both callers preload
+    #   area: :owners.
     class Budgets < Base
       HEADERS = [ "Budget", "Nominal code", "Type", "Visible", "Initial", "Current forecast",
                   "Projected", "Committed", "Pipeline", "Paid (portal)", "EUSA actual",
@@ -51,8 +33,6 @@ module Reimbursements
         ]
       end
 
-      # The owners association is preloaded by the store, so this costs no
-      # per-budget query however many budgets are exported.
       def owner_names(budget)
         budget.owners.filter_map { |owner| owner.name.presence }.join(", ")
       end

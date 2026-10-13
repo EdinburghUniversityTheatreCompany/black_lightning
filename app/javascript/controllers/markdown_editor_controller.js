@@ -1,11 +1,44 @@
 import { Controller } from "@hotwired/stimulus"
+import { getMetaValue } from "../helpers"
+import { showFlashAlerts } from "../sweetalert/alerts"
+
+const DIALOG_WIDTH = 340
+
+// What the user is told when MarkdownController refuses an upload. A 422 or 429 is shown in the
+// server's words; any other failure gets #uploadOneFile's connection message.
+const UPLOAD_ERRORS = {
+  // Signing in, in any tab, replaces the session's CSRF token, so this page's form stops saving.
+  401: "You've been signed out. Copy what you've written before you sign in again: this page can't save it after that.",
+  403: "You can't add images to this record.",
+  404: "This record no longer exists, so the image wasn't saved."
+}
+
+const LINK_FIELDS = `
+  <label class="milkdown-link-dialog__label">Text
+    <input type="text" name="text" class="form-control form-control-sm mt-1" placeholder="Link text (optional)">
+  </label>
+  <label class="milkdown-link-dialog__label">URL
+    <input type="url" name="href" class="form-control form-control-sm mt-1" placeholder="https://" required>
+  </label>`
+
+const TABLE_FIELDS = `
+  <div style="display:flex;gap:0.75rem">
+    <label class="milkdown-link-dialog__label" style="flex:1">Rows
+      <input type="number" name="rows" class="form-control form-control-sm mt-1" value="3" min="1" max="20">
+    </label>
+    <label class="milkdown-link-dialog__label" style="flex:1">Columns
+      <input type="number" name="cols" class="form-control form-control-sm mt-1" value="3" min="1" max="10">
+    </label>
+  </div>`
 
 export default class extends Controller {
   static values = {
     uploadUrl: String,
     height: { type: String, default: "300px" },
     itemType: String,
-    itemId: String
+    itemId: String,
+    primaryButtonClass: String,
+    secondaryButtonClass: String
   }
 
   async connect() {
@@ -25,7 +58,6 @@ export default class extends Controller {
       return
     }
 
-    // Textarea is kept current via listenerCtx, but sync on submit as safety net
     this.#boundSync = () => this.#syncFromEditor()
     this.#form?.addEventListener("submit", this.#boundSync, { capture: true })
   }
@@ -38,8 +70,6 @@ export default class extends Controller {
     this.#destroyEditor()
   }
 
-  // Actions
-
   setMode(event) {
     const mode = event.currentTarget.dataset.mode
     if (mode !== this.#mode) this.#switchTo(mode)
@@ -47,19 +77,19 @@ export default class extends Controller {
 
   bold() {
     this.#mode === "source"
-      ? this.#sourceInline("**", "**", "bold")
+      ? this.#sourceWrap("**", "**", "bold")
       : this.#insertInlineMark("strong", this.#cmds.toggleStrongCommand, "bold")
   }
 
   italic() {
     this.#mode === "source"
-      ? this.#sourceInline("*", "*", "italic")
+      ? this.#sourceWrap("*", "*", "italic")
       : this.#insertInlineMark("emphasis", this.#cmds.toggleEmphasisCommand, "italic")
   }
 
   strike() {
     this.#mode === "source"
-      ? this.#sourceInline("~~", "~~", "strikethrough")
+      ? this.#sourceWrap("~~", "~~", "strikethrough")
       : this.#insertInlineMark("strike_through", this.#cmds.toggleStrikethroughCommand, "strikethrough")
   }
 
@@ -93,13 +123,13 @@ export default class extends Controller {
 
   inlineCode() {
     this.#mode === "source"
-      ? this.#sourceInline("`", "`", "code")
+      ? this.#sourceWrap("`", "`", "code")
       : this.#insertInlineMark("inlineCode", this.#cmds.toggleInlineCodeCommand, "code")
   }
 
   codeBlock() {
     this.#mode === "source"
-      ? this.#sourceBlock("```\n", "\n```", "code")
+      ? this.#sourceWrap("```\n", "\n```", "code")
       : this.#cmd(this.#cmds.createCodeBlockCommand)
   }
 
@@ -107,10 +137,8 @@ export default class extends Controller {
   insertImage() { this.#fileInput?.click() }
   insertTable(event) { this.#showTableDialog(event) }
 
-  undo() { if (this.#mode === "edit") this.#cmd(this.#cmds.undoCommand) }
-  redo() { if (this.#mode === "edit") this.#cmd(this.#cmds.redoCommand) }
-
-  // Private
+  undo() { this.#cmd(this.#cmds.undoCommand) }
+  redo() { this.#cmd(this.#cmds.redoCommand) }
 
   #textarea = null
   #editor = null
@@ -124,15 +152,12 @@ export default class extends Controller {
   #previewEl = null
   #fileInput = null
   #linkDialog = null
-  #linkDialogResolve = null
   #tableDialog = null
-  #tableDialogResolve = null
+  #dialogResolve = null
+  #pasted = false
 
-  // Command definitions (objects with .key, used with commandsCtx.call())
   #cmds = {}
-  // Milkdown context keys (used with ctx.get())
   #ctx = {}
-  // Milkdown utility functions stored after dynamic import
   #TextSelection = null
   #replaceAll = null
   #insert = null
@@ -173,7 +198,7 @@ export default class extends Controller {
       <div class="milkdown-sep"></div>
       <div class="milkdown-toolbar__group">
         <button type="button" class="milkdown-btn" title="Insert link (Ctrl+K)"  data-action="click->markdown-editor#insertLink"><i class="fa-solid fa-link"></i></button>
-        <button type="button" class="milkdown-btn" title="Upload image" data-action="click->markdown-editor#insertImage"><i class="fa-solid fa-image"></i></button>
+        ${this.hasUploadUrlValue ? `<button type="button" class="milkdown-btn" title="Upload image" data-action="click->markdown-editor#insertImage"><i class="fa-solid fa-image"></i></button>` : ""}
         <button type="button" class="milkdown-btn" title="Insert table" data-action="click->markdown-editor#insertTable"><i class="fa-solid fa-table"></i></button>
       </div>
       <div class="milkdown-sep milkdown-sep--strong"></div>
@@ -183,8 +208,7 @@ export default class extends Controller {
       </div>
     `
 
-    // Prevent toolbar button clicks from stealing focus away from the editor,
-    // then immediately re-focus the editor so ProseMirror commands have a valid selection.
+    // Stop toolbar clicks stealing focus, and re-focus the editor so commands have a selection.
     toolbar.addEventListener("mousedown", e => {
       if (e.target.closest(".milkdown-btn, .milkdown-tab")) {
         e.preventDefault()
@@ -197,53 +221,55 @@ export default class extends Controller {
     this.element.appendChild(toolbar)
 
     this.#editorEl = document.createElement("div")
-    this.#editorEl.className = "milkdown-editor-wrap milkdown-panel rounded-bottom"
+    this.#editorEl.className = "milkdown-editor-wrap milkdown-panel rounded-b"
     this.#editorEl.style.minHeight = this.heightValue
     this.element.appendChild(this.#editorEl)
 
     this.#sourceEl = document.createElement("div")
     this.#sourceEl.style.display = "none"
     this.#sourceTextarea = document.createElement("textarea")
-    this.#sourceTextarea.className = "form-control font-monospace border-top-0 rounded-top-0"
+    this.#sourceTextarea.className = "form-control font-mono border-t-0 rounded-t-none"
     this.#sourceTextarea.style.height = this.heightValue
     this.#sourceTextarea.style.resize = "vertical"
     this.#sourceEl.appendChild(this.#sourceTextarea)
     this.element.appendChild(this.#sourceEl)
 
     this.#previewEl = document.createElement("div")
-    this.#previewEl.className = "markdown-body prose max-w-none p-3 milkdown-panel rounded-bottom"
+    this.#previewEl.className = "markdown-body prose max-w-none p-3 milkdown-panel rounded-b"
     this.#previewEl.style.display = "none"
     this.element.appendChild(this.#previewEl)
 
-    this.#fileInput = document.createElement("input")
-    this.#fileInput.type = "file"
-    this.#fileInput.accept = "image/*"
-    this.#fileInput.style.display = "none"
-    this.#fileInput.addEventListener("change", () => this.#handleFileInputChange())
-    this.element.appendChild(this.#fileInput)
+    if (this.hasUploadUrlValue) {
+      this.#fileInput = document.createElement("input")
+      this.#fileInput.type = "file"
+      this.#fileInput.accept = "image/*"
+      this.#fileInput.style.display = "none"
+      this.#fileInput.addEventListener("change", () => this.#handleFileInputChange())
+      this.element.appendChild(this.#fileInput)
+    }
 
-    this.#linkDialog = this.#buildLinkDialog()
+    this.#linkDialog = this.#buildDialog("Insert link", LINK_FIELDS, data => ({
+      href: data.get("href"), text: data.get("text")
+    }))
     document.body.appendChild(this.#linkDialog)
 
-    this.#tableDialog = this.#buildTableDialog()
+    this.#tableDialog = this.#buildDialog("Insert table", TABLE_FIELDS, data => ({
+      rows: parseInt(data.get("rows"), 10) || 3, cols: parseInt(data.get("cols"), 10) || 3
+    }))
     document.body.appendChild(this.#tableDialog)
   }
 
-  #buildLinkDialog() {
+  // A modal whose submit resolves #dialogResolve with read(formData). Only one is open at a time.
+  #buildDialog(title, fieldsHtml, read) {
     const dialog = document.createElement("dialog")
     dialog.className = "milkdown-link-dialog"
     dialog.innerHTML = `
       <form class="milkdown-link-dialog__form">
-        <p class="milkdown-link-dialog__title">Insert link</p>
-        <label class="milkdown-link-dialog__label">Text
-          <input type="text" name="text" class="form-control form-control-sm mt-1" placeholder="Link text (optional)">
-        </label>
-        <label class="milkdown-link-dialog__label">URL
-          <input type="url" name="href" class="form-control form-control-sm mt-1" placeholder="https://" required>
-        </label>
+        <p class="milkdown-link-dialog__title">${title}</p>
+        ${fieldsHtml}
         <div class="milkdown-link-dialog__actions">
-          <button type="button" class="btn btn-sm btn-secondary" data-cancel>Cancel</button>
-          <button type="submit" class="btn btn-sm btn-primary">Insert</button>
+          <button type="button" class="${this.secondaryButtonClassValue}" data-cancel>Cancel</button>
+          <button type="submit" class="${this.primaryButtonClassValue}">Insert</button>
         </div>
       </form>
     `
@@ -251,29 +277,30 @@ export default class extends Controller {
     const form = dialog.querySelector("form")
     form.addEventListener("submit", e => {
       e.preventDefault()
-      const data = new FormData(form)
-      const result = { href: data.get("href"), text: data.get("text") }
+      const resolve = this.#dialogResolve
+      this.#dialogResolve = null
       dialog.close()
-      this.#linkDialogResolve?.(result)
-      this.#linkDialogResolve = null
+      resolve?.(read(new FormData(form)))
     })
 
-    dialog.querySelector("[data-cancel]").addEventListener("click", () => {
-      dialog.close()
-    })
+    dialog.querySelector("[data-cancel]").addEventListener("click", () => dialog.close())
 
-    // Resolve with null on any close (Escape key, cancel button, or backdrop)
+    // Escape, Cancel and the backdrop all land here and resolve null.
     dialog.addEventListener("close", () => {
-      this.#linkDialogResolve?.(null)
-      this.#linkDialogResolve = null
+      this.#dialogResolve?.(null)
+      this.#dialogResolve = null
     })
 
     return dialog
   }
 
-  async #mountEditor(value = null) {
-    const markdown = value ?? this.#textarea.value
+  #ask(dialog, focusName) {
+    dialog.showModal()
+    dialog.querySelector(`[name='${focusName}']`).focus()
+    return new Promise(resolve => { this.#dialogResolve = resolve })
+  }
 
+  async #mountEditor() {
     const [
       { Editor, defaultValueCtx, rootCtx, editorViewCtx, commandsCtx },
       { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand,
@@ -284,8 +311,8 @@ export default class extends Controller {
       { clipboard },
       { listener, listenerCtx },
       { upload, uploadConfig },
-      { replaceAll, insert },
-      { TextSelection }
+      { replaceAll, insert, $prose },
+      { TextSelection, Plugin }
     ] = await Promise.all([
       import("@milkdown/core"),
       import("@milkdown/preset-commonmark"),
@@ -312,16 +339,22 @@ export default class extends Controller {
       insertTableCommand, undoCommand, redoCommand
     }
 
-    this.#editor = await Editor.make()
+    const editor = Editor.make()
       .config(ctx => {
         ctx.set(rootCtx, this.#editorEl)
-        ctx.set(defaultValueCtx, markdown)
+        ctx.set(defaultValueCtx, this.#textarea.value)
         ctx.get(listenerCtx).markdownUpdated((_ctx, md) => {
           this.#textarea.value = md
         })
+        if (!this.hasUploadUrlValue) return
         ctx.update(uploadConfig.key, prev => ({
           ...prev,
-          uploader: (files, schema) => this.#uploadFiles(files, schema)
+          // plugin-upload hands the uploader no event, but calls this with one just before.
+          getInsertPos: (event, _ctx, pos) => {
+            this.#pasted = event instanceof ClipboardEvent
+            return pos
+          },
+          uploader: (files, schema) => this.#uploadFiles(files, schema, this.#pasted)
         }))
       })
       .use(commonmark)
@@ -329,8 +362,12 @@ export default class extends Controller {
       .use(history)
       .use(clipboard)
       .use(listener)
-      .use(upload)
-      .create()
+    // plugin-upload is what uploads a dragged, dropped or pasted image. Without it a file dropped
+    // here must still be swallowed, or the browser opens it in place of the half-filled form.
+    editor.use(this.hasUploadUrlValue ? upload : $prose(() => new Plugin({
+      props: { handleDrop: (_view, event) => event.dataTransfer?.files?.length > 0 }
+    })))
+    this.#editor = await editor.create()
 
     const prose = this.#editorEl.querySelector(".ProseMirror")
     if (prose) prose.classList.add("markdown-body", "prose", "max-w-none", "p-3")
@@ -338,7 +375,7 @@ export default class extends Controller {
 
   async #destroyEditor() {
     const editor = this.#editor
-    // Null eagerly so a reconnect racing this async destruction sees a clean slate
+    // Null eagerly so a reconnect racing this async destroy sees a clean slate.
     this.#editor = null
     this.#cmds = {}
     this.#ctx = {}
@@ -366,8 +403,7 @@ export default class extends Controller {
 
     if (mode === "edit") {
       if (prev === "source") {
-        // Replace content in the live editor — preserves the editor instance and plugins
-        // flush=true re-creates ProseMirror state (clearing undo history) to match source edits
+        // flush=true re-creates ProseMirror state, clearing undo history, to match the source edits.
         this.#editor.action(this.#replaceAll(this.#textarea.value, true))
       }
       this.#editorEl.style.display = ""
@@ -382,10 +418,9 @@ export default class extends Controller {
 
   async #loadPreview() {
     this.#previewEl.innerHTML = '<p class="text-gray-600">Loading preview…</p>'
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     const response = await fetch("/markdown/preview", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": getMetaValue("csrf-token") },
       body: JSON.stringify({ input_html: this.#textarea.value })
     })
     if (response.ok) {
@@ -397,24 +432,21 @@ export default class extends Controller {
   }
 
   #syncFromEditor() {
-    // Textarea is already current via listenerCtx; this is a safety net for submit
+    // Source-mode typing reaches the real textarea only on a mode switch or here, at submit.
     if (this.#mode === "source") this.#textarea.value = this.#sourceTextarea.value
   }
 
   #cmd(cmdDef, payload = undefined) {
     if (!this.#editor || this.#mode !== "edit" || !cmdDef) return
-    // Focus and dispatch the command in a single action so ProseMirror reads the selection
-    // from the already-focused view, avoiding ordering assumptions across two action calls.
+    // Focus and dispatch in one action so ProseMirror reads the focused view's selection.
     this.#editor.action(ctx => {
       ctx.get(this.#ctx.editorViewCtx).focus()
       ctx.get(this.#ctx.commandsCtx).call(cmdDef.key, payload)
     })
   }
 
-  // ── Source-mode helpers ──────────────────────────────────────────────────────
-
-  // Wraps selected text (or inserts placeholder) with before/after syntax.
-  #sourceInline(before, after, placeholder) {
+  // Wraps the selection (or a placeholder) in before/after and selects the middle.
+  #sourceWrap(before, after, placeholder) {
     const ta = this.#sourceTextarea
     const start = ta.selectionStart
     const end = ta.selectionEnd
@@ -426,7 +458,6 @@ export default class extends Controller {
     ta.focus()
   }
 
-  // Inserts a markdown prefix at the start of the current line.
   #sourceLinePrefix(prefix) {
     const ta = this.#sourceTextarea
     const pos = ta.selectionStart
@@ -437,23 +468,7 @@ export default class extends Controller {
     ta.focus()
   }
 
-  // Wraps selected text (or placeholder) in a block-level syntax (e.g. fenced code).
-  #sourceBlock(before, after, placeholder) {
-    const ta = this.#sourceTextarea
-    const start = ta.selectionStart
-    const end = ta.selectionEnd
-    const selected = ta.value.substring(start, end)
-    const text = selected || placeholder
-    const insertion = before + text + after
-    ta.value = ta.value.substring(0, start) + insertion + ta.value.substring(end)
-    ta.setSelectionRange(start + before.length, start + before.length + text.length)
-    this.#textarea.value = ta.value
-    ta.focus()
-  }
-
-  // For inline marks: inserts placeholder text with the mark applied when nothing
-  // is selected, so the user can immediately type to replace it. Toggles the mark
-  // on existing selections as usual.
+  // With nothing selected, inserts the placeholder with the mark applied so typing replaces it.
   #insertInlineMark(markName, cmdDef, placeholder) {
     if (!this.#editor || this.#mode !== "edit") return
 
@@ -516,9 +531,8 @@ export default class extends Controller {
   async #showLinkDialog(event) {
     if (this.#mode === "preview") return
 
-    this.#positionDialog(this.#linkDialog, event ?? this.#getCursorCoords(), 340)
+    this.#positionDialog(this.#linkDialog, event ?? this.#getCursorCoords())
 
-    // Pre-fill text field from current selection
     let selectedText = ""
     if (this.#mode === "source") {
       const ta = this.#sourceTextarea
@@ -537,10 +551,7 @@ export default class extends Controller {
     form.reset()
     form.querySelector("[name='text']").value = selectedText
 
-    this.#linkDialog.showModal()
-    this.#linkDialog.querySelector("[name='href']").focus()
-
-    const result = await new Promise(resolve => { this.#linkDialogResolve = resolve })
+    const result = await this.#ask(this.#linkDialog, "href")
     if (!result?.href) return
 
     const { href, text } = result
@@ -566,10 +577,9 @@ export default class extends Controller {
       if (!linkMark) return
 
       if (!selection.empty) {
-        // Apply link mark to selected text
         dispatch(state.tr.addMark(selection.from, selection.to, linkMark))
       } else {
-        // Insert linked text, using insertText + addMark to avoid mark inheritance stripping
+        // insertText + addMark, so the new text does not inherit (and lose) the cursor's marks.
         const from = selection.from
         const tr = state.tr.insertText(linkText, from)
         tr.addMark(from, from + linkText.length, linkMark)
@@ -579,54 +589,12 @@ export default class extends Controller {
     })
   }
 
-  #buildTableDialog() {
-    const dialog = document.createElement("dialog")
-    dialog.className = "milkdown-table-dialog"
-    dialog.innerHTML = `
-      <form class="milkdown-link-dialog__form">
-        <p class="milkdown-link-dialog__title">Insert table</p>
-        <div style="display:flex;gap:0.75rem">
-          <label class="milkdown-link-dialog__label" style="flex:1">Rows
-            <input type="number" name="rows" class="form-control form-control-sm mt-1" value="3" min="1" max="20">
-          </label>
-          <label class="milkdown-link-dialog__label" style="flex:1">Columns
-            <input type="number" name="cols" class="form-control form-control-sm mt-1" value="3" min="1" max="10">
-          </label>
-        </div>
-        <div class="milkdown-link-dialog__actions">
-          <button type="button" class="btn btn-sm btn-secondary" data-cancel>Cancel</button>
-          <button type="submit" class="btn btn-sm btn-primary">Insert</button>
-        </div>
-      </form>
-    `
-
-    const form = dialog.querySelector("form")
-    form.addEventListener("submit", e => {
-      e.preventDefault()
-      const data = new FormData(form)
-      const result = { rows: parseInt(data.get("rows"), 10) || 3, cols: parseInt(data.get("cols"), 10) || 3 }
-      dialog.close()
-      this.#tableDialogResolve?.(result)
-      this.#tableDialogResolve = null
-    })
-
-    dialog.querySelector("[data-cancel]").addEventListener("click", () => dialog.close())
-    dialog.addEventListener("close", () => {
-      this.#tableDialogResolve?.(null)
-      this.#tableDialogResolve = null
-    })
-
-    return dialog
-  }
-
   async #showTableDialog(event) {
     if (this.#mode === "preview") return
 
-    this.#positionDialog(this.#tableDialog, event, 260)
-    this.#tableDialog.showModal()
-    this.#tableDialog.querySelector("[name='rows']").focus()
+    this.#positionDialog(this.#tableDialog, event)
 
-    const result = await new Promise(resolve => { this.#tableDialogResolve = resolve })
+    const result = await this.#ask(this.#tableDialog, "rows")
     if (!result) return
 
     const { rows, cols } = result
@@ -636,11 +604,10 @@ export default class extends Controller {
       const sep = "| " + Array(cols).fill("---").join(" | ") + " |"
       const row = "| " + Array(cols).fill("Cell").join(" | ") + " |"
       const table = [header, sep, ...Array(rows - 1).fill(row)].join("\n")
-      this.#sourceBlock("", "\n", table)
+      this.#sourceWrap("", "\n", table)
       return
     }
 
-    // WYSIWYG: build table nodes from schema
     this.#editor.action(ctx => {
       const view = ctx.get(this.#ctx.editorViewCtx)
       view.focus()
@@ -684,9 +651,7 @@ export default class extends Controller {
     }
   }
 
-  // Returns {left, bottom} for the current cursor position, used to anchor dialogs
-  // opened via keyboard shortcut. Edit mode uses ProseMirror's coordsAtPos; source
-  // mode falls back to the top of the textarea.
+  // {left, bottom} anchor for a dialog opened by keyboard shortcut.
   #getCursorCoords() {
     if (this.#mode === "edit" && this.#editor) {
       let coords = null
@@ -697,15 +662,12 @@ export default class extends Controller {
       })
       if (coords) return coords
     }
-    if (this.#sourceTextarea) {
-      const rect = this.#sourceTextarea.getBoundingClientRect()
-      return { left: rect.left, bottom: rect.top + 28 }
-    }
-    return null
+    const rect = this.#sourceTextarea.getBoundingClientRect()
+    return { left: rect.left, bottom: rect.top + 28 }
   }
 
-  // Positions a dialog anchored below a button event or a {left, bottom} coord pair.
-  #positionDialog(dialog, anchor, maxWidth = 340) {
+  // Anchors below a button event or a {left, bottom} pair.
+  #positionDialog(dialog, anchor) {
     let left, bottom
     if (anchor?.currentTarget) {
       const rect = anchor.currentTarget.getBoundingClientRect()
@@ -719,52 +681,73 @@ export default class extends Controller {
     }
     dialog.style.margin = "0"
     dialog.style.position = "fixed"
-    dialog.style.left = `${Math.min(left, window.innerWidth - maxWidth - 16)}px`
+    dialog.style.left = `${Math.min(left, window.innerWidth - DIALOG_WIDTH - 16)}px`
     dialog.style.top = `${bottom + 6}px`
   }
 
   async #handleFileInputChange() {
-    const files = this.#fileInput.files
-    if (!files?.length || !this.#editor) return
+    const files = Array.from(this.#fileInput.files ?? [])
+    // Cleared up front (clearing empties the FileList too), so picking the same file again after
+    // a failure still fires change.
+    this.#fileInput.value = ""
+    if (!files.length || !this.#editor) return
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-    const results = await Promise.all(
-      Array.from(files)
-        .filter(f => f.type.startsWith("image/"))
-        .map(f => this.#uploadOneFile(f, csrfToken))
-    )
-
-    for (const { url, alt } of results.filter(Boolean)) {
+    for (const { url, alt } of await this.#uploadImages(files)) {
       this.#editor.action(this.#insert(`![${alt || "image"}](${url})`))
     }
-    this.#fileInput.value = ""
   }
 
-  // Used by plugin-upload (drag/drop/paste) — returns ProseMirror nodes
-  async #uploadFiles(files, schema) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-    const results = await Promise.all(
-      Array.from(files)
-        .filter(f => f.type.startsWith("image/"))
-        .map(f => this.#uploadOneFile(f, csrfToken))
-    )
-    return results
-      .filter(Boolean)
+  // For plugin-upload (drag, drop, paste): returns ProseMirror nodes. Rejecting would leave the
+  // plugin's "Upload in progress" placeholder in the text, so #uploadImages never does.
+  async #uploadFiles(files, schema, pasted) {
+    return (await this.#uploadImages(files, pasted))
       .map(({ url, alt }) => schema.nodes.image?.createAndFill({ src: url, alt }))
       .filter(Boolean)
   }
 
-  async #uploadOneFile(file, csrfToken) {
+  // Returns the uploaded images and tells the user, once, about every file that did not make it.
+  // Pasted files that are not images pass silently: the user chose the clipboard, not its files.
+  async #uploadImages(fileList, pasted = false) {
+    const files = Array.from(fileList)
+    const images = files.filter(f => f.type.startsWith("image/"))
+    const errors = pasted ? [] : files.filter(f => !images.includes(f)).map(f => `${f.name} isn't an image.`)
+
+    const results = await Promise.all(images.map(f => this.#uploadOneFile(f)))
+    errors.push(...results.filter(r => r.error).map(r => r.error))
+    // Not awaited: it resolves only when the user closes it, and the images that did upload
+    // should go in now.
+    if (errors.length) showFlashAlerts({ error: errors })
+    return results.filter(r => r.url)
+  }
+
+  // Resolves to { url, alt } or { error }, never rejects.
+  async #uploadOneFile(file) {
+    const name = file.name || "upload.png"
     const formData = new FormData()
-    formData.append("image", file, file.name || "upload.png")
+    formData.append("image", file, name)
     if (this.itemTypeValue) formData.append("item_type", this.itemTypeValue)
     if (this.itemIdValue) formData.append("item_id", this.itemIdValue)
-    const response = await fetch(this.uploadUrlValue, {
-      method: "POST",
-      headers: { "X-CSRF-Token": csrfToken },
-      body: formData
-    })
-    if (!response.ok) return null
-    return response.json()
+    try {
+      const response = await fetch(this.uploadUrlValue, {
+        method: "POST",
+        headers: { "X-CSRF-Token": getMetaValue("csrf-token"), Accept: "application/json" },
+        body: formData
+      })
+      if (response.ok) return await response.json()
+
+      const error = UPLOAD_ERRORS[response.status] ?? await serverError(response)
+      if (error) return { error: `${name}: ${error}` }
+    } catch {
+      // A dropped connection, or a body that is not JSON: both get the message below.
+    }
+    return { error: `${name} couldn't be uploaded. Check your connection and try again.` }
   }
+}
+
+// The error a 422 or 429 states, or null for any other answer.
+async function serverError(response) {
+  if (![422, 429].includes(response.status)) return null
+
+  const { error } = await response.json()
+  return typeof error === "string" ? error : null
 }

@@ -1,41 +1,22 @@
 # syntax=docker/dockerfile:1
 # Development container for BlackLightning.
 #
-# mise (mise.toml + mise.lock at the repo root) is the SINGLE SOURCE OF TRUTH for the
-# toolchain: Ruby, Node, and the hk / pkl / gitleaks / zizmor / actionlint dev tools.
-# This image therefore installs ONLY mise plus the OS libraries needed to *run* the
-# toolchain and to *compile the app's native gems* — it pins no language versions
-# itself. The actual tools are
-# installed by `mise install` in setup.sh (postCreateCommand), where the bind-mounted
-# mise.toml/mise.lock are available, so the container always matches the checked-out
-# versions. Do NOT add `apt-get install nodejs` or a `ruby:x.y` base back here — that
-# reintroduces the drift this setup exists to remove. To change a tool version, edit
-# mise.toml.
+# mise (mise/config.toml + mise/mise.lock) is the single source of truth for the toolchain: Ruby,
+# Node and the hk / pkl / gitleaks / zizmor / actionlint dev tools. This image installs only mise
+# plus the OS libraries to run the toolchain and compile the app's native gems; `mise install`
+# in setup.sh does the rest. Never pin a language version here (no `ruby:x.y` base, no
+# `apt-get install nodejs`): that reintroduces the drift. To change a version, edit mise/config.toml.
 #
-# Base: debian:trixie-slim — the SAME Debian release the production `ruby:4.0.2-slim`
-# image is built on (Debian 13 / glibc 2.41). Keeping the dev base in lockstep with
-# prod's glibc means native gems compiled in the persistent /bundle volume load in
-# both; a mismatch (e.g. bookworm's glibc 2.36) makes prod-built *.so files fail with
-# "GLIBC_2.xx not found". If you bump the Ruby image's Debian release, bump this too.
+# Base: debian:trixie-slim, the same Debian release (glibc 2.41) as production's `ruby:4.0.2-slim`,
+# so native gems compiled into the persistent /bundle volume load in both (a bookworm base
+# fails with "GLIBC_2.xx not found"). Bump this with the Ruby image.
 FROM debian:trixie-slim
 
-# System packages, in three groups:
-#  - core dev/devcontainer tooling (git, curl, sudo, ca-certificates, gnupg, extrepo)
-#  - C toolchain + headers for compiling the app's native gems (bcrypt, mysql2, nio4r,
-#    puma, …). Ruby itself is now a precompiled portable build (mise `compile = false`,
-#    jdx/ruby — see mise.toml), so these are needed only for gems, not for Ruby. The
-#    ruby-build-only packages that used to be here (autoconf, libreadline-dev,
-#    libgdbm-dev, libncurses-dev, libgmp-dev, uuid-dev) were dropped after verifying a
-#    full `bundle install` still compiles and loads every native gem without them in a
-#    trixie container — jdx/ruby bundles its own readline/psych/openssl. Only add a
-#    header package back with the same kind of evidence.
-#  - the app's native dependencies + MySQL client (libmariadb, libvips,
-#    poppler-utils, mysql client). Keep this group in step with the production
-#    Dockerfile's base stage: poppler-utils is what renders a PDF's first page for
-#    ActiveStorage previews (the reimbursements receipt viewer), so without it PDF
-#    thumbnails fail inside the dev container while working everywhere else, and
-#    libheif-plugin-libde265 is what lets libvips decode the HEVC data inside a HEIC
-#    (iOS photos), which reimbursements converts to JPEG at intake.
+# System packages: dev tooling, a C toolchain + headers for the app's native gems (bcrypt, mysql2,
+# nio4r, puma; Ruby itself is precompiled, see mise/config.toml), and the app's runtime libraries.
+# Keep the last group in step with the production Dockerfile's base stage. poppler-utils renders a
+# PDF's first page for ActiveStorage previews (the receipt viewer), and libheif-plugin-libde265
+# lets libvips decode the HEVC inside a HEIC (iOS photos), which receipts convert to JPEG.
 RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y -o Acquire::Retries=3 \
@@ -60,36 +41,28 @@ RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
 
-# Install mise from its official apt repository instead of `curl | sh`. Debian's
-# `extrepo` enables the curated mise repo and verifies its metadata against keys
-# shipped in extrepo-data, so the mise package is installed GPG-verified via apt —
-# in line with this repo's supply-chain posture (gitleaks, pinned/checksummed deps).
+# Install mise from its apt repository rather than `curl | sh`: extrepo verifies the repo's
+# metadata against keys shipped in extrepo-data, so the package is GPG-verified.
 RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
     extrepo enable mise && \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y -o Acquire::Retries=3 mise && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user with passwordless sudo (standard devcontainer pattern).
-# Container runs as root so volume mounts are writable; remoteUser in
-# devcontainer.json switches the developer shell to vscode.
+# Non-root user with passwordless sudo. The container runs as root so volume mounts are
+# writable; remoteUser in devcontainer.json switches the developer shell to vscode.
 RUN groupadd --gid 1000 vscode && \
     useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode && \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode
 
 USER vscode
 
-# The mise toolchain lives under MISE_DATA_DIR, which compose mounts as a named
-# volume so `mise install` (the precompiled-Ruby download + Node + dev tools) is
-# cached across container rebuilds. Put the shims on PATH for non-interactive commands (VS Code
-# tasks) and activate mise in interactive shells.
+# The toolchain lives under MISE_DATA_DIR, a named volume in compose.yaml so it survives rebuilds.
+# Shims go on PATH for non-interactive commands (VS Code tasks); interactive shells activate mise.
 ENV MISE_DATA_DIR=/home/vscode/.local/share/mise
 ENV PATH=${MISE_DATA_DIR}/shims:${PATH}
-# Pre-create the mise data + state dirs as the vscode user *before* the volume mounts.
-# The compose `mise-data` volume mounts at MISE_DATA_DIR; creating its parents here
-# (owned by vscode) means (a) a fresh volume initialises with vscode ownership and
-# (b) mounting it does not leave ~/.local owned by root — which would block mise from
-# writing ~/.local/state/mise (its trusted-configs live there).
+# Create the mise data and state dirs as vscode before the volume mounts, so a fresh volume is
+# owned by vscode and ~/.local stays writable (mise keeps its trusted configs in ~/.local/state).
 RUN mkdir -p "${MISE_DATA_DIR}" /home/vscode/.local/state/mise && \
     echo 'eval "$(mise activate bash)"' >> /home/vscode/.bashrc
 

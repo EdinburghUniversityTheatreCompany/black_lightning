@@ -1,15 +1,11 @@
 require "test_helper"
 
 ##
-# The writer is reached with a plain hash by every controller today, because
-# `assign_attributes` deep-converts a permitted `Parameters` first. It is tested
-# with `Parameters` as well because that conversion is the caller's, not ours: a
-# caller that assigns `team_members_attributes=` directly hands the writer
-# `Parameters`, and skipping the stamping there would drop the order silently —
-# the failure this whole mechanism exists to prevent.
+# Parameters as well as a plain hash: update deep-converts it, but a caller
+# assigning team_members_attributes= directly passes Parameters, and its order
+# must not drop silently.
 class TeamMemberOrderingTest < ActiveSupport::TestCase
   setup do
-    @show = FactoryBot.create(:show)
     @users = FactoryBot.create_list(:member, 3)
   end
 
@@ -23,24 +19,15 @@ class TeamMemberOrderingTest < ActiveSupport::TestCase
     @show.reload.team_members.ordered.pluck(:position, :display_order)
   end
 
-  test "stamps the row order when assigned a plain hash" do
-    @show.update!(team_members_attributes: rows)
-
-    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order
-  end
-
-  test "stamps the row order when assigned ActionController::Parameters" do
+  test "stamps the row order whatever shape the rows arrive in" do
     params = ActionController::Parameters.new(team_members_attributes: rows)
                                          .permit(team_members_attributes: [ :position, :user_id ])
 
-    @show.update!(team_members_attributes: params[:team_members_attributes])
+    { hash: rows, parameters: params[:team_members_attributes], array: rows.values }.each do |shape, attributes|
+      @show = FactoryBot.create(:show)
+      @show.update!(team_members_attributes: attributes)
 
-    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order
-  end
-
-  test "stamps the row order when assigned an array of rows" do
-    @show.update!(team_members_attributes: rows.values)
-
-    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order
+      assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order, shape
+    end
   end
 end

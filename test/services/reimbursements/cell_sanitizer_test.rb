@@ -2,8 +2,6 @@ require "test_helper"
 
 module Reimbursements
   class CellSanitizerTest < ActiveSupport::TestCase
-    # --- sanitize (string in, string out) ----------------------------------
-
     test "neutralises every leading formula trigger by prefixing a quote" do
       [ "=", "+", "-", "@", "\t", "\r", "\n" ].each do |trigger|
         assert_equal "'#{trigger}danger", CellSanitizer.sanitize("#{trigger}danger"),
@@ -11,21 +9,12 @@ module Reimbursements
       end
     end
 
-    test "leaves ordinary text untouched" do
-      assert_equal "Fake blood", CellSanitizer.sanitize("Fake blood")
-      assert_equal "", CellSanitizer.sanitize(nil)
-      assert_equal "12.50", CellSanitizer.sanitize("12.50")
+    test "sanitize passes non-formula values through as text" do
+      { "Fake blood" => "Fake blood", nil => "", "12.50" => "12.50",
+        "2 + 2 props" => "2 + 2 props", 42 => "42" }.each do |input, out|
+        assert_equal out, CellSanitizer.sanitize(input), input.inspect
+      end
     end
-
-    test "only the LEADING character matters, so mid-string operators survive" do
-      assert_equal "2 + 2 props", CellSanitizer.sanitize("2 + 2 props")
-    end
-
-    test "coerces a non-string to its string form" do
-      assert_equal "42", CellSanitizer.sanitize(42)
-    end
-
-    # --- cell (type-preserving, for mixed-type export rows) ----------------
 
     test "cell guards strings exactly as sanitize does" do
       assert_equal "'=HYPERLINK(\"http://evil\")", CellSanitizer.cell("=HYPERLINK(\"http://evil\")")

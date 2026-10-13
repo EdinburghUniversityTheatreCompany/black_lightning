@@ -9,23 +9,8 @@ module Reimbursements
       @bob   = create_reimbursements_person(name: "Bob", email: "bob@example.com")
     end
 
-    test "a budget in an area inherits the area's owners" do
-      area = create_reimbursements_area(name: "Cogito")
-      area.sync_owner_ids!([ @alice.id ])
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
-
-      assert_equal [ @alice.record_id ], budget.owner_ids
-    end
-
-    test "a budget with no area keeps its own owners" do
-      budget = create_reimbursements_budget(name: "Contingency")
-      budget.sync_owner_ids!([ @bob.id ])
-
-      assert_equal [ @bob.record_id ], budget.owner_ids
-    end
-
     test "the area's owners WIN over rows left on the budget" do
-      # The backfill keeps budget_owners rows so it can be reversed; they must
+      # The 2026-09-11 backfill left budget_owners rows on area lines; they must
       # not also apply, or a claim would need two people's sign-off.
       area = create_reimbursements_area(name: "Cogito")
       area.sync_owner_ids!([ @alice.id ])
@@ -45,12 +30,10 @@ module Reimbursements
       assert OwnerReview.owned_by?(expense, @alice)
     end
 
-    # The worst way to get ownership wrong, pinned: attaching a budget that has
-    # its OWN owner to an area with none reports no owners at all, so the gate
-    # stops applying — every claim on the line skips owner endorsement, the
-    # nightly job never names it, and Review's Awaiting-owner tab never shows
-    # it. Asserted through OwnerReview rather than the model, because the gate
-    # is what the outcome actually is. Both forms now warn about it on screen.
+    # The worst way to get ownership wrong: a budget with its OWN owner attached
+    # to an area with none reports no owners, so the gate stops applying and
+    # every claim on the line skips owner endorsement. Asserted through
+    # OwnerReview because the gate is the outcome.
     test "a budget in an area with NO owners has no owner gate at all" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,

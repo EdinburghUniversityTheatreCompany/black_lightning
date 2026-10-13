@@ -53,8 +53,10 @@ class Display::PagesController < ApplicationController
 
   private
 
+  # Anthias plays these URLs forever, so the identity card is the fallback that
+  # keeps any page from rendering blank.
   def render_chain(*panels)
-    @panel = Display::Chain.new(*panels).resolve
+    @panel = panels.find(&:available?) || Display::Panels::Identity.new
     render "panel"
   end
 

@@ -38,8 +38,7 @@ module SubpageHelper
     # We need to add a / to the path to make it absolute to the root url (bedlamtheatre.co.uk) rather than relative to the current page url.
     get_subpage_editable_blocks(subpage_type).collect do |eb|
       path = if eb.content&.start_with?(EXTERNAL_URL_PREFIX)
-        # normalise_link_target turns a link written against our own www. host back into a path.
-        # Two of these sat in the navbar, so every page carried two needless 301s.
+        # A link to our own www. host becomes a path, saving a 301 on every page.
         normalise_link_target(eb.content.sub(EXTERNAL_URL_PREFIX, ""))
       else
         "/#{eb.url}"

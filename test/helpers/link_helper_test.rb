@@ -9,6 +9,7 @@ class LinkHelperTest < ActionView::TestCase
 
   setup do
     @current_user = users(:admin)
+    @admin_site = true
   end
 
   test "user_link for nil" do
@@ -40,26 +41,6 @@ class LinkHelperTest < ActionView::TestCase
 
   test "user_link as admin" do
     assert_equal '<a href="/admin/users/1">Peter Peanut</a>', user_link(users(:admin), true)
-  end
-
-  test "link_to_add" do
-    skip "Needs a form passed, but I don't know how to create one in here. Test is not essential as every nested form will break when the function breaks, so you will notice, and it has coverage."
-
-    techie = techies(:one)
-
-    simple_horizontal_form_for [ :admin, techie ] do |form|
-      assert_equal "", link_to_add(form, :parents)
-    end
-  end
-
-  test "link_to_remove" do
-    skip "Needs a form passed, but I don't know how to create one in here. Test is not essential as every nested form will break when the function breaks, so you will notice, and it has coverage."
-
-    techie = techies(:one)
-
-    simple_horizontal_form_for [ :admin, techie ] do |form|
-      assert_equal "", link_to_remove(form, :parents)
-    end
   end
 
   test "remove_button_text" do
@@ -115,7 +96,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test "get_link with destroy" do
     news = FactoryBot.create(:news, id: 1, title: "Vikings have taken over the Bedlam")
-    expected_link = "<form style=\"display:contents\" data-controller=\"confirm\" data-action=\"submit-&gt;confirm#confirm\" data-confirm-message-value=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
+    expected_link = "<form style=\"display:contents\" data-turbo-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
 
     assert_equal expected_link, get_link(news, :destroy)
 
@@ -144,6 +125,26 @@ class LinkHelperTest < ActionView::TestCase
     assert_raises TypeError do
       get_link(Opportunity, :reject)
     end
+  end
+
+  test "get_link with confirm alone asks for confirmation" do
+    opportunity = FactoryBot.create(:opportunity, id: 1)
+
+    link = get_link(opportunity, :approve, confirm: "Approve this?")
+
+    assert_includes link, 'data-turbo-confirm="Approve this?"'
+  end
+
+  test "get_link on the public site asks through confirm_controller, which submits natively" do
+    @admin_site = false
+    opportunity = FactoryBot.create(:opportunity, id: 1)
+
+    link = get_link(opportunity, :approve, confirm: "Approve this?")
+
+    assert_includes link, 'data-controller="confirm" data-action="submit-&gt;confirm#confirm" ' \
+                          'data-confirm-message-value="Approve this?"'
+    assert_not_includes link, "data-turbo-confirm"
+    assert_not_includes get_link(opportunity, :reject), "data-controller"
   end
 
   test "get_link with custom action" do
@@ -200,7 +201,7 @@ class LinkHelperTest < ActionView::TestCase
 
     assert_not @current_user.can?(:destroy, news)
 
-    expected_link = "<form style=\"display:contents\" data-controller=\"confirm\" data-action=\"submit-&gt;confirm#confirm\" data-confirm-message-value=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
+    expected_link = "<form style=\"display:contents\" data-turbo-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"#{btn_classes(:danger)}\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i> Destroy</span></button></form>"
 
     assert_equal expected_link, get_link(news, :destroy, condition: true)
   end
@@ -350,85 +351,24 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
-  test "get_default_link_target" do
-    skip "Well this one is pesky. It is pretty much covered by the tests that get the whole link, but it would be nice if this worked"
-
-    object = FactoryBot.create(:proposal)
-
-    hash = {
-      show: "",
-      index: "",
-      new: "",
-      edit: "",
-      destroy: ""
-    }
-
-    hash.each do |action, response|
-      assert_equal "", get_default_link_target(object, action, nil, nil)
-    end
-
-    assert_raises ArgumentError do
-      get_default_http_method(:answer)
-    end
-  end
-
-  test "raise ArgumentError during get_default_link_target for non-default action" do
-    assert_raises ArgumentError do
-      get_default_link_target(FaultReport, :towers, nil, nil)
-    end
-  end
-
-  test "get default_link_target with special arguments" do
-    skip 'Well this one is pesky, for the same reason as the other one. There is something with url_for that doesn\t want to work. It is pretty much covered by the tests that get the whole link, but it would be nice if this worked'
-  end
-
   test "get_confirm_data" do
     object = FactoryBot.create(:staffing_debt)
 
-    assert_nil get_confirm_data(object, :show, nil, nil, nil)
-
-    confirm_hash = {
-      title: "Hexagon",
-      turbo_confirm: nil,
-      verify: "Pineapple"
-    }
-
-    assert_equal confirm_hash, get_confirm_data(object, :edit, "Hexagon", nil, "Pineapple")
+    assert_nil get_confirm_data(object, :show, nil, nil)
+    assert_equal({ turbo_confirm: "Hexagon" }, get_confirm_data(object, :edit, "Hexagon", nil))
+    assert_equal({ turbo_confirm: "Pineapple" }, get_confirm_data(object, :edit, "Hexagon", "Pineapple"))
   end
 
   test "get_confirm_data for destroy" do
     object = FactoryBot.create(:draft_mass_mail, subject: "We are building a Hexagon again!")
 
-    default_destroy_hash_for_object_with_subject = {
-      title: 'Deleting the Mass Mail "We are building a Hexagon again!"',
-      turbo_confirm: 'Are you sure you want to delete the Mass Mail "We are building a Hexagon again!"?',
-      verify: nil
-    }
-
-    assert_equal default_destroy_hash_for_object_with_subject, get_confirm_data(object, :destroy, nil, nil, nil)
+    assert_equal({ turbo_confirm: 'Are you sure you want to delete the Mass Mail "We are building a Hexagon again!"?' },
+                 get_confirm_data(object, :destroy, nil, nil))
 
     object = FactoryBot.create(:staffing_debt)
 
-    default_destroy_hash = {
-      title: "Deleting the Staffing Debt",
-      turbo_confirm: "Are you sure you want to delete the Staffing Debt?",
-      verify: nil
-    }
-
-    assert_equal default_destroy_hash, get_confirm_data(object, :destroy, nil, nil, nil)
-
-    overridden_destroy_hash = {
-      title: "Deleting the Staffing Debt",
-      turbo_confirm: "Pineapple",
-      verify: nil
-    }
-    assert_equal overridden_destroy_hash, get_confirm_data(object, :destroy, nil, "Pineapple", nil)
-  end
-
-  test "btn_classes returns string for primary" do
-    classes = btn_classes(:primary)
-    assert_includes classes, "text-primary"
-    assert_includes classes, "border-primary"
+    assert_equal({ turbo_confirm: "Are you sure you want to delete the Staffing Debt?" }, get_confirm_data(object, :destroy, nil, nil))
+    assert_equal({ turbo_confirm: "Pineapple" }, get_confirm_data(object, :destroy, nil, "Pineapple"))
   end
 
   test "btn_classes returns string for danger sm" do

@@ -1,12 +1,6 @@
 # frozen_string_literal: true
 
-##
-# Shared parsing functionality for import models.
-# Handles TSV paste data and xlsx file uploads.
-#
-# Including class must implement:
-# - normalize_row(row) - Convert raw row hash to normalized format
-##
+# TSV paste and xlsx parsing for the import models. The includer implements normalize_row(row).
 module ImportParsing
   extend ActiveSupport::Concern
 
@@ -16,42 +10,13 @@ module ImportParsing
 
   private
 
-  # Build the categorized-rows result hash.
-  #
-  # Initializes one empty list per bucket (from the including class's BUCKETS),
-  # then routes each row through `determine_bucket`. Rows landing in
-  # `multi_match_bucket` carry a list of candidate users under `:existing_users`;
-  # all other rows carry a single `:existing_user`.
-  #
-  # The including class must define BUCKETS and `determine_bucket(row)`.
-  def build_categorized_result(multi_match_bucket:)
-    result = self.class::BUCKETS.index_with { |_| [] }
-
-    @rows.each_with_index do |row, index|
-      bucket, match, match_type = determine_bucket(row)
-      if bucket == multi_match_bucket
-        result[bucket] << { row: row, existing_users: match, index: index, match_type: match_type }
-      else
-        result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
-      end
-    end
-
-    result
-  end
-
-  # --- Canonical TSV out ---------------------------------------------------
-  #
-  # The other half of parsing, for the stateless wizards (budget import,
-  # expense import): an upload is normalised to TSV and carried into apply in a
-  # hidden field, so apply re-parses rather than trusting the preview. A tab or
-  # newline INSIDE an xlsx cell has to survive that round trip escaped, or one
-  # stray character shifts every later column when apply re-parses.
+  # Canonical TSV for the stateless wizards, which carry an upload to apply in a hidden field. A
+  # tab or newline inside a cell is escaped, or it shifts every later column when apply re-parses.
 
   ESCAPES = { "\\" => "\\\\", "\t" => "\\t", "\n" => "\\n" }.freeze
   UNESCAPES = { "\\" => "\\", "t" => "\t", "n" => "\n" }.freeze
 
-  # Block-form gsub throughout: the replacement-string form would read a
-  # backslash in the replacement as a backreference.
+  # Block-form gsub: the string form would read a backslash in the replacement as a backreference.
   def escape_cell(value)
     value.to_s.delete("\r").gsub(/[\\\t\n]/) { |char| ESCAPES.fetch(char) }
   end
@@ -111,25 +76,12 @@ module ImportParsing
     end
   end
 
-  # Find column value by looking for headers containing any of the keywords (case-insensitive)
-  # Shared helper for flexible column name matching
-  def find_column(row, *keywords)
-    # First try exact matches for common variations
-    keywords.each do |keyword|
-      return row[keyword] if row[keyword].present?
-      return row[keyword.capitalize] if row[keyword.capitalize].present?
-      return row[keyword.upcase] if row[keyword.upcase].present?
-    end
-
-    # Fallback: find first column whose header contains ALL keywords
-    matching_key = row.keys.find do |k|
-      header = k.to_s.downcase
-      keywords.all? { |kw| header.include?(kw.downcase) }
-    end
-    row[matching_key] if matching_key
+  # The header named `keyword` (any of lower, Capitalised, UPPER case), else the first header containing it.
+  def find_column(row, keyword)
+    row.values_at(keyword, keyword.capitalize, keyword.upcase).find(&:present?) ||
+      row.find { |header, _| header.to_s.downcase.include?(keyword.downcase) }&.last
   end
 
-  # Parse name into first and last name parts
   def parse_name(name_string)
     name = name_string.to_s.strip
     name_parts = name.split(/\s+/, 2)
@@ -140,12 +92,10 @@ module ImportParsing
     }
   end
 
-  # Matches column headers that represent an ID field:
-  # "ID", "Student ID", "Associate ID", "User ID", "student_id", "userid", etc.
+  # "ID", "Student ID", "associate_id", "userid" and the like.
   ID_COLUMN_PATTERN = /\A(student|associate|user)?[\s_]*id\z/i
 
-  # Auto-detect ID type from value format.
-  # Returns {user_id:, student_id:, associate_id:} with at most one populated.
+  # Reads the ID type off the value's format; at most one key is populated.
   def parse_any_id(raw)
     value = raw.to_s.strip
     result = { user_id: nil, student_id: nil, associate_id: nil }
@@ -162,8 +112,7 @@ module ImportParsing
     result
   end
 
-  # Scan all ID-like columns in the row and auto-detect each value's type.
-  # Merges results with first-non-nil-wins per ID type.
+  # Every ID-like column, the first value found winning per type.
   def collect_ids_from_row(row)
     merged = { user_id: nil, student_id: nil, associate_id: nil }
 
@@ -179,8 +128,7 @@ module ImportParsing
     merged
   end
 
-  # Parse database primary key from raw string. Returns a positive integer or nil.
-  # Uses Integer() rather than to_i so blank strings raise rather than returning 0.
+  # A positive integer or nil. Integer() rather than to_i, so a blank raises instead of reading 0.
   def parse_user_id(raw)
     id = Integer(raw.to_s.strip, 10)
     id.positive? ? id : nil

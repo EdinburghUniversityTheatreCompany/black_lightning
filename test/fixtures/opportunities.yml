@@ -62,22 +62,6 @@ active_opportunity_6:
   creator_id: 1
   email_visibility: 0
 
-expiring_soon_opportunity:
-  title: "Expiring Soon Opportunity"
-  description: "This opportunity expires in 3 days."
-  approved: true
-  expiry_date: <%= 3.days.from_now.to_fs(:db) %>
-  creator_id: 1
-  email_visibility: 0
-
-pending_digest_opportunity:
-  title: "Digest Test Opportunity"
-  description: "This opportunity is used for digest mailer tests."
-  approved: false
-  expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
-  creator_id: 1
-  email_visibility: 0
-
 internal_project_opportunity:
   title: ~
   description: "EUTC production looking for crew."

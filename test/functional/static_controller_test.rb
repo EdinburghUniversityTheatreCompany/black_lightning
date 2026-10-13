@@ -12,26 +12,13 @@ class StaticControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "home assigns @home_opportunities with active opportunities" do
+  test "home shows at most 5 active opportunities" do
     get :home
 
-    assert_not_nil assigns(:home_opportunities)
-    assert assigns(:home_opportunities).all?(&:active?), "all assigned opportunities should be active"
-  end
-
-  test "home does not include expired or unapproved opportunities" do
-    get :home
-
-    ids = assigns(:home_opportunities).map(&:id)
-    assert_not_includes ids, opportunities(:expired_opportunity).id
-    assert_not_includes ids, opportunities(:unapproved_opportunity).id
-  end
-
-  test "home limits @home_opportunities to 5" do
-    get :home
-
+    home_opportunities = assigns(:home_opportunities)
+    assert home_opportunities.all?(&:active?), "all assigned opportunities should be active"
     # 6 active fixtures exist, so a real limit is needed to get exactly 5
-    assert_equal 5, assigns(:home_opportunities).count
+    assert_equal 5, home_opportunities.count
   end
 
   test "should get contact" do

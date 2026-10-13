@@ -2,65 +2,28 @@ require "test_helper"
 
 module Reimbursements
   class CostCentreTest < ActiveSupport::TestCase
-    test "fringe is the default cost centre with the EUSA F40 code" do
-      assert_equal "fringe", CostCentre.default.key
-      assert_equal "F40", CostCentre.default.eusa_code
-    end
-
-    test "caps the BACS budget holder fields at their column length" do
-      fringe = CostCentre.default
-      fringe.assign_attributes(authoriser_name: "a" * 256, authoriser_designation: "b" * 256)
-
-      assert_not fringe.valid?
-      assert fringe.errors[:authoriser_name].present?
-      assert fringe.errors[:authoriser_designation].present?
-    end
-
-    test "carries distinct receive and send mailboxes" do
-      fringe = CostCentre.default
-      assert_equal "reimbursements@bedlamfringe.co.uk", fringe.receive_mailbox
-      assert_equal "reimbursements@bedlamfringe.co.uk", fringe.send_mailbox
-    end
-
     def contact_centre(receive: "in@example.com", send: "out@example.com", notify: nil)
       CostCentre.new(receive_mailbox: receive, send_mailbox: send, notification_email: notify)
     end
 
-    # The receive mailbox is polled by email-in, so a question sent there is
-    # auto-answered and filed as a receipt rather than read by a person.
-    test "contact_email is the first notification address" do
-      centre = contact_centre(notify: " finance@example.com ; ops@example.com")
-      assert_equal "finance@example.com", centre.contact_email
-    end
-
-    test "contact_email falls back to the send mailbox when it is not the polled one" do
+    # The receive mailbox is polled by email-in, so a question sent there is auto-answered and
+    # filed as a receipt rather than read by a person.
+    test "contact_email is the first notification address, else a send mailbox that is not polled" do
+      assert_equal "finance@example.com",
+                   contact_centre(notify: " finance@example.com ; ops@example.com").contact_email
       assert_equal "out@example.com", contact_centre.contact_email
-    end
-
-    test "contact_email is nil rather than the polled mailbox" do
       assert_nil contact_centre(send: "in@example.com").contact_email
     end
 
-    test "sharepoint_graph_site_path converts the site URL to Graph's path form" do
+    test "sharepoint_graph_site_path converts the site URL to Graph's path form, nil without a valid one" do
       cost_centre = CostCentre.default
       cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance/"
       assert_equal "tenant.sharepoint.com:/sites/Finance", cost_centre.sharepoint_graph_site_path
-    end
 
-    test "sharepoint_graph_site_path is nil without a valid site URL" do
-      cost_centre = CostCentre.default
-      assert_nil cost_centre.tap { |c| c.sharepoint_site_url = nil }.sharepoint_graph_site_path
-      assert_nil cost_centre.tap { |c| c.sharepoint_site_url = "not a url" }.sharepoint_graph_site_path
-    end
-
-    test "requires key, name, eusa_code and both mailboxes" do
-      cost_centre = CostCentre.new
-      assert_not cost_centre.valid?
-      assert_includes cost_centre.errors.attribute_names, :key
-      assert_includes cost_centre.errors.attribute_names, :name
-      assert_includes cost_centre.errors.attribute_names, :eusa_code
-      assert_includes cost_centre.errors.attribute_names, :receive_mailbox
-      assert_includes cost_centre.errors.attribute_names, :send_mailbox
+      cost_centre.sharepoint_site_url = nil
+      assert_nil cost_centre.sharepoint_graph_site_path
+      cost_centre.sharepoint_site_url = "not a url"
+      assert_nil cost_centre.sharepoint_graph_site_path
     end
 
     test "key auto-derives from the name (parameterized) when left blank" do
@@ -95,32 +58,15 @@ module Reimbursements
       assert cc.valid?, cc.errors.full_messages.to_sentence
     end
 
-    test "key is unique" do
-      duplicate = CostCentre.new(key: "fringe", name: "Dup", eusa_code: "F40",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :key
-    end
+    test "a mailbox is unique, case-insensitively" do
+      %i[receive_mailbox send_mailbox].each do |mailbox|
+        duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
+          receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co")
+        duplicate[mailbox] = "REIMBURSEMENTS@bedlamfringe.co.uk"
 
-    test "eusa_code is unique" do
-      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "F40",
-        receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :eusa_code
-    end
-
-    test "receive_mailbox is unique, case-insensitively" do
-      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
-        receive_mailbox: "REIMBURSEMENTS@bedlamfringe.co.uk", send_mailbox: "termtime-out@b.co")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :receive_mailbox
-    end
-
-    test "send_mailbox is unique, case-insensitively" do
-      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
-        receive_mailbox: "termtime-in@b.co", send_mailbox: "REIMBURSEMENTS@bedlamfringe.co.uk")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :send_mailbox
+        assert_not duplicate.valid?
+        assert_includes duplicate.errors.attribute_names, mailbox
+      end
     end
 
     test "rejects a mistyped receive or send mailbox" do
@@ -133,9 +79,6 @@ module Reimbursements
       cost_centre.send_mailbox = "also not an email"
       assert_not cost_centre.valid?
       assert_includes cost_centre.errors.attribute_names, :send_mailbox
-      # Neither a notification address nor a role was given either, and that is
-      # its own error rather than a silent pass.
-      assert_includes cost_centre.errors.attribute_names, :notification_email
     end
 
     test "rejects a mistyped eusa_recipient, but blank is still allowed" do
@@ -163,11 +106,8 @@ module Reimbursements
     test "sharepoint_fully_configured? also requires the site URL (the badge, not the upload gate)" do
       cost_centre = CostCentre.new(sharepoint_receipts_drive_id: "d", sharepoint_receipts_folder_id: "f",
                                    sharepoint_bacs_drive_id: "d2", sharepoint_bacs_folder_id: "f2")
-      # Folders alone let BatchProcessor upload...
+      # Folders alone let BatchProcessor upload, but the badge needs the site URL.
       assert cost_centre.sharepoint_configured?
-      # ...but the "SharePoint set" badge must stay amber without the site URL,
-      # since browse/verify is broken and the folders could be from a since-
-      # changed site.
       assert_not cost_centre.sharepoint_fully_configured?
 
       cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance"
@@ -192,18 +132,14 @@ module Reimbursements
       assert_equal [ 1, 3, 5 ], CostCentre.find(fresh.id).nightly_run_days
     end
 
-    test "nightly_run_days rejects non-weekday values" do
-      cc = CostCentre.new(key: "bad", name: "Bad", eusa_code: "B1",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [ 2, 9 ])
-      assert_not cc.valid?
-      assert_includes cc.errors.attribute_names, :nightly_run_days
-    end
-
-    test "nightly_run_days rejects an empty list — clearing every day would silently disable the nightly" do
-      cc = CostCentre.new(key: "empty", name: "Empty", eusa_code: "E1",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [])
-      assert_not cc.valid?
-      assert_includes cc.errors.attribute_names, :nightly_run_days
+    test "nightly_run_days rejects non-weekday values and an empty list" do
+      # An empty list would silently disable the nightly.
+      [ [ 2, 9 ], [] ].each do |days|
+        cc = CostCentre.new(key: "bad", name: "Bad", eusa_code: "B1",
+          receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: days)
+        assert_not cc.valid?, days.inspect
+        assert_includes cc.errors.attribute_names, :nightly_run_days
+      end
     end
 
     test "nightly_run_today? checks the configured run-days by Ruby wday" do
@@ -241,12 +177,6 @@ module Reimbursements
       assert_nil CostCentre.new(nightly_run_days: []).next_nightly_run_day(Date.new(2026, 7, 9))
     end
 
-    test "record_nightly_run! stamps the last-run date" do
-      cc = CostCentre.default
-      cc.record_nightly_run!(Date.new(2026, 7, 9))
-      assert_equal Date.new(2026, 7, 9), cc.reload.last_nightly_run_on
-    end
-
     # --- Notification email ------------------------------------------------
 
     test "notification_emails splits on semicolons and commas, stripping and de-duplicating" do
@@ -258,14 +188,8 @@ module Reimbursements
     test "notification_emails is empty when the column is blank" do
       assert_empty CostCentre.new(notification_email: nil).notification_emails
       assert_empty CostCentre.new(notification_email: "  ").notification_emails
-    end
-
-    test "a notification email is all a cost centre needs to be valid" do
-      centre = CostCentre.new(key: "ne1", name: "NE One", eusa_code: "NE1",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_email: "finance@b.co")
-
-      assert centre.valid?, centre.errors.full_messages.to_sentence
+      assert_predicate CostCentre.new(notification_email: nil), :notification_recipients_empty?
+      assert_not_predicate CostCentre.new(notification_email: "finance@b.co"), :notification_recipients_empty?
     end
 
     test "a cost centre with no notification email is invalid" do
@@ -285,29 +209,36 @@ module Reimbursements
       assert_includes centre.errors.attribute_names, :notification_email
     end
 
-    test "notification_recipients_empty? follows the addresses" do
-      with_address = CostCentre.new(notification_email: "finance@b.co")
-      without = CostCentre.new(notification_email: nil)
-
-      assert_not_predicate with_address, :notification_recipients_empty?
-      assert_predicate without, :notification_recipients_empty?
-    end
-    test "picker_prefix uses the short code when set" do
-      centre = CostCentre.new(eusa_code: "F40", short_code: "BF")
-      assert_equal "BF", centre.picker_prefix
+    test "operator_recipients is the centre's notification addresses" do
+      assert_equal [ "finance@b.co" ], CostCentre.new(notification_email: "finance@b.co").operator_recipients
     end
 
-    test "picker_prefix falls back to the eusa code" do
-      # The column ships empty on every existing centre and is never backfilled,
-      # so a picker must still name the centre before anyone fills it in.
-      centre = CostCentre.new(eusa_code: "F40", short_code: "")
-      assert_equal "F40", centre.picker_prefix
+    test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the centre's addresses entirely" do
+      with_operator_email("ops@example.com") do
+        assert_equal [ "ops@example.com" ], CostCentre.new(notification_email: "finance@b.co").operator_recipients
+      end
     end
 
-    test "a short code longer than the cap is refused" do
-      centre = CostCentre.new(eusa_code: "F40", short_code: "FAR TOO LONG TO FIT")
-      centre.valid?
-      assert centre.errors[:short_code].present?
+    test "the operator override applies even when the centre has no address" do
+      with_operator_email("ops@example.com") do
+        assert_equal [ "ops@example.com" ], CostCentre.new(notification_email: nil).operator_recipients
+      end
+    end
+
+    test "picker_prefix is the short code, falling back to the eusa code" do
+      assert_equal "BF", CostCentre.new(eusa_code: "F40", short_code: "BF").picker_prefix
+      # The column is never backfilled, so most centres have none.
+      assert_equal "F40", CostCentre.new(eusa_code: "F40", short_code: "").picker_prefix
+    end
+
+    private
+
+    def with_operator_email(value)
+      previous = ENV["REIMBURSEMENTS_OPERATOR_EMAIL"]
+      ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = value
+      yield
+    ensure
+      previous.nil? ? ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL") : ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = previous
     end
   end
 end

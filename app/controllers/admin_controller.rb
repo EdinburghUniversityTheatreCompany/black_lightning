@@ -39,18 +39,12 @@ class AdminController < ApplicationController
     (@current_path.split("/")[2..] || []).each do |segment|
       full_working_path += "/#{segment}"
 
-      # The name is a Proc so breadcrumbs_on_rails resolves it at RENDER time. It has to
-      # be lazy: this before_action is declared on AdminController, so it runs before the
-      # subclass's own set_<resource> / load_and_authorize_resource callbacks and the
-      # record does not exist yet.
+      # A Proc, resolved at render time: this before_action runs before the subclass loads the record.
       add_breadcrumb ->(view) { breadcrumb_name_for(view, segment) }, full_working_path
     end
   end
 
-  # A path segment that is a record identifier titleizes into nonsense: a budget edit page
-  # read "Home / Reimbursements / Budgets / 12 / Edit", and on the legacy Airtable ids
-  # "Rec X Ko G9m U Fbu Dn5 A". When the segment is the identifier of the record the
-  # controller loaded, use that record's own name instead.
+  # A segment that is the loaded record's id would read "Budgets / 12 / Edit", so name the record.
   def breadcrumb_name_for(view, segment)
     record = view.instance_variable_get("@#{controller_name.singularize}")
 

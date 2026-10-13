@@ -1,44 +1,29 @@
-/* The box office display screen.
- *
- * Deliberately does NOT import application.css: that file carries unlayered
- * h1-h6 rules (lines 31 and 37) that beat Tailwind utilities, and every size on
- * this screen is set to be read from across a room. */
+/* The box office display screen. Does NOT import application.css: its unlayered
+ * h1-h6 rules beat the Tailwind utilities that size this screen. */
 @import "../styles/tailwind-base.css";
 
-/* This entrypoint is loaded by layouts/display.html.erb and nothing else, so a
- * token defined here is scoped to the box office screen. */
+/* Loaded by the display layout only, so tokens here are scoped to this screen. */
 @theme {
-  /* --color-primary (#ba0204) is the site-wide brand token and is used on light
-   * backgrounds everywhere else, so it must not change. On this screen's black
-   * it manages 2.9:1 -- fine on a monitor, unreadable across a box office.
-   * Same hue and saturation, lightness raised from 37% to 58%: 5.2:1 against
-   * neutral-950, and still unmistakably Bedlam red. */
+  /* --color-primary (#ba0204) is 2.9:1 on this black. Same hue, lightness raised
+   * from 37% to 58%: 5.2:1 against neutral-950. */
   --color-display-accent: #fd2b2d;
 
-  /* Tailwind's `truncate` sets overflow:hidden, and the line box the size
-   * utilities ship with is shorter than this font's content area (measured at
-   * ~1.36em, ascent + descent), so every g, j, p, q and y is sliced flat. Every
-   * `truncate` on this screen must be paired with `leading-descender`, which is
-   * just wide enough to hold them. Show titles wrap rather than truncate. */
+  /* `truncate` sets overflow:hidden, and the size utilities' line box is shorter
+   * than this font's content area (~1.36em), slicing every g, j, p, q and y.
+   * Pair every `truncate` on this screen with `leading-descender`. */
   --leading-descender: 1.4;
 }
 
-/* The What's On marquee. No JavaScript: the display layout loads none.
- *
- * The scroll distance is (viewport - track height), and the only way to say
- * "track height" in CSS is a percentage on the track itself -- so the viewport
- * must be a real length rather than `flex-1`. --display-marquee-viewport is both
- * the box's height and the animation's reference, so the two cannot drift. Its
- * 17.25rem is the panel's chrome, pinned in the markup to keep the sum true:
+/* The What's On marquee, pure CSS. The scroll distance is (viewport - track
+ * height) and the only way to say "track height" is a percentage on the track, so
+ * the viewport must be a real length, not `flex-1`: --display-marquee-viewport is
+ * both the box's height and the animation's reference. Its 17.25rem is the
+ * panel's chrome, pinned in the markup:
  *   py-12 top 3 + header 4.5 + mb-10 2.5 + mt-8 2 + footer 2.25 + py-12 bot 3.
- *
- * Not `100cqh`, which would drop the constant: Anthias's player is QtWebEngine,
- * which predates container query units, and an unsupported unit would make the
- * whole transform invalid and stop the board scrolling on the one screen it is
- * for.
- *
- * min(0px, ...) is what makes it self-limiting: a track shorter than its
- * viewport yields a positive distance, which clamps to no movement. */
+ * Not `100cqh`: Anthias's QtWebEngine predates container query units, and the
+ * unsupported unit would invalidate the transform and stop the scroll.
+ * min(0px, ...) makes it self-limiting: a track shorter than its viewport yields
+ * a positive distance, which clamps to no movement. */
 .display-marquee {
   --display-marquee-viewport: calc(100vh - 17.25rem);
 
@@ -47,14 +32,11 @@
 }
 
 .display-marquee__track {
-  /* Fills the frame when the events are few, rather than leaving the bottom half
-   * of a 1080-tall screen empty, and grows past it when they are many. */
+  /* Fills the frame when events are few, grows past it when many. */
   min-height: 100%;
-  /* One fixed duration, so speed varies with distance -- the only pacing a fixed
-   * Anthias slot can take, since a constant speed would need the slot sized for
-   * the longest possible board. Don't pace it per event: the distance is the
-   * OVERFLOW, and twelve short titles overflow by ~310px against ~1030px for
-   * twelve wrapping ones. */
+  /* One fixed duration, so speed varies with distance: the only pacing a fixed
+   * Anthias slot can take. Don't pace per event: the distance is the overflow
+   * (~310px for twelve short titles, ~1030px for twelve wrapping ones). */
   animation: display-marquee 18s ease-in-out infinite;
 }
 
@@ -64,9 +46,8 @@
   88%, 100% { transform: translateY(min(0px, calc(var(--display-marquee-viewport) - 100%))); }
 }
 
-/* Honoured for a developer viewing the page, at a cost: with the scroll stopped
- * the overflow cannot be reached at all, there being no JavaScript to offer
- * another way down. Acceptable only because the box office screen never asks. */
+/* With the scroll stopped the overflow is unreachable (no JavaScript offers another
+ * way down). Acceptable because the box office screen never asks for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   .display-marquee__track {
     animation: none;

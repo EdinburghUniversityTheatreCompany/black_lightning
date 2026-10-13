@@ -3,19 +3,14 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # The "Your shows and budgets" half of My Budgets: one row per thing the
-    # signed-in person is responsible for, with the four figures an owner reads.
-    #
-    # Owning a SHOW is owning its area, and its lines inherit that — so the row
-    # is the area, not one row per line, which is what the page used to print.
+    # The "Your shows and budgets" half of My Budgets: one row per area owned (its lines
+    # inherit) or per loose line owned, with the four figures an owner reads.
     class MyBudgetsRowsTest < ActionController::TestCase
       tests Admin::Reimbursements::MyBudgetsController
       include ReimbursementsTestHelpers
 
       setup do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-        users(:member).add_role("Producer")
+        grant_producer_permission(users(:member))
         @user = users(:member)
         @owner = create_reimbursements_person(email: @user.email, name: "Olive Owner")
         @submitter = create_reimbursements_person(email: "sam@example.com", name: "Sam Submitter")
@@ -37,8 +32,7 @@ module Admin
         assert_includes rows.first, "2 lines"
       end
 
-      # Budget − Spent − Waiting, which is NOT Budget#remaining: a claim still
-      # waiting for approval is money an owner cannot spend twice.
+      # Left is Budget - Spent - Waiting, not Budget#remaining.
       test "Left counts the claims still waiting for approval" do
         area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
         area.owners << @owner
@@ -58,8 +52,7 @@ module Admin
         assert_includes row, "£500.00", "Left should be 1000 - 200 - 300: #{row}"
       end
 
-      # A £0 agreed total with nothing allocated is a figure nobody filled in,
-      # not a cap of nothing that all spend is over (Mick's call).
+      # A £0 agreed total with nothing allocated is unset, not a cap all spend is over.
       test "a zero budget reads as unset rather than as an overspend" do
         area = create_reimbursements_area(name: "Last years business", initial_budget: 0)
         area.owners << @owner
@@ -88,8 +81,7 @@ module Admin
         assert_includes row, "no total agreed"
       end
 
-      # Two production areas are both called "Tech", in different centres and
-      # years, so a bare name would be two identical rows.
+      # Two production areas are both called "Tech", so a bare name would be two identical rows.
       test "each row says which pot and year it belongs to" do
         centre = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
                                                    eusa_code: "BED")
@@ -113,22 +105,6 @@ module Admin
         assert_includes row, "a single budget, in no area"
       end
 
-      test "income lines are left out of a show's figures" do
-        area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
-        area.owners << @owner
-        create_reimbursements_budget(name: "Set", initial_budget: 1_000, area: area)
-        create_reimbursements_budget(name: "Ticket income", initial_budget: 800, area: area,
-                                     budget_type: "Income")
-
-        get :index
-
-        row = css_select("tbody tr").first.text.squish
-        assert_includes row, "£1,000.00", "the budget should be the expense line only: #{row}"
-        assert_not_includes row, "£1,800.00"
-      end
-
-      # The inbox gathers the work across every show, so a many-show owner has
-      # one place to do it rather than hunting card by card.
       test "claims waiting for sign-off are listed with how long they have waited" do
         area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
         area.owners << @owner

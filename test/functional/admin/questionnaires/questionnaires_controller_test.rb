@@ -18,11 +18,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     # Christmas is an edge case where the terms swap over. It should still work on this day.
     travel_to Time.zone.local(2021, 12, 25)
 
-    assert Date.current, end_of_term
-
     get_index_process
-
-    travel_back
   end
 
   test "should get index as normal user" do

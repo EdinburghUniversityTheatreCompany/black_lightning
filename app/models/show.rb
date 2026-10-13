@@ -14,10 +14,6 @@
 #  doors_open_minutes_before :integer
 #  duration_minutes          :integer
 #  end_date                  :date
-#  image_content_type        :string(255)
-#  image_file_name           :string(255)
-#  image_file_size           :integer
-#  image_updated_at          :datetime
 #  is_public                 :boolean
 #  maintenance_debt_amount   :integer
 #  maintenance_debt_start    :date
@@ -65,14 +61,7 @@
 class Show < Event
   OCCURRENCE_LABEL = "Performance".freeze
 
-  include ApplicationHelper
-  include AcademicYearHelper
-
   validates :author, :price, presence: true
-
-  # Validate uniqueness on Event Subtype basis instead of on the event.
-  # Otherwise, you cannot have two different types with the same slug.
-  validates :slug, uniqueness: { case_sensitive: false }
 
   has_many :feedbacks, class_name: "Admin::Feedback", dependent: :restrict_with_error
 

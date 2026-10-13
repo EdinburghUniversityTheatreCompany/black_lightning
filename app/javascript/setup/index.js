@@ -1,25 +1,20 @@
-// Load all the stimulus controllers
 import "../controllers"
 
-// And other shared modules
 import "../sweetalert"
 
 import { Turbo } from "@hotwired/turbo-rails";
+import { confirmDialog } from "../lib/confirm"
 
-Turbo.config.forms.confirm = (message) => {
-  return window.Swal.fire({
-    icon: "warning",
-    html: message,
-    title: "Are you sure?",
-    showCancelButton: true,
-    confirmButtonText: "Yes",
-    cancelButtonText: "Cancel",
-    buttonsStyling: true,
-  }).then(result => result.isConfirmed)
-}
+Turbo.config.forms.confirm = confirmDialog
 
+// The message is text unless the stream opts in with an `html` attribute: names and titles
+// are interpolated into it, and getAttribute hands back the entity-decoded string.
 Turbo.StreamActions.toast = function () {
-  window.Toast.fire({ icon: this.getAttribute("type"), html: this.getAttribute("message") })
+  const message = this.getAttribute("message")
+  window.Toast.fire({
+    icon: this.getAttribute("type"),
+    ...(this.hasAttribute("html") ? { html: message } : { text: message }),
+  })
 }
 
 Turbo.StreamActions.dismissMergeModal = function () {

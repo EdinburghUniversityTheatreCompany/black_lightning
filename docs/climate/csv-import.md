@@ -84,13 +84,15 @@ Leave it unset and the job logs and returns, so an environment without a mailbox
 ### One sensor, for now
 
 Nothing in Govee's export email identifies the device. Not the subject, not the attachment
-filename. So the job assumes **one** crypt sensor and imports against it.
+filename. So the job assumes **one** active Govee sensor (of any placement) and imports against it.
+Deactivate a replaced unit and the job ignores it.
 
-With more than one it leaves the message unread and raises an alert (once a day, not once a
-cycle), rather than filing one wall's readings under another. To support several later, the only
-method that changes is `Climate::MailboxPollJob#sensor_for`: give each sensor its own mailbox or
-plus address and resolve on the recipient, or add a per-sensor match string if Govee ever starts
-naming the device.
+With more than one active it leaves the message unread rather than file one wall's readings under
+another. With only inactive ones it leaves it unread too. Either way it raises an alert (once a
+day, not once a cycle), and the mail imports on the next poll once exactly one is active. To
+support several later, the method to change is `Climate::MailboxPollJob#sensor_for` and its call
+in `#process`: give each sensor its own mailbox or plus address and resolve on the recipient (pass
+the message in), or add a per-sensor match string if Govee ever starts naming the device.
 
 ## Reading the dashboard
 
@@ -109,8 +111,8 @@ Bedlam's own coordinates, fetched hourly. Two things follow from that.
 
 - **Attribution is a licence condition** (CC BY 4.0), rendered in the "How this works" panel.
   Don't remove it.
-- **The free tier is non-commercial only.** Fine for a student theatre. `Climate::OUTDOOR_SOURCES`
-  is the swap point if that ever changes.
+- **The free tier is non-commercial only.** Fine for a student theatre. If that ever changes, a
+  replacement is a client class answering `#hourly_series`, built by `OutdoorPollJob`.
 
 Each poll re-fetches a rolling multi-day window and upserts it, so an outage backfills itself.
 That self-healing is why Open-Meteo won over sources with a better uptime guarantee but no history.

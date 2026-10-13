@@ -31,7 +31,6 @@ class MdHelperTest < ActionView::TestCase
   end
 
   test "render_plain decodes HTML entities" do
-    assert_includes render_plain("John & Jeremy"), "John & Jeremy"
     assert_includes render_plain("Tom & Jerry"), "Tom & Jerry"
     assert_not_includes render_plain("Tom & Jerry"), "&amp;"
   end
@@ -83,17 +82,13 @@ class MdHelperTest < ActionView::TestCase
     assert_includes result, "Header"
   end
 
-  test "IAL block syntax applies class to previous element" do
-    markdown = "Some text\n\n{ .card-body }"
-    result = render_markdown(markdown)
-    assert_includes result, 'class="card-body"'
-    assert_not_includes result, "{ .card-body }"
-  end
-
-  test "IAL inline syntax applies class to same element" do
+  # commonmarker derives the aria-label from the RAW source, so the IAL token would leak into it.
+  test "IAL on a heading applies the class and drops the token from the text and the accessible name" do
     result = render_markdown("## My Heading { .text-danger }")
-    assert_includes result, 'class="text-danger"'
-    assert_includes result, "My Heading"
+
+    assert_match(/<h2[^>]*class="[^"]*text-danger/, result)
+    assert_match(%r{>My Heading<a[^>]*class="anchor"}, result)
+    assert_match(%r{<a[^>]*aria-label="Link to heading 'My Heading'"}, result)
     assert_not_includes result, "{ .text-danger }"
   end
 
@@ -104,44 +99,20 @@ class MdHelperTest < ActionView::TestCase
     assert_not_includes result, "{ .lead .text-muted }"
   end
 
-  test "IAL supports id token" do
-    result = render_markdown("## Heading { #my-anchor }")
-    assert_includes result, 'id="my-anchor"'
-    assert_not_includes result, "{ #my-anchor }"
-  end
-
-  # Both guard MdHelper#ial_text_node / #realign_heading_anchor against
-  # commonmarker moving the heading self-link again.
+  # Guards #ial_text_node and #realign_heading_anchor against commonmarker moving the self-link.
   test "IAL on a heading keeps the self-link pointing at the heading" do
     result = render_markdown("## Heading { #my-anchor }")
     assert_match(/<h2[^>]*id="my-anchor"/, result)
     assert_includes result, 'href="#my-anchor"'
     assert_not_includes result, 'href="#heading--my-anchor-"'
+    assert_not_includes result, "{ #my-anchor }"
   end
 
-  test "IAL on a heading strips the token from the rendered text" do
-    result = render_markdown("## My Heading { .text-danger }")
-    assert_match(/<h2[^>]*class="[^"]*text-danger/, result)
-    assert_match(%r{>My Heading<a[^>]*class="anchor"}, result)
-  end
-
-  # commonmarker labels each heading self-link, but the anchor renders as an
-  # empty <a> -- so without the label a screen reader announces an unlabelled
-  # link. The sanitizer allow-list has to permit the attribute or it is stripped.
+  # The anchor renders as an empty <a>, so the sanitizer must let aria-label through.
   test "a heading self-link keeps its accessible name through the sanitizer" do
     result = render_markdown("## My Heading")
 
     assert_match(%r{<a[^>]*aria-label="Link to heading 'My Heading'"}, result)
-  end
-
-  # Allowing aria-label through would otherwise leak the IAL token into the
-  # accessible name: commonmarker derives the label from the RAW source, so it
-  # reads "{ .text-danger }" long after the text has been cleaned.
-  test "a heading self-link's accessible name drops the IAL token" do
-    result = render_markdown("## My Heading { .text-danger }")
-
-    assert_match(%r{<a[^>]*aria-label="Link to heading 'My Heading'"}, result)
-    assert_not_includes result, "{ .text-danger }"
   end
 
   test "IAL block syntax without previous element is ignored safely" do
@@ -166,6 +137,7 @@ class MdHelperTest < ActionView::TestCase
     assert_match(%r{<p[^>]*class="[^"]*\balert\b[^"]*"[^>]*>Important notice</p>}, result,
                  "the class must land on the paragraph, not a stray empty element")
     assert_no_match(%r{<p[^>]*class="[^"]*alert[^"]*"[^>]*></p>}, result, "no empty classed paragraph")
+    assert_not_includes result, "{ .alert }"
   end
 
   test "kramdown colon block IAL after a heading applies to the heading" do

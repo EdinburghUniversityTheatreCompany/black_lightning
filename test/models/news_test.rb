@@ -47,14 +47,12 @@ class NewsTest < ActionView::TestCase
     assert_equal "test-news-title", news.slug
   end
 
-  test "updates slug when title changes and slug was auto-generated" do
-    news = FactoryBot.create(:news, title: "Original Title")
-    original_slug = news.slug
+  test "a renamed news item keeps its generated slug" do
+    news = FactoryBot.create(:news, title: "Original Title", slug: "")
+    assert_equal "original-title", news.slug
 
-    news.title = "New News Title"
-    news.valid?
-    assert_not_equal original_slug, news.slug
-    assert_equal "new-news-title", news.slug
+    news.update!(title: "New News Title")
+    assert_equal "original-title", news.reload.slug
   end
 
   test "does not update slug when title changes if slug was manually set" do
@@ -74,18 +72,6 @@ class NewsTest < ActionView::TestCase
     assert_equal "test-news-1", news2.slug
   end
 
-  test "handles special characters in slug generation" do
-    news = FactoryBot.build(:news, title: 'News with "Quotes" & Symbols!', slug: "")
-    assert news.valid?
-    assert_equal "news-with-quotes-and-symbols", news.slug
-  end
-
-  test "handles accented characters in slug generation" do
-    news = FactoryBot.build(:news, title: "Nouvelles spéciàles", slug: "")
-    assert news.valid?
-    assert_equal "nouvelles-speciales", news.slug
-  end
-
   test "slug uniqueness validation works case-insensitively" do
     FactoryBot.create(:news, slug: "test-slug")
     duplicate_news = FactoryBot.build(:news, slug: "TEST-SLUG")
@@ -94,38 +80,10 @@ class NewsTest < ActionView::TestCase
     assert duplicate_news.errors[:slug].any? { |error| error.include?("already taken") }
   end
 
-  test "rejects slug with spaces" do
-    news = FactoryBot.build(:news, slug: "my news slug")
+  test "rejects a slug Sluggable forbids" do
+    news = FactoryBot.build(:news, slug: "My News")
+
     assert_not news.valid?
     assert news.errors[:slug].any?
-  end
-
-  test "rejects slug with uppercase letters" do
-    news = FactoryBot.build(:news, slug: "My-News")
-    assert_not news.valid?
-    assert news.errors[:slug].any?
-  end
-
-  test "rejects slug with special characters" do
-    [ "slug<tag>", "slug&amp", "slug/path", "slug?query", "slug#hash" ].each do |bad_slug|
-      news = FactoryBot.build(:news, slug: bad_slug)
-      assert_not news.valid?, "Expected #{bad_slug.inspect} to be invalid"
-      assert news.errors[:slug].any?, "Expected slug errors for #{bad_slug.inspect}"
-    end
-  end
-
-  test "rejects slug with leading or trailing hyphen" do
-    news = FactoryBot.build(:news, slug: "-leading-hyphen")
-    assert_not news.valid?
-    assert news.errors[:slug].any?
-
-    news = FactoryBot.build(:news, slug: "trailing-hyphen-")
-    assert_not news.valid?
-    assert news.errors[:slug].any?
-  end
-
-  test "accepts valid slug with lowercase letters numbers and hyphens" do
-    news = FactoryBot.build(:news, slug: "my-news-2024")
-    assert news.valid?
   end
 end
