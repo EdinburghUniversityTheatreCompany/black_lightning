@@ -23,7 +23,7 @@ gem "simple_form"
 # Held at 2.x: json 3 made JSON.parse's options keyword-only, but Rails 8.1's
 # ActiveSupport::JSON.decode passes them positionally, so every serialized/JSON column raises
 # "wrong number of arguments". Drop once Rails calls it with keywords (plans/deferred-upgrades.md).
-gem "json", "< 3"
+gem "json", "< 4"
 gem "kaminari"
 gem "commonmarker"
 
