@@ -118,9 +118,17 @@ module Reimbursements
         template: template, layout: "reimbursements_mailer",
         assigns: assigns.merge(subject: subject, cost_centre: @cost_centre).stringify_keys
       )
-      result = @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html)
+      result = @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html, reply_to: reply_to)
       log_send(to: to, subject: subject, template: template)
       result
+    end
+
+    # Replies go to the centre's contact, not the send mailbox, which email-in may poll (where send
+    # and receive are one mailbox a "thanks" would be answered "no usable receipt"). Never the
+    # polled mailbox itself, whatever the notification field says.
+    def reply_to
+      contact = @cost_centre&.contact_email
+      contact unless contact.to_s.casecmp?(@cost_centre.receive_mailbox.to_s)
     end
 
     # Outside a request the default renderer answers *_url with http://example.org, so it takes

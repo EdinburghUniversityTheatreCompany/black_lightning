@@ -40,11 +40,24 @@ module Reimbursements
       assert_includes mail[:html], %(href="#{PORTAL}/expenses/42")
       assert_includes mail[:html], %(href="#{PORTAL}/expenses/new")
       assert_includes mail[:html], %(href="mailto:#{FINANCE}")
+      assert_equal FINANCE, mail[:reply_to]
       text = Nokogiri::HTML(mail[:html]).text.squish
-      # A reply reaches the send mailbox, which here is the one email-in polls.
+      # Without a contact there is no reply-to, and a reply reaches the send mailbox, which here
+      # is the one email-in polls; so the copy names the contact instead of inviting a reply.
       assert_not_includes text, "reply to this email"
       assert_includes text, "If you believe this decision is wrong, or you have fixed the reason above, " \
                             "write to #{FINANCE} and we can put the claim back in the queue."
+    end
+
+    test "replies never go to the polled mailbox" do
+      [ nil, MAILBOX ].each do |notification_email|
+        notifier, graph = build(centre: cost_centre(notification_email: notification_email))
+
+        notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
+                           amount: 12.5, budget_name: "Props", description: "Fake blood", reason: "No receipt.")
+
+        assert_nil graph.send_mails.sole[:reply_to], notification_email.inspect
+      end
     end
 
     test "producer_notification lists the payee's expenses and totals" do

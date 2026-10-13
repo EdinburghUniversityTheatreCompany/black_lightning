@@ -404,10 +404,10 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   question as a receipt. It is the first notification address, else a send mailbox that is not the
   polled one, else nil, and producer emails then name no contact.
 - **A producer email must never say "reply to this email".** `Notifier` sends from the centre's send
-  mailbox and `GraphClient#send_mail` sets no reply-to, so where send and receive are one mailbox
-  the reply is polled as email-in (answered "no usable receipt" and moved to the Rejected folder,
-  or made a blank draft). Point the producer at `CostCentre#contact_email`, guarded by
-  `if contact_email`.
+  mailbox with reply-to `CostCentre#contact_email` (never the polled mailbox). A centre with no
+  contact gets no reply-to, so where send and receive are one mailbox the reply is polled as
+  email-in (answered "no usable receipt" and moved to the Rejected folder, or made a blank draft).
+  Point the producer at `CostCentre#contact_email`, guarded by `if contact_email`.
 - **The EUSA covering email's body is operator-editable raw HTML** ("Body (HTML)" on Build Batch,
   prefilled with the composed message). Plain text plus `{{placeholders}}` was tried and reverted
   (`ebd09724`): the table is for searching old email, and EUSA pays from the BACS spreadsheet.

@@ -320,13 +320,13 @@ module ReimbursementsTestHelpers
       nil
     end
 
-    def send_mail(mailbox:, to:, subject:, html:)
+    def send_mail(mailbox:, to:, subject:, html:, reply_to: nil)
       raise ::GraphAuth::Error, "send failed" if fail_send
       if (Array(to) & Array(fail_send_to)).any?
         raise ::GraphAuth::Error, "send failed for #{to.inspect}"
       end
 
-      @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html }
+      @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html, reply_to: reply_to }
       nil
     end
   end

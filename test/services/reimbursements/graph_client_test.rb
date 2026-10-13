@@ -85,14 +85,17 @@ module Reimbursements
       end
     end
 
-    test "send_mail posts sendMail with saveToSentItems" do
-      client, http = build_client([ graph_token_response, [ 202, "" ] ])
+    test "send_mail posts sendMail with saveToSentItems, and a replyTo only when given one" do
+      client, http = build_client([ graph_token_response, [ 202, "" ], [ 202, "" ] ])
 
       client.send_mail(mailbox: "send@x", to: [ "p@x" ], subject: "Paid", html: "<p>done</p>")
+      client.send_mail(mailbox: "send@x", to: [ "p@x" ], subject: "Paid", html: "<p>done</p>", reply_to: "finance@x")
 
-      post = http.requests.last
-      assert_includes post.uri, "/users/send@x/sendMail"
-      assert JSON.parse(post.body)["saveToSentItems"]
+      plain, replied = http.requests.last(2).map { |request| JSON.parse(request.body) }
+      assert_includes http.requests.last.uri, "/users/send@x/sendMail"
+      assert plain["saveToSentItems"]
+      assert_not plain["message"].key?("replyTo")
+      assert_equal [ "finance@x" ], replied.dig("message", "replyTo").map { |r| r.dig("emailAddress", "address") }
     end
 
     test "send_mail is suppressed (returns nil, no request) when outbound is disabled" do

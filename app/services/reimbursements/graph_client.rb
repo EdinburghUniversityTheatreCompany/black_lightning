@@ -78,16 +78,14 @@ module Reimbursements
 
     # Sends immediately, no attachments. Notifier uses this for the rejection, producer and
     # operator emails.
-    def send_mail(mailbox:, to:, subject:, html:)
+    def send_mail(mailbox:, to:, subject:, html:, reply_to: nil)
       unless @settings.outbound_enabled?
         Rails.logger.info("Reimbursements send_mail suppressed (outbound disabled): to=#{Array(to).join(',')} subject=#{subject.inspect}")
         return nil
       end
-      graph_request(:post, "/users/#{mailbox}/sendMail",
-                    body: { message: { subject: subject,
-                                       body: { contentType: "HTML", content: html },
-                                       toRecipients: recipients(to) },
-                            saveToSentItems: true })
+      message = { subject: subject, body: { contentType: "HTML", content: html }, toRecipients: recipients(to) }
+      message[:replyTo] = recipients(reply_to) if reply_to.present?
+      graph_request(:post, "/users/#{mailbox}/sendMail", body: { message: message, saveToSentItems: true })
       nil
     end
 
