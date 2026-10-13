@@ -81,5 +81,39 @@ module Reimbursements
       # A year with no start date sorts first: it is the one being set up.
       assert_equal [ undated, new, old ], FinancialYear.recent_first.to_a
     end
+
+    # --- covering --------------------------------------------------------
+
+    def tax_year(starts_on, ends_on)
+      FinancialYear.new(label: "Year from #{starts_on}", starts_on: starts_on, ends_on: ends_on)
+    end
+
+    test "covering finds the year whose dates hold a date, both ends included" do
+      this_year = tax_year(Date.new(2026, 4, 6), Date.new(2027, 4, 5))
+      next_year = tax_year(Date.new(2027, 4, 6), Date.new(2028, 4, 5))
+      years = [ this_year, next_year ]
+
+      assert_equal [ this_year ], FinancialYear.covering(Date.new(2026, 4, 6), years)
+      assert_equal [ this_year ], FinancialYear.covering(Date.new(2027, 4, 5), years)
+      assert_equal [ next_year ], FinancialYear.covering(Date.new(2027, 4, 6), years)
+      assert_empty FinancialYear.covering(Date.new(2026, 4, 5), years)
+      assert_empty FinancialYear.covering(Date.new(2028, 4, 6), years)
+    end
+
+    test "a year missing either date covers nothing" do
+      no_end = tax_year(Date.new(2026, 4, 6), nil)
+      no_start = tax_year(nil, Date.new(2027, 4, 5))
+      undated = tax_year(nil, nil)
+
+      assert_empty FinancialYear.covering(Date.new(2026, 6, 1), [ no_end, no_start, undated ])
+    end
+
+    test "overlapping years both cover a date they share" do
+      fringe = tax_year(Date.new(2026, 8, 1), Date.new(2027, 7, 31))
+      tax = tax_year(Date.new(2026, 4, 6), Date.new(2027, 4, 5))
+
+      assert_equal [ fringe, tax ], FinancialYear.covering(Date.new(2026, 12, 1), [ fringe, tax ])
+      assert_equal [ tax ], FinancialYear.covering(Date.new(2026, 5, 1), [ fringe, tax ])
+    end
   end
 end

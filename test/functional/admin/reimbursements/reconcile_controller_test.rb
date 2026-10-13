@@ -83,9 +83,9 @@ module Admin
       "#{nominal}\t#{cost_centre}\tBACS001\t#{date}\t#{period}\t#{narrative}\tShow\t#{debit}\t\t#{debit}"
     end
 
-    def credit_row(nominal: "250000", period: "03", narrative: "Box office", credit: "500.00",
-                   cost_centre: "F40")
-      "#{nominal}\t#{cost_centre}\tBACS002\t13/05/2026\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
+    def credit_row(nominal: "250000", date: "13/05/2026", period: "03", narrative: "Box office",
+                   credit: "500.00", cost_centre: "F40")
+      "#{nominal}\t#{cost_centre}\tBACS002\t#{date}\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
     end
 
     def fringe_cost_centre
@@ -189,6 +189,82 @@ module Admin
       post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
+    # --- A credit competes only within its own financial year --------------
+    #
+    # Each year's show repeats its income line, code and all, so without the year two lines would
+    # always tie and every credit would wait for a person to place it.
+
+    def create_tax_years
+      [ ::Reimbursements::FinancialYear.create!(label: "2026/2027", starts_on: Date.new(2026, 4, 6),
+                                                ends_on: Date.new(2027, 4, 5)),
+        ::Reimbursements::FinancialYear.create!(label: "2027/2028", starts_on: Date.new(2027, 4, 6),
+                                                ends_on: Date.new(2028, 4, 5)) ]
+    end
+
+    def create_income_line(financial_year, nominal: "250000", name: "Ticket income")
+      create_reimbursements_budget(name: name, nominal_code: nominal, budget_type: "Income",
+                                   financial_year: financial_year)
+    end
+
+    test "a credit links to the income line of the year its date falls in" do
+      this_year, next_year = create_tax_years
+      @income.update!(financial_year: this_year)
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
+    test "apply links a credit dated on a year's first day to that year's line" do
+      this_year, next_year = create_tax_years
+      @income.update!(financial_year: this_year)
+      next_years_line = create_income_line(next_year)
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(date: '06/04/2027', period: '01')}" }
+
+      assert_equal next_years_line.id, ::Reimbursements::EusaActual.sole.budget_id
+      assert_equal 1, assigns(:credits_linked)
+    end
+
+    # A line with no year counts in every year, so it still ties with the year's own line; the
+    # other year's line is no longer among them.
+    test "a credit stays unlinked when a line with no year shares its code with its year's line" do
+      this_year, next_year = create_tax_years
+      create_income_line(this_year, name: "Sponsorship")
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_select "td", text: /\A2 income budgets use this code/
+    end
+
+    test "a credit dated outside every year links on its code alone, as before years had dates" do
+      this_year, _next_year = create_tax_years
+      @income.update!(financial_year: this_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(date: '13/05/2025')}" }
+
+      assert_equal @income.record_id, assigns(:matched_credits).sole.last.record_id
+    end
+
+    test "a credit dated outside every year still ties between two years' lines" do
+      this_year, next_year = create_tax_years
+      @income.update!(financial_year: this_year)
+      create_income_line(next_year)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(date: '13/05/2025')}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_select "td", text: /\A2 income budgets use this code/
     end
 
     test "preview re-renders show with an alert on a malformed paste (missing header columns)" do
@@ -465,6 +541,18 @@ module Admin
       assert_select "td[colspan=7]", text: /If you untick this pair.*##{lookalike.auto_number}/m
       assert_select "td[rowspan=3]", 2, "the checkbox and score cells span the note row"
       assert_includes response.body, "can add to that count"
+    end
+
+    test "the preview names the income line of the credit leg's own year if a pair is unticked" do
+      this_year, next_year = create_tax_years
+      this_years_line = create_income_line(this_year, nominal: ACCRUAL_NOMINAL, name: "Venue hire income")
+      create_income_line(next_year, nominal: ACCRUAL_NOMINAL, name: "Venue hire income")
+      sign_in @user
+
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      key = assigns(:offsetting_pairs).sole.key
+      assert_equal this_years_line.record_id, assigns(:offset_pair_consequences)[key][:budget].record_id
     end
 
     # Two pairs that both look like the same expense must not both claim it:

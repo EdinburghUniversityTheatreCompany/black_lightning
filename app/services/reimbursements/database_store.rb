@@ -170,8 +170,8 @@ module Reimbursements
     #
     # Deliberately not year-scoped either. Callers are id->budget lookups (Review, the expenses
     # index, every export, the nightly job) and the reconcile matcher: scoping would blank the
-    # budget name on last year's claims and stop the year-boundary tail of EUSA credits matching
-    # their income line. Screens that list a year's budgets use #budgets_for_year.
+    # budget name on last year's claims, and the matcher picks each credit's year from the credit's
+    # own date. Screens that list a year's budgets use #budgets_for_year.
     def budgets
       @budgets ||= Budget.includes(:forecasts, :own_owners, :cost_centre, area: %i[owners cost_centre]).to_a
     end

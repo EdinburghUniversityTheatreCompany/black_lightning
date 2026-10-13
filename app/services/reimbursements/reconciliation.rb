@@ -165,6 +165,15 @@ module Reimbursements
       budgets.select { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
     end
 
+    # The +budgets+ a credit may link to by year: those in one of +year_ids+ (the years whose dates
+    # hold the credit's date) plus those with no year, which count in every year. When no year
+    # covers the date, every budget stays in.
+    def in_credit_years(budgets, year_ids)
+      return budgets if year_ids.empty?
+
+      budgets.select { |budget| budget.financial_year_id.nil? || year_ids.include?(budget.financial_year_id) }
+    end
+
     # --- offsetting pairs --------------------------------------------------
 
     # Scoring weights, tuned against a real 309-row EUSA F40 export, where the reference matches only

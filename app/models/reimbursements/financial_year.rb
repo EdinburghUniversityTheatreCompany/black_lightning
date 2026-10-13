@@ -48,6 +48,12 @@ module Reimbursements
       active.first
     end
 
+    # The years among +years+ whose dates hold +date+, both ends inclusive. A year missing either
+    # date covers nothing. Takes loaded years, so a caller judging many dates queries once.
+    def self.covering(date, years)
+      years.select { |year| year.starts_on && year.ends_on && date.between?(year.starts_on, year.ends_on) }
+    end
+
     def to_param = key
 
     # :active, :past or :draft. A non-active year is not automatically a draft: it is past once

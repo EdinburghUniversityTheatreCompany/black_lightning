@@ -216,7 +216,6 @@ module Admin
       # Both are scoped to the row's cost centre: a termtime debit must not mark a Fringe claim Paid.
       def build_matches(entries)
         remaining = matchable_expenses
-        income_budgets = income_budgets_pool
 
         matched_debits = []
         matched_credits = []
@@ -236,7 +235,7 @@ module Admin
             end
           elsif row.credit.positive?
             budget = ::Reimbursements::Reconciliation.match_credit_to_budget(
-              row, budgets_in(entry.cost_centre, income_budgets)
+              row, income_budgets_for(row, entry.cost_centre)
             )
             budget ? matched_credits << [ entry, budget ] : unmatched << entry
           else
@@ -260,19 +259,30 @@ module Admin
         end
       end
 
+      # The income lines a credit may link to: those in its cost centre and in the financial year its
+      # date falls in. Every reader of a credit (the matcher, the shared-code note, the pair notes)
+      # comes through here, so the preview and apply never judge a credit differently.
+      def income_budgets_for(row, cost_centre)
+        year_ids = ::Reimbursements::FinancialYear.covering(row.date, financial_years).map(&:id)
+        ::Reimbursements::Reconciliation.in_credit_years(budgets_in(cost_centre, income_budgets_pool), year_ids)
+      end
+
       def income_budgets_pool
-        store.budgets.select(&:income?)
+        @income_budgets_pool ||= store.budgets.select(&:income?)
+      end
+
+      def financial_years
+        @financial_years ||= ::Reimbursements::FinancialYear.all.to_a
       end
 
       # Unmatched credits whose code several income budgets carry, as { row => how many }, so the
       # preview does not call them unmatchable.
       def shared_credit_codes(unmatched)
-        budgets = income_budgets_pool
         unmatched.each_with_object({}.compare_by_identity) do |entry, counts|
           next unless entry.row.credit.positive?
 
           count = ::Reimbursements::Reconciliation.credit_budget_candidates(
-            entry.row, budgets_in(entry.cost_centre, budgets)
+            entry.row, income_budgets_for(entry.row, entry.cost_centre)
           ).size
           counts[entry.row] = count if count > 1
         end
@@ -304,7 +314,6 @@ module Admin
       def offset_pair_consequences(pairs, entries, matched_debits)
         claimed = matched_debits.map { |_entry, expense| expense.record_id }.to_set
         remaining = matchable_expenses.reject { |e| claimed.include?(e.record_id) }
-        budgets = income_budgets_pool
 
         pairs.to_h do |pair|
           cost_centre = entries[pair.debit_index].cost_centre
@@ -313,7 +322,7 @@ module Admin
           )
           remaining.delete(expense) if expense
           budget = ::Reimbursements::Reconciliation.match_credit_to_budget(
-            pair.credit_row, budgets_in(entries[pair.credit_index].cost_centre, budgets)
+            pair.credit_row, income_budgets_for(pair.credit_row, entries[pair.credit_index].cost_centre)
           )
           [ pair.key, { expense: expense, budget: budget } ]
         end

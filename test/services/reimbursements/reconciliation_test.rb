@@ -347,6 +347,24 @@ module Reimbursements
       assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ cogito, hamlet ])
     end
 
+    # --- in_credit_years ---------------------------------------------------
+
+    test "a credit's year keeps that year's lines and lines with no year" do
+      this_year = Budget.new(name: "This year", nominal_code: "250000", financial_year_id: 1)
+      next_year = Budget.new(name: "Next year", nominal_code: "250000", financial_year_id: 2)
+      unstamped = Budget.new(name: "No year", nominal_code: "250000", financial_year_id: nil)
+
+      assert_equal [ this_year, unstamped ],
+                   Reconciliation.in_credit_years([ this_year, next_year, unstamped ], [ 1 ])
+    end
+
+    test "a credit no year covers keeps every line" do
+      this_year = Budget.new(name: "This year", nominal_code: "250000", financial_year_id: 1)
+      next_year = Budget.new(name: "Next year", nominal_code: "250000", financial_year_id: 2)
+
+      assert_equal [ this_year, next_year ], Reconciliation.in_credit_years([ this_year, next_year ], [])
+    end
+
     # --- detect_offsetting_pairs -------------------------------------------
     # The fixtures are ANONYMISED reproductions of the pair shapes in a real 309-row EUSA F40 export:
     # codes, dates, periods, refs and amounts keep the real structure the heuristic keys on; narratives
