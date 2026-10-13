@@ -5,7 +5,7 @@ module Admin
     # notification recipients per cost centre, and the send log.
     class StatusController < FinanceController
       def show
-        @title = "Integration Status"
+        @title = "Email log"
         @cost_centres = ::Reimbursements::CostCentre.order(:name)
         load_send_log
       end

@@ -84,7 +84,7 @@ module NavigationHelper
       children << { group: "Setup", title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book", scoped: true }
       children << { group: "Setup", title: "Financial years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days", scoped: true }
       children << { group: "Setup", title: "Cost centres", path: admin_reimbursements_settings_path, fa_icon: "fa-gear", scoped: true }
-      children << { group: "Setup", title: "Email & integrations", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse", scoped: true }
+      children << { group: "Setup", title: "Email log", path: admin_reimbursements_status_path, fa_icon: "fa-envelope", scoped: true }
       children << { group: "Setup", title: "What the words mean", path: admin_reimbursements_glossary_path, fa_icon: "fa-book", scoped: true }
     end
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }

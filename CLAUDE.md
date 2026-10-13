@@ -853,8 +853,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     (which still gates every finance screen globally). `REIMBURSEMENTS_OPERATOR_EMAIL` is
     whole-portal and overrides it. Several addresses split on `;` or `,`, each format-validated.
   - **No recipients does not record the run-day**: it warns, fires the
-    `reimbursements.nightly_no_recipients` Honeybadger event and retries tomorrow; Integration
-    Status badges it.
+    `reimbursements.nightly_no_recipients` Honeybadger event and retries tomorrow; the Email
+    log page badges it.
   - **A claim whose budget names no cost centre goes to the DEFAULT centre**
     (`expenses_owned_by_cost_centre`, Build Batch's rule), never to nobody: a wrong recipient is
     visible and correctable, no recipient leaves a producer waiting. Build Batch's emails stay
