@@ -145,6 +145,20 @@ module Admin
         assert code.reload.active?
       end
 
+      test "putting a code back is refused while an active code has its label" do
+        code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
+                                                  cost_centre: @cost_centre, active: false)
+        create_reimbursements_nominal_code(code: "431000", label: "Marketing", cost_centre: @cost_centre)
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, id: code.id, active: "1" }, format: :turbo_stream
+
+        assert_response :unprocessable_entity
+        assert_select "turbo-stream[action=toast][type=error][message=?]",
+                      "Label Marketing is already on another code in the picker."
+        assert_not code.reload.active?
+      end
+
       test "update 404s for a code belonging to another cost centre" do
         termtime = create_second_reimbursements_cost_centre
         code = create_reimbursements_nominal_code(code: "555555", cost_centre: termtime)

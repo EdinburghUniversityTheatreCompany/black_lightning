@@ -32,9 +32,13 @@ module Reimbursements
     # case_sensitive: false because the column is utf8mb4_unicode_ci: a
     # case-sensitive check would let a duplicate through to RecordNotUnique.
     validates :code, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
-    # Finance picks a code from the budget form's suggestions by its label, so
-    # two codes sharing one would leave them guessing which account is meant.
-    validates :label, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
+    # Among active codes only: the budget form's datalist offers those, and
+    # Firefox shows an option's label instead of its code, so two sharing a
+    # label look identical there. A retired code's label is free to reuse.
+    validates :label, uniqueness: { scope: :cost_centre_id, case_sensitive: false,
+                                    conditions: -> { where(active: true) },
+                                    message: "%{value} is already on another code in the picker." },
+                      if: :active?
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
 

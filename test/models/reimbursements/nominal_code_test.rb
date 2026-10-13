@@ -29,13 +29,34 @@ module Reimbursements
       end
     end
 
-    test "a label is unique within its cost centre, case-insensitively" do
+    test "two active codes in a centre cannot share a label, case-insensitively" do
       cc = CostCentre.default
       create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing")
       dupe = NominalCode.new(code: "431000", cost_centre: cc, label: "marketing")
 
       assert_not dupe.valid?
       assert dupe.errors[:label].present?
+    end
+
+    test "a retired code's label may be reused by an active code, and the reverse" do
+      cc = CostCentre.default
+      create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing", active: false)
+      active = NominalCode.new(code: "431000", cost_centre: cc, label: "Marketing")
+      assert active.valid?, "a retired code is out of the picker, so its label is free"
+
+      active.save!
+      assert NominalCode.new(code: "430000", cost_centre: cc, label: "marketing", active: false).valid?
+    end
+
+    test "reactivating a retired code whose label an active code now has is refused" do
+      cc = CostCentre.default
+      retired = create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing",
+                                                   active: false)
+      create_reimbursements_nominal_code(code: "431000", cost_centre: cc, label: "Marketing")
+
+      assert_not retired.update(active: true)
+      assert retired.errors[:label].present?
+      assert_not retired.reload.active?
     end
 
     test "another centre may reuse a label, as it may reuse a code" do
