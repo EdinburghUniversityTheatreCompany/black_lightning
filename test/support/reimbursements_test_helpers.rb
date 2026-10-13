@@ -46,6 +46,17 @@ module ReimbursementsTestHelpers
     budget
   end
 
+  # 2026/2027 and 2027/2028, each running 6 April to 5 April as production's years do. +active:+
+  # is the label of the one to make active, if any.
+  def create_reimbursements_tax_years(active: nil)
+    [ 2026, 2027 ].map do |start|
+      label = "#{start}/#{start + 1}"
+      Reimbursements::FinancialYear.create!(label: label, active: label == active,
+                                            starts_on: Date.new(start, 4, 6),
+                                            ends_on: Date.new(start + 1, 4, 5))
+    end
+  end
+
   def create_reimbursements_area(name:, cost_centre: nil, financial_year: nil, **attrs)
     Reimbursements::Area.create!(
       name: name,

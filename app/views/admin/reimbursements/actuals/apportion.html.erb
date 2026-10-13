@@ -10,7 +10,7 @@
 <%= render "row_summary", actual: @actual, amount_label: "Income",
                           amount: reimbursements_money(@actual.apportionable_total) %>
 
-<% if @budgets.empty? %>
+<% if @budget_groups.empty? %>
   <%= render CardComponent.new(title: "Split it across") do %>
     <p class="mb-0 text-gray-600">
       There are no active income budgets to split this across. Create one on the
@@ -36,13 +36,13 @@
       <div data-controller="nested-form">
         <div class="space-y-3">
           <% @shares.each_with_index do |share, index| %>
-            <%= render "share_row", index: index, share: share, budgets: @budgets %>
+            <%= render "share_row", index: index, share: share, budget_groups: @budget_groups %>
           <% end %>
           <div data-nested-form-target="target" class="hidden"></div>
         </div>
 
         <template data-nested-form-target="template">
-          <%= render "share_row", index: "NEW_RECORD", share: {}, budgets: @budgets %>
+          <%= render "share_row", index: "NEW_RECORD", share: {}, budget_groups: @budget_groups %>
         </template>
 
         <p class="mt-3">

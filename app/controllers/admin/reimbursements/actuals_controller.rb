@@ -136,12 +136,12 @@ module Admin
       # Stripe payout covering a week of shows would otherwise land on one line.
       def apportion
         @title = "Split an EUSA credit across budgets"
-        @budgets = splittable_budgets
+        @budget_groups = splittable_budget_groups
         @shares = blank_shares
       end
 
       def create_apportionment
-        @budgets = splittable_budgets
+        @budget_groups = splittable_budget_groups
         @shares = submitted_shares
 
         if (error = apportionment_error)
@@ -330,11 +330,41 @@ module Admin
 
       # The income lines this row's shares may land on. UNSCOPED like store.budgets: a credit from
       # the tail of one financial year belongs to that year's income line, and these screens are not
-      # year-scoped. Inactive lines are left out. Memoized like #offerable_budgets, so the list
-      # validated is the list rendered.
+      # year-scoped. Inactive lines are left out.
       def splittable_budgets
         @splittable_budgets ||= store.budgets.select { |b| b.active && b.income? }
                                      .sort_by(&:display_name)
+      end
+
+      # #splittable_budgets as <optgroup>s by financial year, as [label, [[text, id], ...]], since
+      # each year's show repeats its line names. The year #first_split_year picks comes first, then
+      # the rest newest first, then lines with no year. Memoized, and #share_rule_error accepts
+      # only the ids listed here, so the list validated is the list rendered.
+      def splittable_budget_groups
+        @splittable_budget_groups ||= begin
+          first_year, why_first = first_split_year
+          by_year = splittable_budgets.group_by(&:financial_year_id)
+          groups = [ first_year, *selectable_financial_years ].compact.uniq.filter_map do |year|
+            next unless by_year.key?(year.id)
+
+            [ year == first_year ? "#{year.label} (#{why_first})" : year.label, split_options(by_year[year.id]) ]
+          end
+          groups << [ "No financial year", split_options(by_year[nil]) ] if by_year.key?(nil)
+          groups
+        end
+      end
+
+      def split_options(budgets) = budgets.map { |budget| [ budget.picker_label, budget.record_id ] }
+
+      # The year whose lines the Split picker lists first, and why: the year the row's date falls
+      # in, else the active year. Nil when there is neither.
+      def first_split_year
+        covering = @actual.date &&
+                   ::Reimbursements::FinancialYear.covering(@actual.date, selectable_financial_years).first
+        return [ covering, "this credit's year" ] if covering
+
+        active = selectable_financial_years.find(&:active?)
+        [ active, "active year" ] if active
       end
 
       def blank_shares
@@ -370,7 +400,7 @@ module Admin
         # The write goes straight to budget_id, so an id the page never offered (deleted, retired,
         # typed by hand) has to be refused here.
         return "One of those budgets is no longer available. Reload the page and pick again." if
-          (ids - splittable_budgets.map(&:record_id)).any?
+          (ids - splittable_budget_groups.flat_map { |_label, options| options.map(&:last) }).any?
 
         "A budget can only take one share of a row. Add its shares together instead." if
           ids.uniq.length != ids.length

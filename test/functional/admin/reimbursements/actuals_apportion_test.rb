@@ -39,6 +39,71 @@ module Admin
         assert_match "Show A", response.body
       end
 
+      # --- The picker names each line's year -------------------------------------
+      #
+      # Each year's show repeats its income line, so finance moving a credit to the right year's
+      # line by hand must be able to tell the two "Ticket income" lines apart.
+
+      def picker_groups
+        css_select("#share_0_budget_id optgroup").map do |group|
+          [ group["label"], group.css("option").map(&:text) ]
+        end
+      end
+
+      test "the picker groups lines by financial year, the credit's own year first" do
+        this_year, next_year = create_reimbursements_tax_years
+        @show_a.update!(name: "Ticket income", financial_year: this_year)
+        @show_b.update!(name: "Ticket income", financial_year: next_year)
+        @payout.update!(date: Date.new(2026, 8, 20))
+        sign_in @user
+
+        get :apportion, params: { id: @payout.record_id }
+
+        assert_equal [ [ "2026/2027 (this credit's year)", [ @show_a.picker_label ] ],
+                       [ "2027/2028", [ @show_b.picker_label ] ] ], picker_groups
+        assert_select "#share_0_budget_id optgroup:first-of-type option[value=?]", @show_a.record_id
+      end
+
+      # The newest year is listed first unless the credit's date says otherwise.
+      test "a credit dated in an older year lists that year before the newer one" do
+        this_year, next_year = create_reimbursements_tax_years
+        @show_a.update!(financial_year: this_year)
+        @show_b.update!(financial_year: next_year)
+        @payout.update!(date: Date.new(2027, 3, 31))
+        sign_in @user
+
+        get :apportion, params: { id: @payout.record_id }
+
+        assert_equal [ "2026/2027 (this credit's year)", "2027/2028" ], picker_groups.map(&:first)
+      end
+
+      test "a credit no year covers lists the active year first, and lines with no year last" do
+        this_year, next_year = create_reimbursements_tax_years(active: "2026/2027")
+        @show_a.update!(financial_year: next_year)
+        @show_b.update!(financial_year: this_year)
+        loose = create_reimbursements_budget(name: "Donations", budget_type: "Income", nominal_code: "4100")
+        @payout.update!(date: Date.new(2025, 6, 1))
+        sign_in @user
+
+        get :apportion, params: { id: @payout.record_id }
+
+        assert_equal [ [ "2026/2027 (active year)", [ @show_b.picker_label ] ],
+                       [ "2027/2028", [ @show_a.picker_label ] ],
+                       [ "No financial year", [ loose.picker_label ] ] ], picker_groups
+      end
+
+      test "a share on another year's line is accepted, as every year is offered" do
+        this_year, next_year = create_reimbursements_tax_years
+        @show_a.update!(financial_year: this_year)
+        @show_b.update!(financial_year: next_year)
+        sign_in @user
+
+        post_split({ "0" => { budget_id: @show_b.record_id, amount: "4000" } })
+
+        assert_redirected_to admin_reimbursements_actuals_path
+        assert_equal [ @show_b.id ], @payout.reload.allocations.map(&:budget_id)
+      end
+
       test "a debit row cannot reach the form" do
         sign_in @user
         debit = create_reimbursements_eusa_actual(debit: BigDecimal("50"))

@@ -196,20 +196,13 @@ module Admin
     # Each year's show repeats its income line, code and all, so without the year two lines would
     # always tie and every credit would wait for a person to place it.
 
-    def create_tax_years
-      [ ::Reimbursements::FinancialYear.create!(label: "2026/2027", starts_on: Date.new(2026, 4, 6),
-                                                ends_on: Date.new(2027, 4, 5)),
-        ::Reimbursements::FinancialYear.create!(label: "2027/2028", starts_on: Date.new(2027, 4, 6),
-                                                ends_on: Date.new(2028, 4, 5)) ]
-    end
-
     def create_income_line(financial_year, nominal: "250000", name: "Ticket income")
       create_reimbursements_budget(name: name, nominal_code: nominal, budget_type: "Income",
                                    financial_year: financial_year)
     end
 
     test "a credit links to the income line of the year its date falls in" do
-      this_year, next_year = create_tax_years
+      this_year, next_year = create_reimbursements_tax_years
       @income.update!(financial_year: this_year)
       create_income_line(next_year)
       sign_in @user
@@ -220,7 +213,7 @@ module Admin
     end
 
     test "apply links a credit dated on a year's first day to that year's line" do
-      this_year, next_year = create_tax_years
+      this_year, next_year = create_reimbursements_tax_years
       @income.update!(financial_year: this_year)
       next_years_line = create_income_line(next_year)
       sign_in @user
@@ -234,7 +227,7 @@ module Admin
     # A line with no year counts in every year, so it still ties with the year's own line; the
     # other year's line is no longer among them.
     test "a credit stays unlinked when a line with no year shares its code with its year's line" do
-      this_year, next_year = create_tax_years
+      this_year, next_year = create_reimbursements_tax_years
       create_income_line(this_year, name: "Sponsorship")
       create_income_line(next_year)
       sign_in @user
@@ -246,7 +239,7 @@ module Admin
     end
 
     test "a credit dated outside every year links on its code alone, as before years had dates" do
-      this_year, _next_year = create_tax_years
+      this_year, _next_year = create_reimbursements_tax_years
       @income.update!(financial_year: this_year)
       sign_in @user
 
@@ -256,7 +249,7 @@ module Admin
     end
 
     test "a credit dated outside every year still ties between two years' lines" do
-      this_year, next_year = create_tax_years
+      this_year, next_year = create_reimbursements_tax_years
       @income.update!(financial_year: this_year)
       create_income_line(next_year)
       sign_in @user
@@ -544,7 +537,7 @@ module Admin
     end
 
     test "the preview names the income line of the credit leg's own year if a pair is unticked" do
-      this_year, next_year = create_tax_years
+      this_year, next_year = create_reimbursements_tax_years
       this_years_line = create_income_line(this_year, nominal: ACCRUAL_NOMINAL, name: "Venue hire income")
       create_income_line(next_year, nominal: ACCRUAL_NOMINAL, name: "Venue hire income")
       sign_in @user
