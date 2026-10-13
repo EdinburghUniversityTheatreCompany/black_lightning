@@ -11,10 +11,6 @@
 #
 #  id                :integer          not null, primary key
 #  access_level      :integer          default(1), not null
-#  file_content_type :string(255)
-#  file_file_name    :string(255)
-#  file_file_size    :integer
-#  file_updated_at   :datetime
 #  item_type         :string(255)
 #  name              :string(255)
 #  created_at        :datetime         not null
@@ -28,7 +24,10 @@
 #  index_attachments_on_item_type_and_item_id  (item_type,item_id)
 #
 class Attachment < ApplicationRecord
-  validates :name, :file_file_name, :file_content_type, :item_type, length: { maximum: 255 }
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[file_content_type file_file_name file_file_size file_updated_at]
+
+  validates :name, :item_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :item, polymorphic: true, optional: true

@@ -20,10 +20,6 @@
 #  doors_open_minutes_before :integer
 #  duration_minutes          :integer
 #  end_date                  :date
-#  image_content_type        :string(255)
-#  image_file_name           :string(255)
-#  image_file_size           :integer
-#  image_updated_at          :datetime
 #  is_public                 :boolean
 #  maintenance_debt_amount   :integer
 #  maintenance_debt_start    :date
@@ -69,6 +65,9 @@
 #  fk_rails_...  (proposal_id => admin_proposals_proposals.id)
 #
 class Event < ApplicationRecord
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[image_content_type image_file_name image_file_size image_updated_at]
+
   # Marks the unfilled members-only template so the show page can skip it. Only
   # this token is the contract; the instruction after it can be reworded.
   MEMBERS_ONLY_TEMPLATE_MARKER = "<!-- members-only-template"
@@ -85,7 +84,7 @@ class Event < ApplicationRecord
 
   validates :name, :tagline, :slug, length: { maximum: 255 }
   validates :publicity_text, length: { maximum: 16777215 }
-  validates :image_file_name, :image_content_type, :author, :type, :price, :spark_seat_slug, length: { maximum: 255 }
+  validates :author, :type, :price, :spark_seat_slug, length: { maximum: 255 }
   validates :members_only_text, length: { maximum: 16777215 }
   validates :pretix_slug_override, :pretix_view, length: { maximum: 255 }
   validates :content_warnings, length: { maximum: 16777215 }

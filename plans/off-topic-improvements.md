@@ -56,6 +56,15 @@ inside `safety_assured`, each guarded by `column_exists?`, with a `down` that re
 Once it has run, never `kamal rollback` past the ignoring release: older code reads `person.iban`
 on every international claim page.
 
+**The Paperclip columns go the same way.** Seven tables keep Paperclip's four metadata columns,
+ignored by their models: `file_*` on `admin_answers` and `attachments`, `image_*` on `events`,
+`news`, `pictures` and `venues`, `avatar_*` on `users` (`*_content_type`, `*_file_name`,
+`*_file_size`, `*_updated_at`). One `remove_columns` per table inside `safety_assured`, guarded by
+`column_exists?`; the `down` re-adds them empty (`string`, `string`, `integer`,
+`datetime precision: nil`). Delete the seven `ignored_columns` lines in the same commit. After it
+has run, never `kamal rollback` past the ignoring release: older code validates these columns'
+length, so every save of those seven models raises.
+
 ## Reimbursements: areas and budgets
 
 ### Drop the two area rollback columns

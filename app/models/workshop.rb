@@ -13,10 +13,6 @@
 #  doors_open_minutes_before :integer
 #  duration_minutes          :integer
 #  end_date                  :date
-#  image_content_type        :string(255)
-#  image_file_name           :string(255)
-#  image_file_size           :integer
-#  image_updated_at          :datetime
 #  is_public                 :boolean
 #  maintenance_debt_amount   :integer
 #  maintenance_debt_start    :date

@@ -6,17 +6,13 @@
 # Table name: pictures
 # Database name: primary
 #
-#  id                 :integer          not null, primary key
-#  access_level       :integer          default(2), not null
-#  description        :text(16777215)
-#  gallery_type       :string(255)
-#  image_content_type :string(255)
-#  image_file_name    :string(255)
-#  image_file_size    :integer
-#  image_updated_at   :datetime
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  gallery_id         :integer
+#  id           :integer          not null, primary key
+#  access_level :integer          default(2), not null
+#  description  :text(16777215)
+#  gallery_type :string(255)
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  gallery_id   :integer
 #
 # Indexes
 #
@@ -25,8 +21,11 @@
 #  index_pictures_on_gallery_type_and_gallery_id  (gallery_type,gallery_id)
 #
 class Picture < ApplicationRecord
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[image_content_type image_file_name image_file_size image_updated_at]
+
   validates :description, length: { maximum: 16777215 }
-  validates :gallery_type, :image_file_name, :image_content_type, length: { maximum: 255 }
+  validates :gallery_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :gallery, polymorphic: true

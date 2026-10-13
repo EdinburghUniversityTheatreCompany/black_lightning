@@ -7,10 +7,6 @@
 # Database name: primary
 #
 #  id                            :integer          not null, primary key
-#  avatar_content_type           :string(255)
-#  avatar_file_name              :string(255)
-#  avatar_file_size              :integer
-#  avatar_updated_at             :datetime
 #  bio                           :text(16777215)
 #  calendar_email                :string(255)
 #  calendar_token                :string(255)
@@ -62,8 +58,11 @@
 #  fk_rails_...  (reimbursements_person_id => reimbursements_people.id)
 #
 class User < ApplicationRecord
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[avatar_content_type avatar_file_name avatar_file_size avatar_updated_at]
+
   validates :email, :encrypted_password, :reset_password_token, :current_sign_in_ip, :last_sign_in_ip,
-            :first_name, :last_name, :phone_number, :avatar_file_name, :avatar_content_type, :username,
+            :first_name, :last_name, :phone_number, :username,
             :remember_token, :student_id, :associate_id, :calendar_token, :calendar_email,
             :profile_completion_salt, length: { maximum: 255 }
   validates :bio, length: { maximum: 16777215 }

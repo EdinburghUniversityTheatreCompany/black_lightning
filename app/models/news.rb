@@ -6,19 +6,15 @@
 # Table name: news
 # Database name: primary
 #
-#  id                 :integer          not null, primary key
-#  body               :text(16777215)
-#  image_content_type :string(255)
-#  image_file_name    :string(255)
-#  image_file_size    :integer
-#  image_updated_at   :datetime
-#  publish_date       :datetime
-#  show_public        :boolean
-#  slug               :string(255)
-#  title              :string(255)
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  author_id          :integer
+#  id           :integer          not null, primary key
+#  body         :text(16777215)
+#  publish_date :datetime
+#  show_public  :boolean
+#  slug         :string(255)
+#  title        :string(255)
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  author_id    :integer
 #
 # Indexes
 #
@@ -27,9 +23,12 @@
 #  index_news_on_slug                          (slug)
 #
 class News < ApplicationRecord
+  # Paperclip's metadata, unused since the files moved to ActiveStorage. A later deploy drops them.
+  self.ignored_columns += %w[image_content_type image_file_name image_file_size image_updated_at]
+
   validates :title, length: { maximum: 255 }
   validates :body, length: { maximum: 16777215 }
-  validates :slug, :image_file_name, :image_content_type, length: { maximum: 255 }
+  validates :slug, length: { maximum: 255 }
   include Sluggable
 
   resourcify

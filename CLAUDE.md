@@ -284,7 +284,8 @@ run `mise install && hk install` once.
   while the new one boots. Once the drop has run, never `kamal rollback` past the ignoring release.
   Pending ([plans/off-topic-improvements.md](plans/off-topic-improvements.md)):
   `PaymentDetails`' `iban`/`bic`, `EusaActual`'s `source_month`, `Budget`'s
-  `area_before_rollback`/`name_before_area_rename`.
+  `area_before_rollback`/`name_before_area_rename`, and Paperclip's `*_file_name`/`_content_type`/
+  `_file_size`/`_updated_at` on seven older tables.
 - **A data migration that writes through a live model breaks on a later re-migrate** once that
   model validates a column newer than the migration. Write SQL, or guard the validation with
   `has_attribute?`.
