@@ -100,9 +100,23 @@ h3 {
   @apply text-primary hover:text-primary-dark;
 }
 
-/* Admin content link styling — scoped to main so navbar/sidebar are unaffected */
-main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
-  @apply text-primary hover:text-primary-dark;
+/* Links in main (not the navbar or sidebar) are brand red. In base, so a link
+   given a colour utility (a tab, a selector chip) shows that colour instead. */
+@layer base {
+  main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
+    @apply text-primary hover:text-primary-dark;
+  }
+}
+
+/* .prose colours its own links in the utilities layer, over the rule above */
+main .prose {
+  --tw-prose-links: var(--color-primary);
+}
+
+@media (hover: hover) {
+  main .prose a:hover {
+    --tw-prose-links: var(--color-primary-dark);
+  }
 }
 
 /* The footer is inside <main>: keep its links white on the red background */
