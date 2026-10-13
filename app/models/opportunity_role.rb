@@ -8,14 +8,15 @@
 # Table name: opportunity_roles
 # Database name: primary
 #
-#  id             :bigint           not null, primary key
-#  note           :string(255)
-#  ordering       :integer
-#  position       :string(255)      not null
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  department_id  :bigint
-#  opportunity_id :integer          not null
+#  id                   :bigint           not null, primary key
+#  note                 :string(255)
+#  ordering             :integer
+#  position             :string(255)      not null
+#  suggested_department :string(255)
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  department_id        :bigint
+#  opportunity_id       :integer          not null
 #
 # Indexes
 #
@@ -29,17 +30,16 @@
 #
 class OpportunityRole < ApplicationRecord
   validates :position, presence: true, length: { maximum: 255 }
-  validates :note, length: { maximum: 255 }
+  validates :note, :suggested_department, length: { maximum: 255 }
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true
 
-  # Set on a public submission. Only a reviewer adds a department, so a name matching none goes
-  # into the note for them instead.
+  # Set on a public submission. Only a reviewer adds a department, so a name matching none is kept
+  # in suggested_department for them instead, which only the admin pages show.
   attr_accessor :existing_department_only
 
   before_validation :assign_department_from_name
-  validate :unlisted_department_fits_note
-  before_save :note_unlisted_department
+  before_save :clear_suggested_department, if: :department
 
   normalizes :position, with: ->(position) { position&.strip }
 
@@ -75,23 +75,16 @@ class OpportunityRole < ApplicationRecord
     return unless defined?(@department_name)
 
     department = Department.find_or_build_by_name(@department_name)
-    @unlisted_department = (department.name if existing_department_only && department&.new_record?)
-    self.department = @unlisted_department ? nil : department
+    if existing_department_only && department&.new_record?
+      self.department = nil
+      # Cut, not refused: the public form has no field to show this column's error on.
+      self.suggested_department = department.name.first(255)
+    else
+      self.department = department
+    end
   end
 
-  def note_with_unlisted_department
-    label = "Department: #{@unlisted_department}"
-    note.to_s.include?(label) ? note : [ note.presence, label ].compact.join("; ")
-  end
-
-  # The note column holds 255 characters; cutting the submitter's text to fit would lose it.
-  def unlisted_department_fits_note
-    return unless @unlisted_department && note_with_unlisted_department.length > 255
-
-    errors.add(:note, "is too long to also hold the department you typed. Shorten it, or pick a department from the list.")
-  end
-
-  def note_unlisted_department
-    self.note = note_with_unlisted_department if @unlisted_department
+  def clear_suggested_department
+    self.suggested_department = nil
   end
 end

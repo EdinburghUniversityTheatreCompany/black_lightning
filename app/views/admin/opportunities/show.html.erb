@@ -3,7 +3,8 @@
   <% roles_html = @opportunity.roles.map do |role|
        content_tag(:li, safe_join([ content_tag(:strong, role.position),
                                     (": #{role.department.name}" if role.department),
-                                    (" (#{role.note})" if role.note.present?) ]))
+                                    (" (#{role.note})" if role.note.present?),
+                                    (" · Suggested department: #{role.suggested_department}" if role.suggested_department.present?) ]))
      end %>
   <% roles_content = { type: 'content', header: 'Roles', content: content_tag(:ul, safe_join(roles_html), class: 'list-disc pl-5') } %>
 <% end %>

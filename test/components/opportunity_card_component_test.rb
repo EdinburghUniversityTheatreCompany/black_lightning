@@ -25,6 +25,16 @@ class OpportunityCardComponentTest < ViewComponent::TestCase
     assert_text "Stage Management"
   end
 
+  test "never prints a department a submitter typed, which waits for a reviewer" do
+    opportunity = opportunities(:external_project_opportunity)
+    opportunity.roles.create!(position: "Puppeteer", department_name: "Puppetry", existing_department_only: true)
+
+    render_inline(OpportunityCardComponent.new(opportunity: opportunity.reload, detailed: true))
+
+    assert_text "Puppeteer"
+    assert_no_text "Puppetry"
+  end
+
   test "shows the contact link in detailed mode when visibility allows" do
     render_inline(OpportunityCardComponent.new(opportunity: opportunities(:external_project_opportunity), detailed: true))
 

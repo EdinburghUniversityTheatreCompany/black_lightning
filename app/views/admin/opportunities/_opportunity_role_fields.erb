@@ -19,4 +19,11 @@
           { field: f.input(:note, placeholder: "Optional note", wrapper: :inline_form) },
           { field: link_to_remove(f), col_modifier: 'auto' },
   ] %>
+  <%# The public form renders this partial too; a suggestion is for reviewers only. %>
+  <% if @admin_site && f.object.suggested_department.present? %>
+    <p class="-mt-2 mb-3 text-sm text-gray-600">
+      Suggested department: <%= f.object.suggested_department %>. Until you pick or add one, this
+      role shows no department.
+    </p>
+  <% end %>
 </div>
