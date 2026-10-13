@@ -61,15 +61,31 @@ on every international claim page.
 ### Drop the two area rollback columns
 
 `reimbursements_budgets.area_before_rollback` and `.name_before_area_rename` have been unused since
-the area backfill and rename code went; `Reimbursements::Budget` ignores both. Before dropping them,
-check in production that `area_before_rollback` is NULL on every row, and copy the pre-rename names
-(about 17 rows, their only record) into an issue:
+the area backfill and rename code went; `Reimbursements::Budget` ignores both. Production was
+checked on 2026-10-13: nothing in `area_before_rollback` is needed, and these 17 rows are the only
+record of the pre-rename names (budget 27's double space is as stored):
 
-```ruby
-require "csv"; puts CSV.generate { |csv| csv << %w[budget_id current_name name_before_area_rename area]; ActiveRecord::Base.connection.select_rows("SELECT b.id, b.name, b.name_before_area_rename, a.name FROM reimbursements_budgets b LEFT JOIN reimbursements_areas a ON a.id = b.area_id WHERE b.name_before_area_rename IS NOT NULL ORDER BY b.id").each { |row| csv << row } }; nil
-```
+| Budget id | Name now | Name before the rename | Area |
+|---|---|---|---|
+| 1 | Press Launch Hospitality | `BF Marketing: Press Launch Hospitality` | BF Marketing |
+| 2 | Electricity | `Utilities: Electricity` | Utilities |
+| 4 | Other | `Improverts: Other` | Improverts |
+| 6 | Maintenance costs | `Venue: Maintenance costs` | Venue |
+| 9 | Marketing | `Cogito: Marketing` | Cogito |
+| 11 | Other | `Last Orders: Other` | Last Orders |
+| 12 | Equipment hire and purchase | `Venue: Equipment hire and purchase` | Venue |
+| 13 | Other | `Cogito: Other` | Cogito |
+| 16 | Licenses | `Tech: Licenses` | Tech |
+| 17 | Miscellaneous | `BF Marketing: Miscellaneous` | BF Marketing |
+| 19 | Equipment hire and purchase | `Tech: Equipment hire and purchase` | Tech |
+| 21 | Correx Boards | `BF Marketing: Correx Boards` | BF Marketing |
+| 22 | Marketing | `Last Orders: Marketing` | Last Orders |
+| 23 | Staff Passes and Lanyards | `BF Marketing: Staff Passes and Lanyards` | BF Marketing |
+| 25 | Gas | `Utilities: Gas` | Utilities |
+| 27 | Retreat | `Improverts:  Retreat` | Improverts |
+| 30 | Marketing | `Improverts: Marketing` | Improverts |
 
-Then add `DropAreaRollbackRecordsFromReimbursementsBudgets`: both `remove_column`s inside
+To drop them, add `DropAreaRollbackRecordsFromReimbursementsBudgets`: both `remove_column`s inside
 `safety_assured` with `if_exists: true` (a database migrated from scratch never gets
 `name_before_area_rename`), a `down` re-adding them with `if_not_exists: true`, and delete the
 `ignored_columns` line in the same commit. Deploy it only once the code ignoring the columns is
@@ -81,14 +97,6 @@ That migration's `down` drops `areas.budget_basis` and its `up` re-adds it with 
 default, so every net allowance comes back as a spend cap with nothing on screen to say so.
 Keeping the basis across a rollback needs a scratch column. Until then, re-declare the net areas
 by hand after any such rollback.
-
-### A test that catches bare budget names (question for Mick)
-
-Budget names are not unique since the prefix strip (production has three `Marketing` lines on one
-nominal code), so every screen must name a budget through `Budget#display_name`. Four grep sweeps
-each found sites the previous one missed. The mechanical fix is a test that seeds two identically
-named budgets, walks every reimbursements screen, and fails on any bare name outside a rowgroup
-heading. Expensive and not built: is it worth building?
 
 ### A claim cannot create its own budget line yet
 

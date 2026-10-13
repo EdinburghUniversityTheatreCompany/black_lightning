@@ -178,8 +178,6 @@ Graph auth failure alerts straight away. Rotate before the date.
 **Production credentials only.** `config/credentials/development.key` is committed, so anything in
 the development credentials is public.
 
-**Keep the secret under `reimbursements:`.** `Graph::Settings` (mailbox polling, climate included)
-reads `GRAPH_*` and a `graph:` block first, then falls back to `reimbursements:`. The
-reimbursements Graph client (drafts, sending, SharePoint) and the expiry warning read
-`reimbursements:` alone. A new secret put only under `graph:` leaves those on the old one.
-`REIMBURSEMENTS_*` environment variables override the credentials if set.
+**The secret lives under `reimbursements:`.** Every Graph caller reads it there: mailbox polling
+(climate included), drafts, sending, SharePoint and the expiry warning. `REIMBURSEMENTS_*`
+environment variables override the credentials if set.

@@ -14,9 +14,9 @@ The rollout is finished. Production was backfilled on 2026-07-26 (10 `PaymentDet
 `Expense` records, 0 failures). The two IBAN/BIC override columns on Expense came later and were
 new, so they never held plaintext.
 
-**The check run that day proved nothing.** It tested `ciphertext_for`, which encrypts a plaintext
-value on the way out, so every value looked like ciphertext. Run the sweep below once in
-production to confirm the backfill. Until then, its 0 failures is the only evidence.
+The check run that day proved nothing: it tested `ciphertext_for`, which encrypts a plaintext
+value on the way out, so every value looked like ciphertext. The sweep below, run on 2026-10-13,
+confirmed the backfill: 1,185 values, none plaintext, and every one decrypts.
 
 `config.active_record.encryption.support_unencrypted_data` is `false` (`config/application.rb`),
 so a plaintext value **raises** on read rather than being served.

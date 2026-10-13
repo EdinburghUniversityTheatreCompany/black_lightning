@@ -1,11 +1,10 @@
 module Graph
-  # The Graph app credentials shared by every mailbox integration. Reads +GRAPH_*+ first, then
-  # falls back to +REIMBURSEMENTS_AZURE_*+. The fallback is permanent: there is one Entra app
-  # registration, and renaming the variables would break every existing ENV and credential entry.
+  # The Graph app credentials shared by every mailbox integration, climate included. They live
+  # under +reimbursements:+ (or +REIMBURSEMENTS_AZURE_*+) because that is where production keeps
+  # them: there is one Entra app registration, and Reimbursements::Settings reads the same keys.
   module Settings
     extend ::Settings::Base
 
-    reads_from env: "GRAPH", credentials: :graph
     reads_from env: "REIMBURSEMENTS", credentials: :reimbursements
 
     setting :azure_tenant_id, :azure_client_id, :azure_client_secret

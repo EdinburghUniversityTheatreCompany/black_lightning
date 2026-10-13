@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Settings::BaseTest < ActiveSupport::TestCase
-  # A throwaway module per test, so nothing here depends on how the four real
+  # A throwaway module per test, so nothing here depends on how the real
   # Settings modules happen to be configured.
   def build_settings(&block)
     Module.new do
@@ -50,40 +50,19 @@ class Settings::BaseTest < ActiveSupport::TestCase
     assert_nil settings.api_token
   end
 
-  # No mocking library: a source answering from memory stands in for one backed by ENV and credentials.
+  # No mocking library: a source answering from memory stands in for ENV and credentials.
   FakeSource = Struct.new(:env_result, :credentials_result) do
     def env_value(_key) = env_result
     def credentials_value(_key) = credentials_result
   end
 
-  # Every ENV source is tried before any credentials source (Settings::Base#raw_value);
-  # Graph::Settings is the real case.
-  test "a fallback ENV source beats the primary credentials source" do
-    settings = build_settings { setting :azure_client_id }
-    settings.settings_sources << FakeSource.new(nil, "from-primary-creds")
-    settings.settings_sources << FakeSource.new("from-fallback-env", nil)
-
-    assert_equal "from-fallback-env", settings.azure_client_id
+  def settings_reading(source)
+    build_settings { setting :api_token }.tap { |settings| settings.instance_variable_set(:@settings_source, source) }
   end
 
-  test "credentials answer when no ENV source does" do
-    settings = build_settings { setting :azure_client_id }
-    settings.settings_sources << FakeSource.new(nil, "from-primary-creds")
-    settings.settings_sources << FakeSource.new(nil, "from-fallback-creds")
-
-    assert_equal "from-primary-creds", settings.azure_client_id
-  end
-
-  test "the first ENV source wins over the second" do
-    settings = build_settings do
-      reads_from env: "PRIMARY", credentials: :primary
-      reads_from env: "FALLBACK", credentials: :fallback
-      setting :azure_client_id
-    end
-    set_env("PRIMARY_AZURE_CLIENT_ID", "from-primary-env")
-    set_env("FALLBACK_AZURE_CLIENT_ID", "from-fallback-env")
-
-    assert_equal "from-primary-env", settings.azure_client_id
+  test "ENV beats credentials, and credentials answer when ENV does not" do
+    assert_equal "from-env", settings_reading(FakeSource.new("from-env", "from-creds")).api_token
+    assert_equal "from-creds", settings_reading(FakeSource.new(nil, "from-creds")).api_token
   end
 
   test "settings_present? defaults to every declared key and can be asked about a subset" do

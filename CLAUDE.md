@@ -526,8 +526,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
       basis".
   - **The area backfill and prefix rename cannot be rolled back**: both migrations' `down`s raise
     `IrreversibleMigration`. `Budget` ignores `area_before_rollback` and `name_before_area_rename`
-    until a later migration drops them; export the pre-rename names first
-    (plans/off-topic-improvements.md, "Drop the two area rollback columns").
+    until a later migration drops them. The pre-rename names are recorded in
+    plans/off-topic-improvements.md ("Drop the two area rollback columns").
   - **`strong_migrations` blocks `add_reference … foreign_key:` on a populated table.** Use the
     gem's MySQL pattern: `add_reference`, then `add_foreign_key` inside `safety_assured` with
     `SET SESSION foreign_key_checks = 0/1`, `safety_assured` wrapping the `execute` calls too.
@@ -783,9 +783,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   material must never go in `development.yml.enc`.
   - **`support_unencrypted_data = false`**, so stray plaintext raises. **There is no rollback**:
     removing `encrypts` makes the data unreadable; losing the production keys loses it outright.
-    Production was backfilled 2026-07-26 with 0 failures; the all-rows sweep in
-    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md) has not
-    yet been run in its working form.
+    Production was backfilled 2026-07-26 and the all-rows sweep in
+    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md) confirmed
+    it on 2026-10-13 (1,185 values, none plaintext, none unreadable).
   - **A brand-new column with no plaintext rows needs only `encrypts` and a deploy** (as the
     IBAN/BIC overrides did). **An existing column holding plaintext repeats the whole sequence**:
     add `encrypts`, flag true, deploy, `reimbursements:encrypt_backfill`, verify, flag false,
@@ -870,8 +870,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     re-running `docs/graph-mailbox-rbac.ps1` with the **full** list from `bin/rails graph:mailboxes`:
     the scope is replaced, not appended, so a short list cuts off a working cost centre.
   - `CredentialsCheckJob` (daily) and `AuthError` alerts warn `alert_email` (IT subcommittee) before
-    and when the Entra client secret dies. Keep the secret under `reimbursements:`: `Graph::Settings`
-    reads `graph:` first, but `Reimbursements::GraphClient` and the expiry warning do not.
+    and when the Entra client secret dies. Every Graph caller, climate included, reads the secret
+    from `reimbursements:` (or `REIMBURSEMENTS_AZURE_*`).
   - **`GraphAuth::AccessDeniedError` (a 403) subclasses `AuthError`**, so every rescue and the IT
     alert still catch it. Only Settings' access check tells them apart: scope or grant advice for a
     403, client-secret advice for any other `AuthError`, the bare message for everything else.
@@ -1127,10 +1127,9 @@ Temperature, humidity and dew point charts at `/admin/climate`
   A file goes to the sole **active** Govee sensor (a deactivated, replaced unit is ignored). Two or
   more active, or only inactive ones, leave it unread with a once-a-day Honeybadger alert (one
   class and cache key per state); never guessed.
-- **Graph plumbing is shared**: `GraphAuth`, `Graph::MailboxClient`, `Graph::Settings` (reads
-  `GRAPH_*`, falling back to `REIMBURSEMENTS_AZURE_*`: one Entra app for the org, and renaming would
-  break existing credentials). Reimbursements uses `Graph::MailboxClient` directly and rescues
-  `GraphAuth::*` errors.
+- **Graph plumbing is shared**: `GraphAuth`, `Graph::MailboxClient`, `Graph::Settings` (one Entra
+  app for the org, so it reads reimbursements' credentials). Reimbursements uses
+  `Graph::MailboxClient` directly and rescues `GraphAuth::*` errors.
 - **Outdoor data is Open-Meteo, which self-heals**: `OutdoorPollJob` upserts a rolling `past_days`
   window hourly, so an outage fills its own gap. Its CC BY 4.0 attribution must stay on the
   dashboard; the free tier is non-commercial only. A replacement source (Met Office, METAR) is a

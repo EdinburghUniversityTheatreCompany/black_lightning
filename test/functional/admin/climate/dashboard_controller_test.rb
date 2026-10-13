@@ -7,10 +7,7 @@ module Admin
 
       tests Admin::Climate::DashboardController
 
-      # Graph::Settings reads GRAPH_* before the REIMBURSEMENTS_AZURE_* fallback; both are named so
-      # that clearing them leaves nothing configured.
-      GRAPH_ENV = %w[GRAPH REIMBURSEMENTS].product(%w[TENANT_ID CLIENT_ID CLIENT_SECRET])
-                                          .to_h { |prefix, key| [ "#{prefix}_AZURE_#{key}", "x" ] }.freeze
+      GRAPH_ENV = %w[TENANT_ID CLIENT_ID CLIENT_SECRET].to_h { |key| [ "REIMBURSEMENTS_AZURE_#{key}", "x" ] }.freeze
 
       def with_env(vars)
         original = vars.keys.index_with { |key| ENV.fetch(key, nil) }
