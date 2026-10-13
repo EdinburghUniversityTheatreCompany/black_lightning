@@ -122,7 +122,8 @@ module Reimbursements
       assert_includes failure[:html], "forward this email to IT"
     end
 
-    # The interactive build runs no readiness checks, so the email must not claim any.
+    # The interactive build runs no readiness checks, so the email must not claim any. Its date is
+    # the BACS date, not the day the batch was built.
     test "batch_ready states the batch it built, with a count that reads right for one or several" do
       notifier, graph = build
       row = { auto_number: 3, payee_name: "Sam", amount: "40.00", budget_name: "Props",
@@ -134,8 +135,8 @@ module Reimbursements
       end
 
       one, three = graph.send_mails.map { |mail| Nokogiri::HTML(mail[:html]).text.squish }
-      assert_includes one, "You built a BACS batch of 1 approved expense on 9 July 2026."
-      assert_includes three, "You built a BACS batch of 3 approved expenses on 9 July 2026."
+      assert_includes one, "You built a batch of 1 approved expense for BACS date 9 July 2026."
+      assert_includes three, "You built a batch of 3 approved expenses for BACS date 9 July 2026."
       [ one, three ].each { |text| assert_no_match(/readiness|checks/, text) }
     end
 
