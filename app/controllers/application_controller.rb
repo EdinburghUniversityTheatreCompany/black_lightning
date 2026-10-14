@@ -6,6 +6,7 @@ class ApplicationController < ActionController::Base
   before_action :configure_permitted_parameters, if: :devise_controller?
 
   before_action :set_globals
+  before_action :drop_out_of_range_search_dates
   before_action :require_profile_completion!
   around_action :set_statement_timeout
 
@@ -33,6 +34,15 @@ class ApplicationController < ActionController::Base
                        "so nothing was saved. Copy anything you typed, reload the page and try again.".freeze
   STALE_FORM_MESSAGE = "The page had gone out of date (you signed out or in again in another tab), " \
                        "so nothing was saved. Please try again.".freeze
+
+  # A date input accepts a five-digit year, which MySQL refuses as a DATE (a 500 on every Ransack
+  # search). Such a filter is dropped, so the search runs without it.
+  def drop_out_of_range_search_dates
+    q = params[:q]
+    return unless q.respond_to?(:each_pair)
+
+    q.delete_if { |_key, value| value.is_a?(String) && value.match?(/\A\d{5,}-/) }
+  end
 
   def set_globals
     @base_url = request.protocol + request.host_with_port
