@@ -325,6 +325,14 @@ end
 
 # HTML5 date/time inputs instead of SimpleForm's select-based default.
 class DateTimeInput < SimpleForm::Inputs::DateTimeInput
+  # A date input accepts a five-digit year, which MySQL refuses; the browser now says so.
+  LATEST = { date: "9999-12-31", datetime: "9999-12-31T23:59" }.freeze
+
+  def input(wrapper_options = nil)
+    input_html_options[:max] ||= LATEST[input_type] if use_html5_inputs?
+    super
+  end
+
   private
 
   def use_html5_inputs?

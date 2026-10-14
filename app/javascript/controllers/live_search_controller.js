@@ -41,6 +41,9 @@ export default class extends Controller {
 
   #doSearch() {
     const form = this.element.querySelector("form") || this.element
+    // A fetch skips the browser's own check, so a year past an input's max would search silently.
+    if (!form.reportValidity()) return
+
     const params = new URLSearchParams(new FormData(form))
     params.delete("commit")
 
