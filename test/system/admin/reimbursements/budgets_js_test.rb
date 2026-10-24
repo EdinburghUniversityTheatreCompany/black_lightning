@@ -203,7 +203,6 @@ module Admin
       def area_option_names
         find_field("Area").all("option").map(&:text)
       end
-
     end
   end
 end

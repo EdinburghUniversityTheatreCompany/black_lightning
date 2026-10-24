@@ -1548,7 +1548,6 @@ module Admin
         ::Reimbursements::EusaActual.create!(expense: expense, debit: BigDecimal("5"),
                                             nominal_code: budget.nominal_code)
       end
-
     end
   end
 end
