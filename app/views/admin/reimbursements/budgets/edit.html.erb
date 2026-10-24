@@ -150,3 +150,21 @@
     </div>
   <% end %>
 <% end %>
+
+<%# Its own form: destroy shares update's URL, so inside the edit form a lost
+    _method would SAVE the line instead. %>
+<div class="mt-4 flex flex-wrap items-center gap-3">
+  <% blockers = @budget.delete_blockers %>
+  <% if blockers.empty? %>
+    <%= button_to "Delete budget", admin_reimbursements_budget_path(@budget.record_id, **scope_params),
+          method: :delete, class: btn_classes(:danger),
+          form: { data: { turbo_confirm: "Delete #{@budget.display_name} for good? This can't be undone." } } %>
+    <p class="mb-0 text-sm text-gray-500">No claim or EUSA actual uses this line yet. Its forecasts go with it.</p>
+  <% else %>
+    <p class="mb-0 text-sm text-gray-500">
+      <%= blockers.map { |noun, count| pluralize(count, noun) }.to_sentence %>
+      <%= blockers.values.sum == 1 ? "is" : "are" %> on this line, so it can't be deleted. Untick
+      Visible to submitters to hide it instead.
+    </p>
+  <% end %>
+</div>

@@ -197,6 +197,16 @@ module Reimbursements
 
     def income? = budget_type == "Income"
 
+    # What still names this line, keyed by the noun the edit page prints; empty
+    # when it may be deleted. Forecasts and owners are the line's own planning
+    # and go with it.
+    def delete_blockers
+      { "claim" => expenses.count, "EUSA actuals row" => eusa_actuals.count,
+        "split credit" => actual_allocations.count }.select { |_, count| count.positive? }
+    end
+
+    def deletable? = delete_blockers.empty?
+
     # The over-budget badge's rule lives here once, so no view re-derives it (the badge was
     # once red beside a positive Remaining). A nil remaining is untracked; income is never
     # over budget.

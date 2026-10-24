@@ -1470,6 +1470,59 @@ module Admin
                       text: "Make this my default"
       end
 
+      # --- Delete ------------------------------------------------------------
+
+      test "deleting a line nothing names removes it and returns to the index" do
+        sign_in @user
+
+        delete :destroy, params: { id: @income.record_id }
+
+        assert_redirected_to admin_reimbursements_budgets_path
+        assert_equal "Ticket income deleted.", flash[:notice]
+        assert_not ::Reimbursements::Budget.exists?(@income.id)
+      end
+
+      test "a line with claims is not deleted, and its claims keep it" do
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          delete :destroy, params: { id: @props.record_id }
+        end
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_match(/not deleted/, flash[:alert])
+        assert_equal 2, @props.expenses.count
+      end
+
+      test "the producer portal permission alone cannot delete a budget" do
+        submitter = users(:member_with_phone_number)
+        grant_producer_permission(submitter)
+        sign_in submitter
+
+        delete :destroy, params: { id: @income.record_id }
+
+        assert_response :forbidden
+        assert ::Reimbursements::Budget.exists?(@income.id)
+      end
+
+      test "edit offers Delete for a line nothing names" do
+        sign_in @user
+
+        get :edit, params: { id: @income.record_id }
+
+        assert_select "form[action=?] button", admin_reimbursements_budget_path(@income.record_id),
+                      text: "Delete budget"
+      end
+
+      test "edit says what stops a line being deleted, and offers no Delete" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_select "button", text: "Delete budget", count: 0
+        assert_select "main", text: /2 claims are on this line, so it can't be deleted/
+      end
+
       private
 
       # The live year (holding the budgets seeded in setup) plus a draft year
@@ -1495,6 +1548,7 @@ module Admin
         ::Reimbursements::EusaActual.create!(expense: expense, debit: BigDecimal("5"),
                                             nominal_code: budget.nominal_code)
       end
+
     end
   end
 end

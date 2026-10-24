@@ -1208,5 +1208,39 @@ module Reimbursements
         end
       end
     end
+
+    test "delete_budget! deletes an unused line with its forecasts and owner rows" do
+      owner = create_reimbursements_person
+      budget = create_reimbursements_budget(owners: [ owner ])
+      forecast = store.create_forecast!(budget_id: budget.id, amount: 100,
+                                        date: Date.new(2026, 5, 1), reason: "plan")
+
+      store.delete_budget!(budget.record_id)
+
+      assert_not Budget.exists?(budget.id)
+      assert_not BudgetForecast.exists?(forecast.id)
+      assert_not BudgetOwner.exists?(budget_id: budget.id)
+      assert Person.exists?(owner.id), "the owner is a person, not part of the line"
+    end
+
+    # destroy! alone would succeed: dependent: :nullify would silently unlink the claim and the
+    # ledger row from their budget.
+    test "delete_budget! refuses a line a claim, ledger row or split credit names, changing nothing" do
+      claimed = create_reimbursements_budget(name: "Claimed")
+      expense = create_reimbursements_expense(budget: claimed, receipt: false)
+      booked = create_reimbursements_budget(name: "Booked", budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: 50, budget: booked)
+      split = create_reimbursements_budget(name: "Split", budget_type: "Income")
+      store.apportion_actual!(create_reimbursements_eusa_actual(credit: 90).id,
+                              [ { budget_id: split.id, amount: BigDecimal("90") } ])
+
+      [ claimed, booked, split ].each do |budget|
+        assert_raises(DatabaseStore::BudgetInUseError) { store.delete_budget!(budget.record_id) }
+        assert Budget.exists?(budget.id), "#{budget.name} must survive"
+      end
+      assert_equal claimed.id, expense.reload.budget_id
+      assert_equal booked.id, actual.reload.budget_id
+      assert_equal 1, split.actual_allocations.count
+    end
   end
 end

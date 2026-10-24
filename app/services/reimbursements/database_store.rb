@@ -17,6 +17,9 @@ module Reimbursements
     # Named so controllers re-render the form instead of 500ing and losing a filled-in claim.
     class BudgetGoneError < StandardError; end
 
+    # A claim, ledger row or split credit names the budget being deleted.
+    class BudgetInUseError < StandardError; end
+
     # The ledger row stopped being splittable between the caller's check and the write.
     class NotApportionableError < StandardError; end
 
@@ -257,6 +260,19 @@ module Reimbursements
       budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?)) unless owner_ids.nil?
       bust_budgets!
       budget
+    end
+
+    # Deletes a line nothing names, with its forecasts and owner rows. Checked under the row
+    # lock: a claim saved meanwhile waits on it, then fails as BudgetGoneError. Without the check
+    # destroy! would still succeed, as dependent: :nullify silently unlinks claims and ledger rows.
+    def delete_budget!(record_id)
+      Budget.transaction do
+        budget = Budget.lock.find(record_id)
+        raise BudgetInUseError unless budget.deletable?
+
+        budget.destroy!
+      end
+      bust_budgets!
     end
 
     def create_area!(attrs)

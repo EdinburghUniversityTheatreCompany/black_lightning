@@ -184,11 +184,26 @@ module Admin
         assert_equal area, budget.area
       end
 
+      # The confirm is SweetAlert (setup/index.js replaces Turbo's), which the
+      # button has to get through.
+      test "Delete budget asks first, then the line is gone from the index" do
+        budget = create_reimbursements_budget(name: "Typo line")
+
+        visit edit_admin_reimbursements_budget_path(budget.record_id)
+        click_on "Delete budget"
+        within(".swal2-popup") { click_on "Yes" }
+
+        assert_text "Typo line deleted."
+        assert_current_path admin_reimbursements_budgets_path
+        assert_not ::Reimbursements::Budget.exists?(budget.id)
+      end
+
       private
 
       def area_option_names
         find_field("Area").all("option").map(&:text)
       end
+
     end
   end
 end

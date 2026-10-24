@@ -122,7 +122,7 @@ ChaosRails::Application.routes.draw do
       resources :areas, only: %i[show]
 
       # Finance budget management: overview, edit, and a forecast log per budget.
-      resources :budgets, only: %i[index new create edit update] do
+      resources :budgets, only: %i[index new create edit update destroy] do
         collection do
           get :overview
         end

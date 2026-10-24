@@ -398,5 +398,20 @@ module Reimbursements
 
       assert_equal 0, queries, "eusa_actual_amount must read preloaded allocations"
     end
+
+    test "delete_blockers counts what still names the line, and nothing blocks forecasts or owners" do
+      budget = create_reimbursements_budget(budget_type: "Income", owners: [ create_reimbursements_person ])
+      budget.forecasts.create!(amount: 100, date: Date.new(2026, 5, 1))
+      assert_empty budget.delete_blockers
+      assert budget.deletable?
+
+      2.times { create_reimbursements_expense(budget: budget, receipt: false) }
+      create_reimbursements_eusa_actual(credit: 10, budget: budget)
+      split = create_reimbursements_eusa_actual(credit: 90)
+      ActualAllocation.create!(eusa_actual: split, budget: budget, amount: 90)
+
+      assert_equal({ "claim" => 2, "EUSA actuals row" => 1, "split credit" => 1 }, budget.delete_blockers)
+      assert_not budget.deletable?
+    end
   end
 end

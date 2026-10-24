@@ -10,7 +10,7 @@ module Admin
       # permission (the same union and 404 as an area's page).
       skip_before_action :authorize_finance!, only: %i[show]
       before_action :authorize_budget_page!, only: %i[show]
-      before_action :set_budget, only: %i[edit update forecast update_forecast delete_forecast]
+      before_action :set_budget, only: %i[edit update destroy forecast update_forecast delete_forecast]
       before_action :set_forecast, only: %i[update_forecast delete_forecast]
 
       def show
@@ -108,6 +108,15 @@ module Admin
         redirect_to admin_reimbursements_budgets_path(**scope_params, budget: @budget.record_id,
                                                                       anchor: "budget_#{@budget.record_id}"),
                     notice: "Budget saved."
+      end
+
+      # Only a line nothing names (the edit page offers Delete on no other). The
+      # store re-checks, since a claim can land after the page rendered.
+      def destroy
+        store.delete_budget!(@budget.record_id)
+        redirect_to admin_reimbursements_budgets_path(**scope_params), notice: "#{@budget.display_name} deleted."
+      rescue ::Reimbursements::DatabaseStore::BudgetInUseError
+        redirect_to edit_path, alert: "Budget not deleted: a claim or EUSA actual uses it now."
       end
 
       # Appends a projected-spend update (amount + date + reason) to this budget;
