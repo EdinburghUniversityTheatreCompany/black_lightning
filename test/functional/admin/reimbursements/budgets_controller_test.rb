@@ -1512,6 +1512,17 @@ module Admin
 
         assert_select "form[action=?] button", admin_reimbursements_budget_path(@income.record_id),
                       text: "Delete budget"
+        assert_select "main p", text: "No claim or EUSA actual uses this budget yet."
+      end
+
+      test "edit says Delete takes the budget's forecasts too, when it has some" do
+        sign_in @user
+        spare = create_reimbursements_budget(name: "Spare")
+        2.times { |n| spare.forecasts.create!(amount: 100 + n, date: Date.new(2026, 5, 1)) }
+
+        get :edit, params: { id: spare.record_id }
+
+        assert_select "main p", text: /No claim or EUSA actual uses this budget yet.\s+Deleting it also deletes its 2 forecasts./
       end
 
       test "edit says what stops a line being deleted, and offers no Delete" do
@@ -1520,7 +1531,7 @@ module Admin
         get :edit, params: { id: @props.record_id }
 
         assert_select "button", text: "Delete budget", count: 0
-        assert_select "main", text: /2 claims are on this line, so it can't be deleted/
+        assert_select "main", text: /2 claims are on this budget, so it can't be deleted/
       end
 
       private

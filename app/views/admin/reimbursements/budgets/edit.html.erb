@@ -162,10 +162,13 @@
   <% end %>
   <p class="mb-0 text-sm text-gray-500">
     <% if blockers.empty? %>
-      No claim or EUSA actual uses this line yet. Its forecasts go with it.
+      No claim or EUSA actual uses this budget yet.
+      <% if @forecasts.any? %>
+        Deleting it also deletes its <%= pluralize(@forecasts.size, "forecast") %>.
+      <% end %>
     <% else %>
       <%= blockers.map { |noun, count| pluralize(count, noun) }.to_sentence %>
-      <%= blockers.values.sum == 1 ? "is" : "are" %> on this line, so it can't be deleted. Untick
+      <%= blockers.values.sum == 1 ? "is" : "are" %> on this budget, so it can't be deleted. Untick
       Visible to submitters to hide it instead.
     <% end %>
   </p>
