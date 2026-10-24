@@ -94,6 +94,9 @@ its place only by saying what the controls cannot:
 - **Traps survive the cut, shorter.** Tighten a screen's trap wording; never delete it.
 - **Producer-facing screens are the exception** (`expenses/**`, `reimbursements/emails/**`): a
   producer files a claim once or twice a term, so more explanation is right there.
+- **On screen a budget is a "budget", never a "line"**, and a row of a pasted sheet is a "row".
+  Code and these notes may say "line"; export headings keep it, as export columns are never
+  renamed.
 
 ## Admin forms
 
