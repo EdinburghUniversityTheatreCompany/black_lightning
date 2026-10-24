@@ -464,6 +464,10 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - **Only `store.budgets_with_actuals` preloads actuals** (budgets index, overview, Budgets export
     sheet), not `store.budgets`. Don't switch a caller: the producer's budget `<select>` once
     loaded the whole ledger that way.
+- **A budget is deletable only while no claim, EUSA actuals row or split credit names it**
+  (`Budget#delete_blockers`; the edit page's Delete goes through `DatabaseStore#delete_budget!`,
+  which re-checks under a row lock). Never `destroy!` one directly: `dependent: :nullify`
+  silently unlinks its claims and ledger rows. Its forecasts and owner rows go with it.
 - **Areas** (`Reimbursements::Area`, `Admin::Reimbursements::AreasController`) group a show's
   budget lines under one agreed total and one owner set.
   - **The area owns, its budgets inherit.** `Budget#owners` resolves through the area, whose
