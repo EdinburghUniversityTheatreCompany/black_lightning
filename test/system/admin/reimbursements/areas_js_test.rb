@@ -17,7 +17,7 @@ module Admin
         area = create_reimbursements_area(name: "Cogito")
 
         visit edit_admin_reimbursements_area_path(area.record_id)
-        click_on "Add budget line"
+        click_on "Add budget"
         # Each nested row is a .nested-form-wrapper div (the gem's default
         # wrapperSelector); it exposes no target to select by.
         within all(".nested-form-wrapper").last do
@@ -102,13 +102,13 @@ module Admin
         area = create_reimbursements_area(name: "Cogito")
 
         visit edit_admin_reimbursements_area_path(area.record_id)
-        click_on "Add budget line"
+        click_on "Add budget"
         within all(".nested-form-wrapper").last do
           fill_in "Name", with: "Cogito: Marketing"
         end
         click_on "Save"
 
-        assert_text "A new budget line needs a name and a nominal code"
+        assert_text "A new budget needs a name and a nominal code"
         assert_empty area.reload.budgets
       end
     end

@@ -29,7 +29,7 @@ module Admin
         rows = css_select("tbody tr").map { |row| row.text.squish }
         assert_equal 1, rows.size, "expected one row for the area: #{rows.inspect}"
         assert_includes rows.first, "Cogito"
-        assert_includes rows.first, "2 lines"
+        assert_includes rows.first, "2 budgets"
       end
 
       # Left is Budget - Spent - Waiting, not Budget#remaining.

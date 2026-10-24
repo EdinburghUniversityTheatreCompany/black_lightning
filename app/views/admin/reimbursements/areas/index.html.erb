@@ -12,7 +12,7 @@
     <p class="py-4 text-center text-gray-600">No areas found.</p>
   <% end %>
 <% else %>
-  <% headers = [ "Area", "Agreed total", "Committed", "Remaining", "Budget lines", "Owners", "" ] %>
+  <% headers = [ "Area", "Agreed total", "Committed", "Remaining", "Budgets", "Owners", "" ] %>
   <% field_sets = @areas.map do |area|
        remaining_class = "text-danger font-medium" if area.remaining&.negative?
        # Two rows both reading £5,000.00 mean different things, so the total names

@@ -9,8 +9,8 @@ module Admin
       # user misreading two figures over different sets of lines, so every
       # clause must hold on both bases and for a line of either type.
       OUT_OF_SCOPE_WARNING =
-        "1 of 2 lines shown. 1 line in another year or cost centre, left out of the totals " \
-        "below. The not-yet-allocated figure is worked out over every line the area holds.".freeze
+        "1 of 2 budgets shown. 1 budget in another year or cost centre, left out of the totals " \
+        "below. The not-yet-allocated figure is worked out over every budget the area holds.".freeze
 
       setup do
         @user = users(:member)
@@ -380,7 +380,7 @@ module Admin
 
         assert_response :success
         assert_select "[data-area='#{area.record_id}']" do |elements|
-          assert_no_match(/lines shown/, elements.first.text)
+          assert_no_match(/budgets shown/, elements.first.text)
         end
       end
 
@@ -474,7 +474,7 @@ module Admin
         sign_in @user
         get :overview
 
-        assert_includes response.body, "No line is over budget"
+        assert_includes response.body, "Nothing is over budget"
 
         over = create_reimbursements_budget(name: "Overspent", nominal_code: "4321",
                                             initial_budget: 100)
@@ -682,7 +682,7 @@ module Admin
         assert_response :success
         assert_not_includes response.body, "Cogito next year"
         assert_not_includes response.body, "not yet allocated"
-        assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
+        assert_equal "1 of 2 budgets shown. 1 budget in another year or cost centre, left out of " \
                      "the totals below.",
                      css_select("span.text-warning").sole.text.squish
       end

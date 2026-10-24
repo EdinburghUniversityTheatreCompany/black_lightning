@@ -66,7 +66,7 @@ module Admin
                                      cost_centre: @cost_centre)
 
         visit settings_page
-        assert_text "1 budget line booked here"
+        assert_text "1 budget booked here"
         within(row_for(nominal_code)) { click_on "Retire" }
 
         assert_text "432320 retired"

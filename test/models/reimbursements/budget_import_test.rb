@@ -637,7 +637,7 @@ module Reimbursements
       import = build_import(sheet, existing_budgets: [ budget ], existing_areas: [ elsewhere ])
 
       work = import.apply_work.each_value.reject { |_, count| count.zero? }
-      assert_equal [ [ "new area", 1 ], [ "moved line", 1 ] ], work
+      assert_equal [ [ "new area", 1 ], [ "moved budget", 1 ] ], work
     end
 
     # One owner column per line, so two lines of one area name two people, and

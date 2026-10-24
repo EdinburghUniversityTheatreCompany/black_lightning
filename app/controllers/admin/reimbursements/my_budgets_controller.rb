@@ -92,7 +92,7 @@ module Admin
 
       def area_row(area)
         { name: area.name, scope: scope_label(area),
-          detail: "#{area.budgets.size} #{'line'.pluralize(area.budgets.size)}",
+          detail: "#{area.budgets.size} #{'budget'.pluralize(area.budgets.size)}",
           summary: ::Reimbursements::SpendSummary.for_area(area),
           waiting_count: area.budgets.count { |line| waiting_on?(line) },
           path: admin_reimbursements_area_path(area.record_id) }

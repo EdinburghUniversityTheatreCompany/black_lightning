@@ -5,7 +5,7 @@
     <% skipped = @import.entries_in(:already_imported) %>
     <% if skipped.any? %>
       <li>
-        <strong><%= pluralize(skipped.size, "line") %></strong> skipped, already imported
+        <strong><%= pluralize(skipped.size, "row") %></strong> skipped, already imported
         under the same ID.
       </li>
     <% end %>

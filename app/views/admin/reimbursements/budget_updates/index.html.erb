@@ -40,7 +40,7 @@
                        (area_name = forecast.area&.name) && "#{area_name} (area total)"
                      end
                    end %>
-                <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "line") %>
+                <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "budget") %>
               </td>
               <td class="whitespace-nowrap"><%= update.created_by&.full_name.presence || "-" %></td>
               <td class="whitespace-nowrap text-right">

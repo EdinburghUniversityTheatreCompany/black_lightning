@@ -180,7 +180,7 @@ module Admin
 
         get :edit, params: { key: @cost_centre.key }
 
-        assert_includes response.body, "1 budget line and 1 ledger row booked here"
+        assert_includes response.body, "1 budget and 1 ledger row booked here"
         assert_select "#nominal_code_#{used.record_id} button", text: "Retire"
         assert_includes response.body, "Nothing booked here"
         assert_select "#nominal_code_#{unused.record_id} button", text: "Delete"

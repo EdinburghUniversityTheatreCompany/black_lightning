@@ -2,8 +2,8 @@
            path: admin_reimbursements_budget_updates_path %>
 
 <p class="mb-4 text-gray-600">
-  One revision, and what it changed. Each line's plan is the latest forecast logged against it,
-  so removing this update puts every line back on whatever it had before, except where a later
+  One revision, and what it changed. Each budget's plan is the latest forecast logged against it,
+  so removing this update puts every budget back on whatever it had before, except where a later
   revision has already superseded it. The rows below mark those.
 </p>
 
@@ -20,7 +20,7 @@
   </dl>
 <% end %>
 
-<%= render CardComponent.new(title: "#{pluralize(@rows.size, 'line')} revised", html_class: "mt-4") do %>
+<%= render CardComponent.new(title: "#{pluralize(@rows.size, 'budget')} revised", html_class: "mt-4") do %>
   <% if @rows.empty? %>
     <p class="mb-0 text-gray-600">
       This update logged no forecasts. Removing it changes no figure.
@@ -30,7 +30,7 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Line</th>
+            <th scope="col" class="px-3 py-2">Budget</th>
             <th scope="col" class="px-3 py-2 text-right">Was</th>
             <th scope="col" class="px-3 py-2 text-right">Set to</th>
             <th scope="col" class="px-3 py-2 text-right">Plan now</th>
@@ -79,8 +79,8 @@
 
 <%= render CardComponent.new(title: "Remove this update", html_class: "mt-4") do %>
   <p class="mb-3 text-sm text-gray-600">
-    Deletes the <%= pluralize(@rows.size, "forecast") %> it logged. Each line goes back to the
-    figure it had before, except the lines marked above as already superseded, which do not move.
+    Deletes the <%= pluralize(@rows.size, "forecast") %> it logged. Each budget goes back to the
+    figure it had before, except the budgets marked above as already superseded, which do not move.
     Claims are untouched, no budgets are deleted and nobody is emailed. No undo, but the same
     revision can be logged again from
     <%= link_to "New budget update", new_admin_reimbursements_budget_update_path,
@@ -92,6 +92,6 @@
                 form: { class: "inline-block" },
                 data: { turbo_confirm: "Remove this budget update? " \
                                        "#{pluralize(@rows.size, 'forecast')} will be deleted and " \
-                                       "each line goes back to the figure it had before. " \
+                                       "each budget goes back to the figure it had before. " \
                                        "This can't be undone." } %>
 <% end %>

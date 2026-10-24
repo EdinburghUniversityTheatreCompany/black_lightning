@@ -176,7 +176,7 @@ module Admin
 
         assert_response :unprocessable_entity
         assert_match(/about a ton/, response.body)
-        assert_match(/1 line can.t be imported/, response.body)
+        assert_match(/1 row can.t be imported/, response.body)
         assert_select "input[type=submit][disabled]"
       end
 

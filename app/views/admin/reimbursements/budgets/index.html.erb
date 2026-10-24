@@ -7,7 +7,7 @@
 
 <%= render "admin/reimbursements/shared/glossary_terms",
            summary: "About these figures",
-           intro: "Every budget line with its live financials. Only the initial figure is typed; " \
+           intro: "Every budget with its live financials. Only the initial figure is typed; " \
                   "the rest is computed.",
            terms: ::Reimbursements::Glossary.terms(:initial_budget, :projected, :committed,
                                                    :remaining, :expected_outturn,

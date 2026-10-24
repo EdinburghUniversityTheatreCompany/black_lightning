@@ -95,7 +95,7 @@ module Admin
         assert_checked_field "re-home-#{marketing.record_id}"
         uncheck "re-home-#{set.record_id}"
 
-        click_on "Import 2 moved lines"
+        click_on "Import 2 moved budgets"
         assert_text "Imported into Fringe 2027"
 
         assert_equal cogito.id, marketing.reload.area_id

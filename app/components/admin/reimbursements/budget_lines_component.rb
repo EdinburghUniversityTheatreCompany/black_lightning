@@ -27,7 +27,7 @@ module Admin
         lines.one? && income_lines.empty? && lines.first.name.to_s.strip == area&.name.to_s.strip
       end
 
-      def heading = single_line_named_after_area? ? "Its one line" : "Lines"
+      def heading = single_line_named_after_area? ? "Its one budget" : "Budgets"
 
       def summary_for(line) = ::Reimbursements::SpendSummary.for_budget(line)
     end

@@ -29,7 +29,7 @@ module Admin
       # A sum of lines must not be presented as an agreed total.
       def budget_note
         return "nobody has set one" if summary.no_budget_set?
-        return "no total agreed; what its lines add up to" if summary.from_lines?
+        return "no total agreed; what its budgets add up to" if summary.from_lines?
 
         finance? ? "agreed total" : nil
       end

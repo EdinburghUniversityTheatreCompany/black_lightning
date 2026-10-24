@@ -8,7 +8,7 @@
 <div id="nominal_codes">
   <%= render CardComponent.new(title: "Nominal codes", html_class: "mt-4") do %>
     <p class="text-sm text-gray-600 mb-3">
-      The accounts <%= cost_centre.name %>'s budget lines are booked against, as EUSA's ledger
+      The accounts <%= cost_centre.name %>'s budgets are booked against, as EUSA's ledger
       names them. Retiring a code takes it out of the list without touching the rows already
       booked against it.
     </p>
@@ -19,7 +19,7 @@
       <div class="flex flex-col gap-2">
         <% codes.each do |nominal_code| %>
           <% usage = usage_counts[nominal_code.code.downcase] || {} %>
-          <% booked = [ [ usage[:budgets].to_i, "budget line" ], [ usage[:actuals].to_i, "ledger row" ] ]
+          <% booked = [ [ usage[:budgets].to_i, "budget" ], [ usage[:actuals].to_i, "ledger row" ] ]
                         .select { |count, _noun| count.positive? }
                         .map { |count, noun| pluralize(count, noun) } %>
           <% path = admin_reimbursements_nominal_code_path(cost_centre.key, nominal_code.record_id) %>

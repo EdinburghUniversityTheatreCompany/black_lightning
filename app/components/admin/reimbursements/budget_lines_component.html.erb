@@ -1,10 +1,10 @@
 <%= render CardComponent.new(title: heading, html_class: "mt-4") do %>
   <% if lines.empty? && income_lines.empty? %>
     <p class="text-gray-600">
-      No lines yet, so nobody can claim against <%= area&.name || "this budget" %>. A line is one
+      No budgets yet, so nobody can claim against <%= area&.name || "this budget" %>. A budget is one
       category of spending, such as Set or Marketing.
       <% if finance? && area %>
-        <%= link_to "Add a line", edit_admin_reimbursements_area_path(area.record_id),
+        <%= link_to "Add a budget", edit_admin_reimbursements_area_path(area.record_id),
                     class: "underline" %>.
       <% end %>
     </p>
@@ -15,7 +15,7 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Line</th>
+            <th scope="col" class="px-3 py-2">Name</th>
             <% if finance? %><th scope="col" class="px-3 py-2">Nominal code</th><% end %>
             <th scope="col" class="px-3 py-2 text-right">Budget</th>
             <th scope="col" class="px-3 py-2 text-right">Spent</th>
@@ -73,7 +73,7 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Line</th>
+            <th scope="col" class="px-3 py-2">Name</th>
             <% if finance? %><th scope="col" class="px-3 py-2">Nominal code</th><% end %>
             <th scope="col" class="px-3 py-2 text-right">Expected</th>
             <th scope="col" class="px-3 py-2 text-right">Received</th>

@@ -171,7 +171,7 @@ module ReimbursementsHelper
         "attention. If the claim was marked Paid by this match it returns to Submitted, and an " \
         "international claim keeps the amount EUSA actually charged."
     else
-      "Unlink this row from its income line? The row stays on the ledger, that line stops " \
+      "Unlink this row from its income budget? The row stays on the ledger, that budget stops " \
         "counting this money, and the row can then be split across several budgets."
     end
   end
@@ -229,7 +229,7 @@ module ReimbursementsHelper
     variance = budget.variance
     if variance.nil?
       return content_tag(:span, reimbursements_money(nil), class: "text-gray-400",
-                         title: "No initial budget was agreed for this line, so there is " \
+                         title: "No initial budget was agreed for this budget, so there is " \
                                 "nothing for the current plan to have drifted from.")
     end
 

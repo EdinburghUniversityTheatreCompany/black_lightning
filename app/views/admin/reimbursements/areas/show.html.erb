@@ -34,7 +34,7 @@
 
 <% if finance && @area.owners.empty? %>
   <div class="mb-4"><%= render AlertComponent.new(type: :warning) do %>
-    <strong>Nobody owns this area</strong>, so claims charged to its lines skip owner sign-off and
+    <strong>Nobody owns this area</strong>, so claims charged to its budgets skip owner sign-off and
     come straight to finance.
     <%= link_to "Add an owner", edit_admin_reimbursements_area_path(@area.record_id, **scope_params),
                 class: "underline" %>.

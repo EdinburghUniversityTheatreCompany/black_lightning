@@ -97,7 +97,7 @@
       <% if can?(:manage, :reimbursements_finance) %>
         Budget owners are set on the
         <%= link_to "Budgets page", admin_reimbursements_budgets_path, class: "underline" %>,
-        or on an area's own form for a line inside one.
+        or on an area's own form for a budget inside one.
       <% else %>
         Ask the business manager to add you as an owner of the budgets you are responsible for.
       <% end %>
@@ -137,7 +137,7 @@
                 <% else %>
                   <%= reimbursements_money(figures.budget_amount) %>
                   <% if figures.from_lines? %>
-                    <div class="text-xs font-normal text-gray-500">no total agreed; what its lines add up to</div>
+                    <div class="text-xs font-normal text-gray-500">no total agreed; what its budgets add up to</div>
                   <% end %>
                 <% end %>
               </td>

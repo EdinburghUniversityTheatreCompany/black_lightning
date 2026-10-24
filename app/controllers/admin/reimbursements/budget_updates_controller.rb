@@ -29,7 +29,7 @@ module Admin
         store.delete_budget_update!(budget_update.record_id)
         redirect_to admin_reimbursements_budget_updates_path,
                     notice: "Removed that budget update. #{pluralize_forecasts(count)} " \
-                            "#{count == 1 ? 'was' : 'were'} undone, so each line is back on the " \
+                            "#{count == 1 ? 'was' : 'were'} undone, so each budget is back on the " \
                             "forecast it had before."
       end
 

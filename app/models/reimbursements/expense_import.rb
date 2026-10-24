@@ -60,7 +60,7 @@ module Reimbursements
       },
       budget: {
         label: "Budget",
-        hint: "The budget line's name; write Area: Name if two lines share it",
+        hint: "The budget's name; write Area: Name if two budgets share it",
         exact: [ "budget", "budget name", "budget line", "category" ],
         contains: [ "budget name", "budget line", "budget category" ]
       },
@@ -358,20 +358,20 @@ module Reimbursements
 
     def reference_error(row, duplicated)
       if row[:reference].blank?
-        "This line has no ID. Give every claim one (its row number in your own sheet " \
+        "This row has no ID. Give every claim one (its row number in your own sheet " \
           "will do). It's what stops a second import creating the same claim twice."
       elsif row[:reference].length > IMPORT_KEY_LIMIT
         "That ID is too long: #{row[:reference].length} characters, and the limit is " \
           "#{IMPORT_KEY_LIMIT}."
       elsif duplicated[:references].include?(self.class.key_match(row[:reference]))
-        "The ID #{row[:reference].inspect} is used by more than one line in this sheet, so a " \
+        "The ID #{row[:reference].inspect} is used by more than one row in this sheet, so a " \
           "re-import couldn't tell them apart. (IDs are matched ignoring case.)"
       end
     end
 
     def status_error(row)
       if row[:status].blank?
-        "This line has no status. Say what state the claim is in: " \
+        "This row has no status. Say what state the claim is in: " \
           "#{Status.all.to_sentence(last_word_connector: ' or ')}."
       elsif Status.all.exclude?(row[:status])
         "#{row[:status].inspect} isn't a status. Use " \
@@ -388,7 +388,7 @@ module Reimbursements
       elsif row[:submitted_on] == :unreadable
         "#{row[:raw_submitted_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
       elsif row[:submitted_on].nil?
-        "This line has no Date submitted. Give every claim the date it was made: without one " \
+        "This row has no Date submitted. Give every claim the date it was made: without one " \
           "it would be dated by this import."
       elsif row[:paid_on] == :unreadable
         "#{row[:raw_paid_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
@@ -400,7 +400,7 @@ module Reimbursements
     # nowhere to send the money.
     def submitter_error(row, people)
       if row[:payee_email].blank? && row[:submitter_name].blank?
-        "This line names no submitter. Give the email or the name of the person the claim " \
+        "This row names no submitter. Give the email or the name of the person the claim " \
           "belongs to."
       elsif people.many?
         "#{row[:submitter_name].inspect} is the name of more than one person on the People " \
@@ -441,7 +441,7 @@ module Reimbursements
 
     def budget_error(row)
       if row[:budget].blank?
-        "This line names no budget, so there's nothing to charge it to."
+        "This row names no budget, so there's nothing to charge it to."
       else
         "#{row[:budget].inspect} isn't a budget in #{destination_label}. Check the spelling, or " \
           "import the budget sheet first."
@@ -456,7 +456,7 @@ module Reimbursements
       if number == :unreadable
         "#{row[:raw_auto_number].inspect} isn't an expense number."
       elsif duplicated[:numbers].include?(number)
-        "Expense number #{number} is used by more than one line in this sheet."
+        "Expense number #{number} is used by more than one row in this sheet."
       elsif @taken_numbers.include?(number)
         "Expense number #{number} already belongs to another claim in the portal."
       end

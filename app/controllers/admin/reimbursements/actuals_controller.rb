@@ -229,8 +229,8 @@ module Admin
         elsif actual.budget_id?
           store.unlink_actual_from_budget!(actual.record_id)
           redirect_to actuals_path_with_filters,
-                      notice: "Unlinked from that income line. The row is unplaced again, and can " \
-                              "now be split across budgets or linked to another line."
+                      notice: "Unlinked from that income budget. The row is unplaced again, and can " \
+                              "now be split across budgets or linked to another budget."
         else
           redirect_to actuals_path_with_filters, alert: "That row isn't linked to anything."
         end
@@ -293,7 +293,7 @@ module Admin
         return "That row is split across budgets, so unpick the split first." if actual.apportioned?
         if actual.expense_id? || actual.budget_id?
           return "That row is linked to a claim or a budget. Unlink it first: marking it " \
-                 "offsetting would hide spend that a claim or a line is still counting."
+                 "offsetting would hide spend that a claim or a budget is still counting."
         end
 
         "That row has no debit or credit, so there is nothing for another row to cancel out."

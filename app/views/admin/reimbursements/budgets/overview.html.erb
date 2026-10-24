@@ -15,11 +15,11 @@
 <%# The health check in one line, above the tables. %>
 <%= render AlertComponent.new(type: @over_budget_count.positive? ? :warning : :info) do %>
   <% if @over_budget_count.positive? %>
-    <strong><%= pluralize(@over_budget_count, "line") %></strong>
+    <strong><%= pluralize(@over_budget_count, "budget") %></strong>
     <%= @over_budget_count == 1 ? "is" : "are" %> over budget
     (<%= link_to "see them below", "#budgets-by-code", class: "underline" %>, badged in red).
   <% else %>
-    No line is over budget.
+    Nothing is over budget.
   <% end %>
   <%# The COUNT leads and the net is a parenthetical: debits less credits can be
       negative, and a bare negative reads as bad news. %>

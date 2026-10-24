@@ -11,7 +11,7 @@
       collection: ::Reimbursements::Area::BASIS_OPTIONS,
       label: "What that total covers",
       hint: "A show's total is a spend cap: what it raises buys it no more room, " \
-            "and its income lines are listed on their own. A committee's is a net " \
+            "and its income budgets are listed on their own. A committee's is a net " \
             "allowance: money it raises genuinely raises what it may spend." %>
 
 <% if cost_centres.size > 1 %>
@@ -32,7 +32,7 @@
   <%# OwnerReview.gate_applies? is false with no owners, so every claim under
       this area skips owner endorsement. %>
   <p class="-mt-2 mb-4 text-sm text-warning">
-    Nobody is named, so claims on this area's budget lines
+    Nobody is named, so claims on this area's budgets
     skip budget-owner sign-off entirely.
   </p>
 <% end %>

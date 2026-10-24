@@ -30,9 +30,9 @@
             It never names the agreed total, which counts no lines. %>
         <% if rollup.lines_out_of_scope.positive? %>
           <span class="text-sm text-warning">
-            <%= rollup.lines_shown %> of <%= pluralize(rollup.lines_total, "line") %> shown.
-            <%= pluralize(rollup.lines_out_of_scope, "line") %> in another year or cost centre,
-            left out of the totals below.<%= " The not-yet-allocated figure is worked out over every line the area holds." unless rollup.unallocated.nil? %>
+            <%= rollup.lines_shown %> of <%= pluralize(rollup.lines_total, "budget") %> shown.
+            <%= pluralize(rollup.lines_out_of_scope, "budget") %> in another year or cost centre,
+            left out of the totals below.<%= " The not-yet-allocated figure is worked out over every budget the area holds." unless rollup.unallocated.nil? %>
           </span>
         <% end %>
       </div>

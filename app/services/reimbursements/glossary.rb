@@ -8,12 +8,12 @@ module Reimbursements
     # The money columns, in the order a line is read left to right.
     MONEY = [
       Term.new(key: :initial_budget, term: "Initial budget",
-               definition: "The figure agreed when the line was set up, either from the " \
-                           "committee's spreadsheet or typed in when the line was created. " \
+               definition: "The figure agreed when the budget was set up, either from the " \
+                           "committee's spreadsheet or typed in when it was created. " \
                            "It is never rewritten by a later revision, so it stays the thing " \
                            "a plan is measured against."),
       Term.new(key: :projected, term: "Projected",
-               definition: "The line's current plan: the latest forecast logged against it, " \
+               definition: "The budget's current plan: the latest forecast logged against it, " \
                            "falling back to the initial budget when none has been. Marked " \
                            "\"(initial)\" where it is falling back.",
                also: "the plan, the current forecast"),
@@ -27,7 +27,7 @@ module Reimbursements
       Term.new(key: :remaining, term: "Remaining",
                definition: "The plan less what is Committed. It deliberately IGNORES the " \
                            "pipeline, because this is the figure finance reads when deciding " \
-                           "whether a line is overspent. \"No budget set\", never £0, when nobody set a " \
+                           "whether a budget is overspent. \"No budget set\", never £0, when nobody set a " \
                            "plan: a zero there would read as \"fully spent\"."),
       Term.new(key: :left, term: "Left",
                definition: "The plan less what is Committed AND what is waiting for approval. " \
@@ -36,16 +36,16 @@ module Reimbursements
                            "already claimed is spent as far as that goes.",
                also: "on My Budgets and an area's page"),
       Term.new(key: :expected_outturn, term: "Expected outturn",
-               definition: "The most this line could realistically end up costing: the greater " \
+               definition: "The most this budget could realistically end up costing: the greater " \
                            "of the current plan and what has already been spent or committed, " \
-                           "so it never drops below reality. Blank on an income line, where the " \
+                           "so it never drops below reality. Blank on an income budget, where the " \
                            "same figure would read as best-case income instead."),
       Term.new(key: :variance, term: "Variance",
                definition: "How far the current plan has drifted from the initial budget. £0.00 " \
                            "with no forecast logged, because the plan then IS the agreed figure; " \
                            "blank only when no initial budget was ever set."),
       Term.new(key: :eusa_actual, term: "EUSA actual",
-               definition: "What EUSA's own ledger says landed on this line, net of credits. " \
+               definition: "What EUSA's own ledger says landed on this budget, net of credits. " \
                            "It is read off their monthly export, not from anything the " \
                            "portal did. Its divergence from Paid is the signal that something " \
                            "needs reconciling.")
@@ -54,9 +54,9 @@ module Reimbursements
     # How the money is organised.
     STRUCTURE = [
       Term.new(key: :area, term: "Area",
-               definition: "The show, festival or committee a set of budget lines belongs to. " \
-                           "It holds one agreed total and one set of owners, and its lines " \
-                           "inherit both. A line with no area stands on its own.",
+               definition: "The show, festival or committee a set of budgets belongs to. " \
+                           "It holds one agreed total and one set of owners, and its budgets " \
+                           "inherit both. A budget with no area stands on its own.",
                also: "a show, a project"),
       Term.new(key: :cost_centre, term: "Cost centre",
                definition: "One pot of money, with its own budgets, claims, ledger rows, " \
@@ -69,11 +69,11 @@ module Reimbursements
                            "a draft alongside it and switched to when it is ready."),
       Term.new(key: :nominal_code, term: "Nominal code",
                definition: "EUSA's account code for a kind of spending (432320, 439999). " \
-                           "SEVERAL budget lines can share one, which is why every figure in " \
-                           "this portal is linked line by line rather than matched on the code."),
+                           "SEVERAL budgets can share one, which is why every figure in " \
+                           "this portal is linked budget by budget rather than matched on the code."),
       Term.new(key: :budget_update, term: "Forecast revision",
                definition: "A revision of the plan, logged with a date and a reason so the " \
-                           "history survives. One revision can cover several lines at once (a " \
+                           "history survives. One revision can cover several budgets at once (a " \
                            "budget meeting's worth) and can be opened and undone as a unit.",
                also: "budget update, forecast")
     ].freeze
@@ -86,7 +86,7 @@ module Reimbursements
                            "the same thing here.",
                also: "expense"),
       Term.new(key: :endorse, term: "Endorse",
-               definition: "A budget owner confirming a claim charged to their line before " \
+               definition: "A budget owner confirming a claim charged to their budget before " \
                            "finance pays it. Any one owner can; a claim an owner filed " \
                            "themselves clears automatically; finance can override with a note " \
                            "when no owner has a portal account.",
@@ -116,7 +116,7 @@ module Reimbursements
                also: "the EUSA ledger"),
       Term.new(key: :reconcile, term: "Reconcile",
                definition: "Matching a month's actuals export to the claims the portal already " \
-                           "holds, so each one is marked Paid and each line's figures come from " \
+                           "holds, so each one is marked Paid and each budget's figures come from " \
                            "the bank rather than from what was requested."),
       Term.new(key: :offsetting_pair, term: "Offsetting pair",
                definition: "An accrual and the reversal that cancels it. Together they net to " \
@@ -125,12 +125,12 @@ module Reimbursements
                            "trail."),
       Term.new(key: :unattributed, term: "Unlinked",
                definition: "A ledger row no budget's figures account for: attached to no claim, " \
-                           "booked against no income line, and not one leg of an offsetting " \
+                           "booked against no income budget, and not one leg of an offsetting " \
                            "pair. Until it is linked, that money is missing from every budget " \
                            "total.",
                also: "unattributed, needs attention"),
       Term.new(key: :apportion, term: "Split across budgets",
-               definition: "Dividing one credit between several income lines. A Stripe payout " \
+               definition: "Dividing one credit between several income budgets. A Stripe payout " \
                            "covering a week of shows lands as a single row, and without this " \
                            "the whole of it would count as one show's income.")
     ].freeze

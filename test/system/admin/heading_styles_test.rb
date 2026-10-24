@@ -13,7 +13,7 @@ module Admin
       visit edit_admin_reimbursements_area_path(area.record_id)
 
       # text-sm
-      assert_equal "14px", style_of(find("main h3", text: "Budget lines"), "fontSize")
+      assert_equal "14px", style_of(find("main h3", text: "Budgets"), "fontSize")
     end
 
     test "entry year headings show their own colours" do

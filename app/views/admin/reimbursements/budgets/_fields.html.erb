@@ -47,7 +47,7 @@
       <% end %>
     <% end %>
     <%= render "shared/form/field", label: "Area", name: :area_id,
-          hint: "Leave blank for a standalone line like Contingency or payroll." do %>
+          hint: "Leave blank for a standalone budget like Contingency or payroll." do %>
       <%# A plain select, not Tom Select, to match the Type and Cost centre
           selects beside it. %>
       <%= select_tag :area_id,
@@ -86,7 +86,7 @@
         <%# An area naming nobody switches sign-off OFF for every line under it
             (OwnerReview.gate_applies?). %>
         <p class="mt-1 text-sm text-warning">
-          This area names nobody, so claims on this line skip budget-owner sign-off entirely.
+          This area names nobody, so claims on this budget skip budget-owner sign-off entirely.
         </p>
       <% end %>
     </div>
@@ -98,7 +98,7 @@
       <%# A fieldset because only a fieldset can disable its descendants, so the
           browser posts no owner_ids once an area is chosen. %>
       <%= render "shared/form/field", label: "Owners", name: :owner_ids,
-            hint: "Everyone who owns this budget. A line placed in an area takes the " \
+            hint: "Everyone who owns this budget. A budget placed in an area takes the " \
                   "area's owners instead." do %>
         <%# Only simple-select2: Tom Select copies classes onto its wrapper, which
             draws the box. select_tag emits no hidden empty field, so clearing
@@ -117,7 +117,7 @@
         announced once. %>
     <p class="text-sm text-gray-700" hidden aria-live="polite"
        data-reimbursements-budget-area-target="notice">
-      This line goes in an area, so it takes the area's owners. Set them on the area itself.
+      This budget goes in an area, so it takes the area's owners. Set them on the area itself.
     </p>
   <% end %>
 

@@ -43,7 +43,7 @@ module Reimbursements
     FIELDS = {
       area: {
         label: "Area",
-        hint: "The show or committee this line belongs to",
+        hint: "The show or committee this budget belongs to",
         exact: [ "area" ],
         # NOT "area": the old "Area Budget" heading contains it.
         contains: [ "area name" ]
@@ -58,13 +58,13 @@ module Reimbursements
       },
       name: {
         label: "Budget name",
-        hint: "The line's name, such as Marketing",
+        hint: "The budget's name, such as Marketing",
         exact: [ "budget name", "name", "line", "category", "budget" ],
         contains: [ "budget name" ]
       },
       nominal_code: {
         label: "Nominal code",
-        hint: "The line's nominal code",
+        hint: "The budget's nominal code",
         exact: [ "nominal code", "nominal", "code" ],
         contains: [ "nominal code" ]
       },
@@ -76,7 +76,7 @@ module Reimbursements
       },
       amount: {
         label: "Budget amount",
-        hint: "This line's own figure",
+        hint: "This budget's own figure",
         exact: [ "budget amount", "amount", "initial budget", "forecast", "total" ],
         contains: [ "initial budget" ]
       },
@@ -396,8 +396,8 @@ module Reimbursements
         creates: [ "new budget", entries_in(:create).size ],
         revisions: [ "changed figure", revisions.size ],
         area_revisions: [ "revised area total", area_revisions.size ],
-        re_homes: [ "moved line", re_homes.size ],
-        adoptions: [ "adopted line", adoptions.size ],
+        re_homes: [ "moved budget", re_homes.size ],
+        adoptions: [ "adopted budget", adoptions.size ],
         owner_syncs: [ "owner update", owner_syncs.size ],
         area_owner_syncs: [ "area owner update", area_owner_syncs.size ] }
     end
@@ -590,13 +590,13 @@ module Reimbursements
     def ambiguous_area_error(row, areas)
       "#{row[:area].inspect} matches more than one area already here " \
         "(#{areas.map { |area| self.class.area_label(area) }.to_sentence(last_word_connector: ' and ')}). " \
-        "Rename one of them so it's clear which this line belongs to."
+        "Rename one of them so it's clear which one this budget belongs to."
     end
 
     def ambiguous_match_error(row, budgets)
       "#{row[:name].inspect} matches more than one budget already here " \
         "(#{self.class.budget_labels(budgets).to_sentence(last_word_connector: ' and ')}). " \
-        "Rename one of them so it's clear which line this figure is for."
+        "Rename one of them so it's clear which budget this figure is for."
     end
 
     # The Area cell tells rows of one name apart; where even that matches,
@@ -628,14 +628,14 @@ module Reimbursements
 
     def row_error(row, twins)
       if row[:name].blank?
-        "This line has no budget name, so there's nothing to create or match it against."
+        "This row has no budget name, so there's nothing to create or match it against."
       elsif twins.any?
         duplicate_rows_error(row, twins)
       elsif row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount. Leave it blank to keep the current figure."
       elsif row[:area_budget] == :unreadable
         "#{row[:raw_area_budget].inspect} isn't an amount for " \
-          "#{row[:area].presence&.inspect || 'this line'}'s Area total. " \
+          "#{row[:area].presence&.inspect || 'this row'}'s Area total. " \
           "Leave it blank if the total isn't agreed yet."
       elsif row[:area].present? && (areas = colliding_areas(self.class.match_key(row[:area])))
         ambiguous_area_error(row, areas)
@@ -646,7 +646,7 @@ module Reimbursements
 
     def duplicate_rows_error(row, twins)
       group = [ row ] + twins
-      "The same budget line is named more than once in this sheet " \
+      "The same budget is named more than once in this sheet " \
         "(#{rows_phrase(group)}). #{duplicate_instruction(group)}"
     end
 
@@ -655,7 +655,7 @@ module Reimbursements
     def duplicate_instruction(group)
       prefixed = group.find { |row| row[:area].blank? && prefix_area_for(row[:name]) }
       unless prefixed
-        return "Name it once: two lines are told apart by their area, not by the name alone."
+        return "Name it once: two budgets are told apart by their area, not by the name alone."
       end
 
       "Name it once: #{prefixed[:name].inspect} already names " \
@@ -694,7 +694,7 @@ module Reimbursements
 
         amounts = values.map { |value| value.to_s("F") }.to_sentence(last_word_connector: " and ")
         @errors << "#{first_seen_names[key].inspect} has more than one Area total figure in " \
-                   "this sheet (#{amounts}). Make every line for the area agree, or leave the " \
+                   "this sheet (#{amounts}). Make every row for the area agree, or leave the " \
                    "column blank."
       end
     end

@@ -282,7 +282,7 @@ module Admin
         return nil if budget.area_id || posted_area_id.blank?
         return nil if Array(params[:owner_ids]).reject(&:blank?).empty?
 
-        "A line in an area takes its owners from the area, so the people ticked here would " \
+        "A budget in an area takes its owners from the area, so the people ticked here would " \
           "never be read. Untick them and set them on the area, or leave Area blank."
       end
 

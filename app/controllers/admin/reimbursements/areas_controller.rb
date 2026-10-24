@@ -162,12 +162,12 @@ module Admin
       # posted with no name key at all (detach-only) is not a blank name.
       def budget_row_error(row)
         if row[:id].present?
-          return row.key?(:name) && row[:name].blank? ? "A budget line's name can't be blank." : nil
+          return row.key?(:name) && row[:name].blank? ? "A budget's name can't be blank." : nil
         end
         return nil if ::Reimbursements::Area::UNTOUCHED_BUDGET_ROW.call(row)
         return nil if row[:name].present? && row[:nominal_code].present?
 
-        "A new budget line needs a name and a nominal code."
+        "A new budget needs a name and a nominal code."
       end
 
       # An unreadable amount is silent wrong money, so it blocks the whole save.
@@ -179,7 +179,7 @@ module Admin
         return nil if row["budget_type"].blank?
         return nil if ::Reimbursements::Budget::TYPES.include?(row["budget_type"])
 
-        "Choose a valid budget type for each line."
+        "Choose a valid budget type for each budget."
       end
 
       # The form field wins, then the ?cost_centre= selector, so an area added

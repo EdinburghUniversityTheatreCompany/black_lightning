@@ -32,7 +32,7 @@
               <%# Only shown when some of the area's lines sit in another year or cost centre. %>
               <% if lines.size < total_count %>
                 <span class="text-sm text-gray-500">
-                  <%= lines.size %> of <%= pluralize(total_count, "line") %> shown
+                  <%= lines.size %> of <%= pluralize(total_count, "budget") %> shown
                 </span>
               <% end %>
               <%# no_budget_set?, not projected_amount.nil?: a £0 total with

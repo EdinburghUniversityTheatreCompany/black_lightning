@@ -10,14 +10,14 @@
 <%= render CardComponent.new(
       title: "Preview: #{selected_financial_year.label} · #{chosen_cost_centre&.name}") do %>
   <p class="mb-4 text-sm text-gray-600">
-    Nothing has been written yet. Check the lines below, then confirm at the bottom.
+    Nothing has been written yet. Check the rows below, then confirm at the bottom.
   </p>
 
   <% invalid = @import.entries_in(:invalid) %>
   <% if invalid.any? %>
     <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2">
       <p class="font-medium text-red-800">
-        <%= pluralize(invalid.size, "line") %> can't be read, so nothing can be imported yet.
+        <%= pluralize(invalid.size, "row") %> can't be read, so nothing can be imported yet.
       </p>
       <ul class="mt-2 list-disc pl-5 text-sm text-red-800">
         <% invalid.each do |entry| %>
@@ -168,8 +168,8 @@
         <p class="mt-1 text-amber-800">
           <%= @import.superseded_absent_budgets.map(&:display_name).to_sentence %>
           <%= @import.superseded_absent_budgets.one? ? "carries" : "carry" %> an area's name as a
-          prefix, and this sheet creates the same line inside that area. Nothing is merged, so
-          check whether the older line should be retired.
+          prefix, and this sheet creates the same budget inside that area. Nothing is merged, so
+          check whether the older budget should be retired.
         </p>
       <% end %>
     </div>
@@ -221,7 +221,7 @@
 
   <% if @import.missing_nominal_codes.any? %>
     <p class="mt-4 text-sm text-amber-800">
-      <%= pluralize(@import.missing_nominal_codes.size, "line") %>
+      <%= pluralize(@import.missing_nominal_codes.size, "row") %>
       <%= @import.missing_nominal_codes.one? ? "has" : "have" %> no nominal code.
       <%= @import.missing_nominal_codes.one? ? "It'll" : "They'll" %> import and appear under
       "(none)" on the budget overview until you set one.
@@ -248,8 +248,8 @@
           <%= @import.re_homes.one? ? "is" : "are" %> in a different area than this sheet names.
         </p>
         <p>
-          Leave a line ticked to follow the sheet. Untick it if somebody moved that line on
-          purpose: an unticked line stays where it is, and an area nothing lands in isn't
+          Leave a budget ticked to follow the sheet. Untick it if somebody moved that budget on
+          purpose: an unticked budget stays where it is, and an area nothing lands in isn't
           created at all.
         </p>
         <%# Always posted, so an untick is a real "no" rather than a missing parameter. %>
@@ -277,7 +277,7 @@
                     switches budget-owner sign-off off for the line. %>
                 <% unless re_home[:to_area_has_owners] %>
                   <p class="mt-1 text-sm text-warning">
-                    <%= re_home[:to_area_name] %> names nobody, so claims on this line skip
+                    <%= re_home[:to_area_name] %> names nobody, so claims on this budget skip
                     budget-owner sign-off entirely.
                   </p>
                 <% end %>

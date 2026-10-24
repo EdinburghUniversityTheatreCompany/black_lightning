@@ -80,7 +80,7 @@
   <%= render CardComponent.new(title: "EUSA ledger") do %>
     <p class="mb-3 text-sm text-gray-600">
       Imported ledger rows that no budget's figures account for: not linked to a claim, not
-      booked against an income line, and not one leg of an offsetting pair. Until they are
+      booked against an income budget, and not one leg of an offsetting pair. Until they are
       linked, that money is missing from every budget total.
     </p>
     <p class="mb-3">
@@ -124,14 +124,14 @@
 
   <%= render CardComponent.new(title: "Budget health") do %>
     <p class="mb-3 text-sm text-gray-600">
-      Lines with nothing left against their current plan.
+      Budgets with nothing left against their current plan.
     </p>
     <p class="mb-3">
       <span class="text-2xl font-semibold tabular-nums <%= "text-danger" if @home.over_budget_count.positive? %>">
         <%= @home.over_budget_count %>
       </span>
       <span class="text-sm text-gray-700">
-        <%= "line".pluralize(@home.over_budget_count) %> over budget
+        <%= "budget".pluralize(@home.over_budget_count) %> over budget
       </span>
     </p>
     <% if @home.over_budget_preview.any? %>
@@ -149,7 +149,7 @@
         <% end %>
         <% hidden = @home.over_budget_count - @home.over_budget_preview.size %>
         <% if hidden.positive? %>
-          <li class="text-gray-500">and <%= pluralize(hidden, "more line") %> over budget</li>
+          <li class="text-gray-500">and <%= pluralize(hidden, "more budget") %> over budget</li>
         <% end %>
       </ul>
     <% end %>

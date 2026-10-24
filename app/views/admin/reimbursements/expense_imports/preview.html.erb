@@ -9,14 +9,14 @@
     still says whatever the page loaded with. %>
 <%= render CardComponent.new(title: "Preview: #{selected_financial_year.label} · #{chosen_cost_centre.name}") do %>
   <p class="mb-4 text-sm text-gray-600">
-    Nothing has been written yet. Check the lines below, then confirm at the bottom.
+    Nothing has been written yet. Check the rows below, then confirm at the bottom.
   </p>
 
   <% invalid = @import.entries_in(:invalid) %>
   <% if invalid.any? %>
     <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2">
       <p class="font-medium text-red-800">
-        <%= pluralize(invalid.size, "line") %> can't be imported, so nothing can be imported yet.
+        <%= pluralize(invalid.size, "row") %> can't be imported, so nothing can be imported yet.
       </p>
       <ul class="mt-2 list-disc pl-5 text-sm text-red-800">
         <% invalid.each do |entry| %>
@@ -80,7 +80,7 @@
   <% if imported.any? %>
     <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       <p class="font-medium">
-        <%= pluralize(imported.size, "line") %>
+        <%= pluralize(imported.size, "row") %>
         <%= imported.one? ? "has" : "have" %> been imported before and will be skipped.
       </p>
       <p class="text-gray-600">

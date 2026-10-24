@@ -226,7 +226,7 @@ module Admin
         )
 
         assert_equal [ area.id ], assigns(:import).creates.map { |create| create[:area_id].to_i }
-        assert_match(/this sheet creates the same line inside that area/, response.body)
+        assert_match(/this sheet creates the same budget inside that area/, response.body)
       end
 
       # A half-filled Area column, then the same lines fully converted, must
@@ -334,7 +334,7 @@ module Admin
 
         assert_empty assigns(:import).entries_in(:create)
         assert_empty assigns(:import).revisions
-        assert_select "input[type=submit][value=?]", "Import 1 new area and 1 moved line" do
+        assert_select "input[type=submit][value=?]", "Import 1 new area and 1 moved budget" do
           assert_select "[disabled]", false
         end
       end
@@ -384,7 +384,7 @@ module Admin
         post :preview, params: preview_params(cogito_sheet)
 
         assert_select "p.text-warning",
-                      text: /Cogito names nobody, so claims on this line skip budget-owner sign-off entirely/
+                      text: /Cogito names nobody, so claims on this budget skip budget-owner sign-off entirely/
       end
 
       test "preview does not warn when the area the sheet names has owners" do
@@ -766,7 +766,7 @@ module Admin
 
         assert_response :success
         assert_match(/Area total.*agreed total.*every row/m, response.body)
-        assert_match(/Budget amount.*that line/m, response.body)
+        assert_match(/Budget amount.*that budget/m, response.body)
       end
 
       test "show preselects the operator's home cost centre when no link named one" do
