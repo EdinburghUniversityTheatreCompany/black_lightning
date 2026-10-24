@@ -13,7 +13,9 @@ env:
 
 jobs:
   scan_ruby:
-    runs-on: ubuntu-latest
+    # shortcut: ruby-builder has no Ruby 4.0.2 for ubuntu-26.04 (ubuntu-latest since Oct 2026),
+    # so setup-ruby fails there. Back to ubuntu-latest with Ruby >= 4.0.9, which has a build.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -36,7 +38,7 @@ jobs:
         run: bundle exec bundler-audit --update
 
   lint_ruby:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Ruby 4.0.2: see scan_ruby
     permissions:
       contents: read
 
@@ -116,7 +118,7 @@ jobs:
         run: bash scripts/check_repo_rules.sh dockerfile-node
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Ruby 4.0.2: see scan_ruby
     permissions:
       contents: read
       actions: write
@@ -244,7 +246,7 @@ jobs:
 
   # Noisier audits: debride, flay, fasterer, jscpd, large files.
   audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Ruby 4.0.2: see scan_ruby
     permissions:
       contents: read
 
