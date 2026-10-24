@@ -159,12 +159,14 @@
     <%= button_to "Delete budget", admin_reimbursements_budget_path(@budget.record_id, **scope_params),
           method: :delete, class: btn_classes(:danger),
           form: { data: { turbo_confirm: "Delete #{@budget.display_name} for good? This can't be undone." } } %>
-    <p class="mb-0 text-sm text-gray-500">No claim or EUSA actual uses this line yet. Its forecasts go with it.</p>
-  <% else %>
-    <p class="mb-0 text-sm text-gray-500">
+  <% end %>
+  <p class="mb-0 text-sm text-gray-500">
+    <% if blockers.empty? %>
+      No claim or EUSA actual uses this line yet. Its forecasts go with it.
+    <% else %>
       <%= blockers.map { |noun, count| pluralize(count, noun) }.to_sentence %>
       <%= blockers.values.sum == 1 ? "is" : "are" %> on this line, so it can't be deleted. Untick
       Visible to submitters to hide it instead.
-    </p>
-  <% end %>
+    <% end %>
+  </p>
 </div>
