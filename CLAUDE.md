@@ -1158,6 +1158,16 @@ form per international claim, all on the same draft.
     settled claim waiting for its EUSA row); Link to claim never offers Paid. `#settleable?` refuses
     only what neither should reach, so never tighten it to "never Paid" unless Reconcile's pool
     changes in the same commit.
+  - **`DatabaseStore#matchable_expenses` is the one pool for Reconcile and the finance edit
+    save** (`#settle_from_matching_actual!`, which links a corrected claim to the one unlinked row
+    that would have matched it at import). Change the rule there, never in one caller. The save
+    also needs mutual best (the row must prefer this claim to every other), or the claim edited
+    second takes the row from the claim it belongs to.
+  - **A debit at another amount is only ever offered, unticked** (Reconcile's "Possible matches",
+    `Reconciliation.probable_debit_match`): same code, within 14 days, exactly one claim whose
+    payee or description the narrative carries. Description counts as well as payee because in
+    production's links (2026-10-25) the payee was named on 56%, the description on 88%. Its key
+    carries the claim id, so a tick never settles a claim the re-parse chose differently.
 - **An international claim's IBAN and BIC come only from its own overrides**
   (`EffectivePayee#effective_iban` / `#effective_bic`): a payee's People record holds no IBAN, so
   a screen must send finance to the claim's override.
