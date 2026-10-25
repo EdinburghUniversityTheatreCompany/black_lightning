@@ -1,0 +1,38 @@
+<%= render Admin::ImportPreviewSectionComponent.new(items: @items, title: "Possible Matches (Review Required)", variant: :warning, hint: "Please decide for each row", headers: headers) do %>
+  <% @items.each do |item| %>
+    <% row = item[:row] %>
+    <% candidates = item[:existing_users] %>
+    <tr>
+      <td>
+        <strong><%= row[:original_name] %></strong><br>
+        <% if @show_blank_email || row[:email].present? %>
+          <small class="text-gray-500"><%= row[:email] %></small>
+        <% end %>
+        <%= helpers.import_id_note(row) if @show_ids %>
+      </td>
+      <td>
+        <% candidates.each_with_index do |user, i| %>
+          <%= link_to user.name_or_email, helpers.admin_user_path(user) %>
+          <small class="text-gray-500">(<%= years_label(user) %>)</small><br>
+          <small class="text-gray-500"><%= user.email %></small>
+          <% if @show_ids && user.student_id.present? %>
+            <br><small class="text-gray-500">ID: <%= user.student_id %></small>
+          <% end %>
+          <% if i < candidates.size - 1 %>
+            <hr class="my-1">
+          <% end %>
+        <% end %>
+      </td>
+      <% if @show_position %>
+        <td><span class="font-mono"><%= row[:position] %></span></td>
+      <% end %>
+      <td>
+        <% candidates.each_with_index do |user, i| %>
+          <%= helpers.import_choice(item[:index], "#{@choice}_#{user.id}", choice_label(user), checked: i.zero?) %>
+        <% end %>
+        <%= helpers.import_choice(item[:index], "create", @create_label) %>
+        <%= helpers.import_choice(item[:index], "skip", "Skip") %>
+      </td>
+    </tr>
+  <% end %>
+<% end %>

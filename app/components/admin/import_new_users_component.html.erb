@@ -1,0 +1,31 @@
+<%= render Admin::ImportPreviewSectionComponent.new(items: @items, title: "New Users to Create", variant: :primary, hint: @hint, headers: headers) do %>
+  <% @items.each do |item| %>
+    <% row = item[:row] %>
+    <tr>
+      <td><%= row[:original_name] %></td>
+      <td>
+        <% if row[:email].present? %>
+          <span class="font-mono"><%= row[:email] %></span>
+          <% if generated_email?(row) %>
+            <br><small class="text-gray-500">(auto-generated)</small>
+          <% end %>
+        <% else %>
+          <em class="text-gray-500">(will generate placeholder)</em>
+        <% end %>
+      </td>
+      <td>
+        <% if @show_position %>
+          <span class="font-mono"><%= row[:position] %></span>
+        <% elsif (id = helpers.import_row_id(row)) %>
+          <span class="font-mono"><%= id %></span>
+        <% else %>
+          <em class="text-gray-500">-</em>
+        <% end %>
+      </td>
+      <td>
+        <%= helpers.import_choice(item[:index], "create", @create_label, checked: true) %>
+        <%= helpers.import_choice(item[:index], "skip", "Skip") %>
+      </td>
+    </tr>
+  <% end %>
+<% end %>
