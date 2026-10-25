@@ -73,15 +73,19 @@ module ReimbursementsHelper
     expense = match.expense
     debit = match.row.debit
     claimed = expense.amount_for_matching
+    penny = Reimbursements::Reconciliation::AMOUNT_TOLERANCE
     text =
       if claimed.nil?
         "the claim has no amount yet"
-      elsif expense.amount && expense.amount > claimed &&
-            (debit - expense.amount).abs <= Reimbursements::Reconciliation::AMOUNT_TOLERANCE
+      elsif (debit - claimed).abs <= penny
+        "same amount as claimed"
+      elsif expense.amount && expense.amount > claimed && (debit - expense.amount).abs <= penny
         "EUSA's figure is the claim's total including VAT"
       else
         "#{reimbursements_money((debit - claimed).abs)} #{debit < claimed ? 'less' : 'more'} than claimed"
       end
+    # Only reachable for a claim with no code, so it says what to fix for next time.
+    text += "; its budget has no nominal code" if expense.effective_nominal_code.blank?
     expense.international? ? "#{text}; this international claim takes EUSA's figure" : text
   end
 

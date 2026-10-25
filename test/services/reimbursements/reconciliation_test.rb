@@ -379,6 +379,44 @@ module Reimbursements
       assert_nil Reconciliation.probable_debit_match(narrated_row("STRIPE FEES"), [ named_expense ])
     end
 
+    # --- Claims brought in by the claims import ---------------------------
+    #
+    # The import records when a claim was submitted but never when it was sent to EUSA, and a
+    # committee that runs claims outside the portal often has budgets with no nominal code.
+
+    def imported_expense(submitted_at:, nominal_code: "439999", **attrs)
+      expense(nominal_code: nominal_code, submitted_date: nil, **attrs).tap do |e|
+        e.status = Status::PAID
+        e.submitted_at = submitted_at
+      end
+    end
+
+    test "a claim with neither a sent nor a payment date is dated by when it was submitted" do
+      exp = imported_expense(submitted_at: Time.zone.local(2025, 3, 14, 10))
+
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row, [ exp ])
+    end
+
+    test "the submitted date is only a fallback: a sent date outside the window still rules a claim out" do
+      exp = imported_expense(submitted_at: Time.zone.local(2025, 3, 14, 10)).tap do |e|
+        e.submitted_to_eusa_date = Date.new(2025, 2, 1)
+      end
+
+      assert_nil Reconciliation.match_debit_to_expense(debit_row, [ exp ])
+    end
+
+    # With no code there is nothing to check the row's against, so a person decides.
+    test "a claim with no nominal code is never matched, only offered when the narrative names it" do
+      exp = imported_expense(submitted_at: Time.zone.local(2025, 3, 14, 10), nominal_code: "").tap do |e|
+        e.person = Reimbursements::Person.new(name: "Alice Producer")
+      end
+      row = debit_row.with(narrative: "BACS ALICE PRODUCER")
+
+      assert_nil Reconciliation.match_debit_to_expense(row, [ exp ])
+      assert_equal [ exp, [ :payee ] ], Reconciliation.probable_debit_match(row, [ exp ])
+      assert_nil Reconciliation.probable_debit_match(row.with(narrative: "STRIPE FEES"), [ exp ])
+    end
+
     # --- match_credit_to_budget -------------------------------------------
 
     def credit_row(nominal_code: "250000")

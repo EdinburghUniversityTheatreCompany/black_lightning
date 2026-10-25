@@ -16,9 +16,9 @@ module Admin
       # The list is sorted by closeness, so a claim past this was never the answer.
       LINK_CANDIDATE_LIMIT = 50
 
-      # Statuses a manual "Link to claim" must never offer or settle; see #link_candidates.
+      # Statuses a manual "Link to claim" must never offer or settle; Paid has its own rule, see
+      # #link_offerable?.
       EXCLUDED_LINK_STATUSES = [
-        ::Reimbursements::Status::PAID,
         ::Reimbursements::Status::DRAFT,
         ::Reimbursements::Status::REJECTED
       ].freeze
@@ -119,14 +119,12 @@ module Admin
           return
         end
         # Re-checked on the write: #link_candidates was a stale read.
-        return refuse_settle(expense.status) if EXCLUDED_LINK_STATUSES.include?(expense.status)
+        return refuse_settle(expense.status) unless link_offerable?(expense)
 
         store.settle_expense_from_actual!(@actual.record_id, expense.record_id,
                                           payment_date: @actual.date,
                                           gbp_charged: @actual.debit)
-        redirect_to actuals_path_with_filters,
-                    notice: "Linked to ##{expense.auto_number}, which is now Paid" \
-                            "#{' with the amount corrected to what EUSA charged' if expense.international?}."
+        redirect_to actuals_path_with_filters, notice: linked_notice(expense)
       rescue ::Reimbursements::DatabaseStore::NotSettleableError => e
         # The claim changed between the check above and the store's locked re-read.
         refuse_settle(e.status)
@@ -427,14 +425,34 @@ module Admin
       end
 
       # Claims this row could settle. Not filtered by nominal code or date: the automatic matcher
-      # applies both, and this list is for the rows it gave up on. Paid is out (already settled).
-      # Draft and Rejected are out because settling one marks paid something nobody agreed to pay.
-      # Pending, Approved and Submitted can each have been paid outside a batch.
+      # applies both, and this list is for the rows it gave up on. Pending, Approved and Submitted
+      # can each have been paid outside a batch.
       def link_candidates(actual)
         store.expenses
-             .reject { |expense| EXCLUDED_LINK_STATUSES.include?(expense.status) }
+             .select { |expense| link_offerable?(expense) }
              .sort_by { |expense| link_candidate_rank(expense, actual) }
              .first(LINK_CANDIDATE_LIMIT)
+      end
+
+      # Draft and Rejected never: settling one marks paid something nobody agreed to pay. Paid only
+      # while it waits for its EUSA row (no payment date, no row), as the claims import leaves it and
+      # as Reconcile's pool reads it (DatabaseStore#matchable_expenses); otherwise it is settled.
+      def link_offerable?(expense)
+        return false if EXCLUDED_LINK_STATUSES.include?(expense.status)
+        return true unless expense.status == ::Reimbursements::Status::PAID
+
+        expense.payment_confirmed_date.blank? && !linked_expense_ids.include?(expense.record_id)
+      end
+
+      def linked_expense_ids
+        @linked_expense_ids ||= store.eusa_actuals.filter_map { |actual| actual.expense_id&.to_s }.to_set
+      end
+
+      # +expense+ as it was before the link: a Paid one was only waiting for its row.
+      def linked_notice(expense)
+        outcome = expense.status == ::Reimbursements::Status::PAID ? "was already Paid and now has its EUSA row" : "is now Paid"
+        "Linked to ##{expense.auto_number}, which #{outcome}" \
+          "#{' with the amount corrected to what EUSA charged' if expense.international?}."
       end
 
       def refuse_settle(status)

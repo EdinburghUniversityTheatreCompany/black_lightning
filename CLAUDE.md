@@ -1159,11 +1159,13 @@ form per international claim, all on the same draft.
   never overwritten**: it is what the producer spent. It re-reads the claim under a row lock and
   raises `NotSettleableError` for Draft, Rejected, or a Paid claim a payment date or another ledger
   row already settled.
-  - **Reconcile and Link to claim disagree about Paid, on purpose.** Reconcile's
-    `matchable_expenses` matches a Paid claim with no payment date and no linked row (an imported
-    settled claim waiting for its EUSA row); Link to claim never offers Paid. `#settleable?` refuses
-    only what neither should reach, so never tighten it to "never Paid" unless Reconcile's pool
-    changes in the same commit.
+  - **A Paid claim with no payment date and no linked row is still waiting for its EUSA row**
+    (the claims import leaves every settled claim so). Reconcile's `matchable_expenses`,
+    `#settleable?` and Link to claim (`ActualsController#link_offerable?`) all take it; change
+    the three together. **The claims import records only `submitted_at`**, never a sent-to-EUSA
+    date, so `Reconciliation.days_from_claim` falls back to it, or such a claim never matches.
+  - **A claim with no nominal code (its budget has none) is never matched, only offered**
+    (`probable_debit_match` skips the code gate for it); termtime's imported budgets are like this.
   - **`DatabaseStore#matchable_expenses` is the one pool for Reconcile and the finance edit
     save** (`#settle_from_matching_actual!`, which links a corrected claim to the one unlinked row
     that would have matched it at import). Change the rule there, never in one caller. The save

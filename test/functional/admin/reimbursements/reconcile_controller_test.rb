@@ -505,6 +505,41 @@ module Admin
       assert_equal 2, assigns(:unmatched_rows).size
     end
 
+    # --- Claims the claims import brought in as Paid ------------------------
+    #
+    # They carry no sent-to-EUSA or payment date, only when they were submitted, and a committee
+    # running claims outside the portal often has budgets with no nominal code.
+
+    def imported_claim(budget: @budget)
+      create_reimbursements_expense(person: @person, budget: budget, amount: BigDecimal("123.45"),
+                                    amount_excl_vat: BigDecimal("123.45"), status: ::Reimbursements::Status::PAID,
+                                    submitted_at: Time.zone.local(2026, 5, 12, 10), import_key: "OLD-1",
+                                    receipt: false)
+    end
+
+    test "apply settles an imported Paid claim by the date it was submitted" do
+      @expense.update!(status: ::Reimbursements::Status::REJECTED)
+      claim = imported_claim
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
+
+      assert_equal claim.id, ::Reimbursements::EusaActual.sole.expense_id
+      assert_equal Date.new(2026, 5, 13), claim.reload.payment_confirmed_date
+    end
+
+    test "a claim whose budget has no nominal code is offered, never matched, and says why" do
+      @expense.update!(status: ::Reimbursements::Status::REJECTED)
+      claim = imported_claim(budget: create_reimbursements_budget(name: "Theatre", nominal_code: ""))
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
+
+      assert_empty assigns(:matched_debits)
+      assert_equal claim.record_id, assigns(:probable_matches).sole.expense.record_id
+      assert_select "td", text: "same amount as claimed; its budget has no nominal code"
+    end
+
     test "a claim another row matched exactly is not offered again" do
       sign_in @user
       rows = [ debit_row, debit_row(debit: "110.00") ].join("\n")

@@ -158,7 +158,10 @@ module Reimbursements
     # candidates return nil, because choosing between them is the guess this avoids.
     def probable_debit_match(row, expenses)
       candidates = expenses.filter_map do |expense|
-        next unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
+        # A claim with no code (its budget has none) cannot be checked against the row's, so the
+        # narrative alone ties it; match_debit_to_expense never takes one.
+        code = expense.effective_nominal_code.strip
+        next unless code.empty? || code.casecmp?(row.nominal_code.strip)
         next unless days_from_claim(expense, row)
 
         reasons = []
@@ -189,9 +192,12 @@ module Reimbursements
     end
 
     # Days between the row and the nearer of the claim's submitted-to-EUSA and payment-confirmed
-    # dates, or nil when neither is within DATE_WINDOW_DAYS.
+    # dates, or nil when neither is within DATE_WINDOW_DAYS. A claim with neither (one the claims
+    # import brought in, which records only when it was submitted) is dated by submitted_at, or
+    # its row could never match.
     def days_from_claim(expense, row)
       dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact
+      dates = [ expense.submitted_at&.to_date ].compact if dates.empty?
       dates.map { |date| (date - row.date).abs }.select { |diff| diff <= DATE_WINDOW_DAYS }.min
     end
 

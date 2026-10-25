@@ -12,8 +12,8 @@
 <% if @candidates.empty? %>
   <%= render CardComponent.new(title: "Which claim did this pay?") do %>
     <p class="mb-0 text-gray-600">
-      No claim here can be settled by this row. Paid claims are settled already, and drafts and
-      rejected claims are never offered. So this row is income, someone else's, or a cost nobody
+      No claim here can be settled by this row. Paid claims that already have their EUSA row are
+      settled, and drafts and rejected claims are never offered. So this row is income, someone else's, or a cost nobody
       claimed - in which case
       <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id, actual_filters) %>
       instead.
@@ -29,7 +29,8 @@
         A claim whose payee or description the row's narrative carries comes first; after that,
         closest amount.
         Draft and rejected claims are not offered: settling one would mark paid something
-        nobody agreed to pay. An <strong>international</strong> claim's amount is only the
+        nobody agreed to pay. A Paid claim is offered only while it has no EUSA row yet, as one
+        brought in by the claims import. An <strong>international</strong> claim's amount is only the
         estimate finance typed at review, so it will not match the row exactly; linking it
         corrects the claim to what EUSA actually charged.
       </p>

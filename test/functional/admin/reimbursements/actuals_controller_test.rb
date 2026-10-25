@@ -697,6 +697,52 @@ module Admin
       end
     end
 
+    # --- A Paid claim still waiting for its EUSA row (the claims import's) -----
+    #
+    # It has no payment date and no row until one is linked. Reconcile's pool already takes it, so
+    # Link to claim offers it too; a Paid claim a date or a row has settled is never offered.
+
+    def paid_claim(auto_number, **attrs)
+      create_reimbursements_expense(auto_number: auto_number, budget: @budget, status: ::Reimbursements::Status::PAID,
+                                    amount: BigDecimal("42.00"), amount_excl_vat: BigDecimal("42.00"), **attrs)
+    end
+
+    test "link_expense offers a Paid claim waiting for its row, never one already settled" do
+      waiting = paid_claim(86)
+      dated = paid_claim(87, payment_confirmed_date: Date.new(2026, 5, 1))
+      with_row = paid_claim(88)
+      create_reimbursements_actual(narrative: "Earlier row", debit: BigDecimal("42.00"), expense: with_row)
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      numbers = assigns(:candidates).map(&:auto_number)
+      assert_includes numbers, waiting.auto_number
+      assert_not_includes numbers, dated.auto_number
+      assert_not_includes numbers, with_row.auto_number
+    end
+
+    test "confirm_link settles a Paid claim waiting for its row without calling it newly Paid" do
+      waiting = paid_claim(86)
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: waiting.record_id }
+
+      assert_equal waiting.id, @unlinked.reload.expense_id
+      assert_equal Date.new(2026, 6, 1), waiting.reload.payment_confirmed_date
+      assert_equal "Linked to #86, which was already Paid and now has its EUSA row.", flash[:notice]
+    end
+
+    test "confirm_link refuses a Paid claim a payment date already settles" do
+      dated = paid_claim(87, payment_confirmed_date: Date.new(2026, 5, 1))
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: dated.record_id }
+
+      assert_match(/can't settle it/, flash[:alert])
+      assert_nil @unlinked.reload[:expense_id]
+    end
+
     # The store's locked re-read refuses it; the operator gets the same message as the pre-check.
     test "confirm_link refuses a claim rejected after the controller read it" do
       claim = create_reimbursements_expense(auto_number: 85, budget: @budget,
