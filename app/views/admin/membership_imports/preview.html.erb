@@ -1,16 +1,4 @@
-<%= render(QuickActionsCardComponent.new) do %>
-  <%= link_to "Cancel", new_admin_membership_import_path, class: btn_classes(:secondary) %>
-<% end %>
-
-<% total = @import.rows.size %>
-<%= render AlertComponent.new(type: :info) do %>
-  <strong>Found <%= total %> row(s) to process.</strong>
-  Review the categorization below and adjust decisions as needed.
-<% end %>
-
-<%= form_with url: confirm_admin_membership_imports_path, method: :post, local: true do |f| %>
-  <%= hidden_field_tag :cache_key, @cache_key %>
-
+<%= render Admin::ImportPreviewComponent.new(total: @import.rows.size, cancel_path: new_admin_membership_import_path, confirm_path: confirm_admin_membership_imports_path, cache_key: @cache_key) do %>
   <% if @import.categorized[:activate_by_email].any? %>
     <%= render CardComponent.new(variant: :info, flush: true) do |c| %>
       <% c.with_tools do %>
@@ -219,15 +207,6 @@
           <% end %>
         </tbody>
       </table>
-    <% end %>
-  <% end %>
-
-  <%= render CardComponent.new(flush: true) do |c| %>
-    <% c.with_footer do %>
-      <div class="flex justify-between">
-        <%= link_to "Cancel", new_admin_membership_import_path, class: btn_classes(:secondary) %>
-        <%= f.submit "Confirm Import", class: btn_classes(:success) %>
-      </div>
     <% end %>
   <% end %>
 <% end %>

@@ -1,0 +1,23 @@
+<%= render(QuickActionsCardComponent.new) do %>
+  <%= link_to "Cancel", @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
+<% end %>
+
+<%= render AlertComponent.new(type: :info) do %>
+  <strong>Found <%= @total %> row(s) to process<% if @event_name %> for <%= @event_name %><% end %>.</strong>
+  Review the categorization below and adjust decisions as needed.
+<% end %>
+
+<%= form_with url: @confirm_path, method: :post, local: true do |f| %>
+  <%= hidden_field_tag :cache_key, @cache_key %>
+
+  <%= content %>
+
+  <%= render CardComponent.new(flush: true) do |c| %>
+    <% c.with_footer do %>
+      <div class="flex justify-between">
+        <%= link_to "Cancel", @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
+        <%= f.submit "Confirm Import", class: ButtonComponent.classes_for(variant: :success) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
