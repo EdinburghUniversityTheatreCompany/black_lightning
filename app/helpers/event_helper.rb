@@ -19,4 +19,19 @@ module EventHelper
       pretix_slug: event.pretix_shown? ? event.pretix_slug : nil
     }
   end
+
+  # EventsGridComponent items for a member's projects, on their admin and public profiles.
+  def team_membership_grid_items(team_memberships)
+    team_memberships.map do |team_membership|
+      event = team_membership.teamwork
+      {
+        event: event,
+        paragraphs: [
+          { content: event.date_range(true), small: true },
+          { content: event.short_blurb },
+          { content: safe_join([ tag.b("Position"), ": ", team_membership.position ]), class: "mt-auto" }
+        ]
+      }
+    end
+  end
 end
