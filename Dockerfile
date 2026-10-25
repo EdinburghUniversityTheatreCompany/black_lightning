@@ -5,7 +5,7 @@
 # docker build -t blacklightning .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name blacklightning blacklightning
 
-ARG RUBY_VERSION=4.0.2
+ARG RUBY_VERSION=4.0.9
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 WORKDIR /rails

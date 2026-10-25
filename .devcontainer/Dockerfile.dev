@@ -7,7 +7,7 @@
 # in setup.sh does the rest. Never pin a language version here (no `ruby:x.y` base, no
 # `apt-get install nodejs`): that reintroduces the drift. To change a version, edit mise/config.toml.
 #
-# Base: debian:trixie-slim, the same Debian release (glibc 2.41) as production's `ruby:4.0.2-slim`,
+# Base: debian:trixie-slim, the same Debian release (glibc 2.41) as production's `ruby:4.0.9-slim`,
 # so native gems compiled into the persistent /bundle volume load in both (a bookworm base
 # fails with "GLIBC_2.xx not found"). Bump this with the Ruby image.
 FROM debian:trixie-slim

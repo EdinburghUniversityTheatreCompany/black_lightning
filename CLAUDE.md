@@ -205,7 +205,7 @@ run `mise install && hk install` once.
 - **`HK_SKIP_HOOK=1` does not stop hk's repo-wide stash.** When another session may be working in
   the repo, commit with `--no-verify` and run the checks over the branch afterwards.
 - **The Gemfile's `cooldown: 4` needs Bundler ≥ 4.0.13; older ones ignore it silently** (Ruby
-  4.0.2's built-in Bundler is 4.0.6). Keep `BUNDLED WITH` at or above that
+  4.0.2 shipped Bundler 4.0.6; 4.0.9 ships 4.0.20). Keep `BUNDLED WITH` at or above that
   (`bundle update --bundler=<version>`). It is working when an update lists
   held-back releases ("available in N days").
 - **The pre-commit hook autocorrects, so tests green before `git commit` prove nothing after it.**
