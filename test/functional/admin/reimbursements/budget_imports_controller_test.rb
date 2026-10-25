@@ -78,6 +78,16 @@ module Admin
         assert_equal 2, assigns(:import).entries_in(:create).size
       end
 
+      test "the preview states a problem with the whole sheet and offers nothing to import" do
+        sign_in @user
+
+        post :preview, params: preview_params("Nominal code\tBudget amount\n4000\t1200")
+
+        assert_response :success
+        assert_select "div.bg-red-50", text: /Couldn't find a budget name column/
+        assert_select "input[type=submit][value='Nothing to import'][disabled]"
+      end
+
       test "preview refuses an empty paste" do
         sign_in @user
 
