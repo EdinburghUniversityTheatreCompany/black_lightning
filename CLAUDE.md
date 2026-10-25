@@ -229,6 +229,12 @@ run `mise install && hk install` once.
   findings remain, 76 of them missing length validators (mostly `reimbursements_*`), most others
   NOT NULL / FK / unique-index gaps needing data-aware backfill migrations. Two herb rules are
   disabled in `.herb.yml`.
+- **jscpd reads ERB markup since 5.4.2** (it runs the newest release past a 4-day cooldown, so
+  a release can turn CI red on a push that changed nothing). About six identical lines of
+  markup in two templates fail the gate. Extract a component or local partial; a deliberate
+  look-alike gets `<%# jscpd:ignore-start: <reason> %>` … `<%# jscpd:ignore-end %>` (an ERB
+  comment, so nothing renders). Email-builder markup and scaffold templates are excluded in
+  `.jscpd.json`.
 - **Secrets:** `gitleaks` scans the tree, with gitignored secret paths allowlisted in
   `.gitleaks.toml`. Real plaintext secrets still sit in `config/` (move them to production
   credentials). The hk step scans only the working tree; the CI `gitleaks git` job scans full
