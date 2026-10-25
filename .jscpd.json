@@ -14,6 +14,10 @@
     "**/db/structure.sql",
     "**/app/assets/builds/**",
     "**/bin/**",
-    "**/app/javascript/styles/swalCustomTheme.scss"
+    "**/app/javascript/styles/swalCustomTheme.scss",
+    "**/app/views/shared/mail/_header.html.erb",
+    "**/app/views/shared/mail/_footer.html.erb",
+    "**/lib/generators/**/templates/**",
+    "**/lib/templates/**"
   ]
 }
