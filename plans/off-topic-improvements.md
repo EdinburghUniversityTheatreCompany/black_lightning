@@ -258,6 +258,21 @@ year and cross-year reporting (Fringe 2026 against 2027) were planned and never 
 - **Tests mutate process-global ENV** and rely on `test_helper.rb` for the restore, and some
   row-count assertions break on any new fixture.
 
+### Unlinking an imported Paid claim leaves it Submitted
+
+The claims import files a settled claim as Paid with no payment date, and Reconcile or Link to
+claim settles it once its EUSA row arrives (`DatabaseStore#settleable?`). Unlinking that row runs
+`#revert_settlement!`, which always writes Submitted: a status the claim never had, so a claim
+EUSA paid reads as sent and awaiting payment. **Fix:** record the status a claim had before
+settling and restore it, so the undo reverses only what the link wrote. Found 2026-10-25.
+
+### Two reimbursements models still show in the permissions grid
+
+`Reimbursements::ActualAllocation` and `Reimbursements::NotificationLog` are missing from the
+exclusion list in `Admin::PermissionsController#set_models_and_roles`, so each shows as a row of
+checkboxes. No `can?` or `authorize!` names either (checked 2026-10-25), so ticking one does
+nothing. **Fix:** add both beside `Reimbursements::ClaimShare`.
+
 ### The em-dash sweep (only if Mick asks)
 
 About 71 user-facing prose sites in the reimbursements portal use an em dash, plus 6 bare `"—"`
