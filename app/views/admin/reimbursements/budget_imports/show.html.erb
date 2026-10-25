@@ -37,30 +37,11 @@
                   class: "text-primary underline", data: { turbo_frame: "_top" } %>.
     </p>
 
-    <div class="flex flex-col gap-4">
-      <%= render "shared/form/field", label: "Financial year", name: :year,
-            html_class: "sm:w-1/2" do %>
-        <%= select_tag :year,
-                       options_from_collection_for_select(selectable_financial_years, :key, :label,
-                                                          selected_financial_year&.key),
-                       class: input_classes %>
-      <% end %>
-
-      <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
-            html_class: "sm:w-1/2" do %>
-        <%= select_tag :cost_centre_id,
-                       options_from_collection_for_select(selectable_cost_centres, :id, :name,
-                                                          (chosen_cost_centre || current_user.reimbursements_cost_centre)&.id),
-                       include_blank: "Choose a cost centre…", class: input_classes %>
-      <% end %>
-
-      <%= render "shared/form/paste_or_upload",
-            text_name: :pasted_text, text_label: "Paste the sheet", text_value: params[:pasted_text],
-            rows: 12, placeholder: ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t"),
-            file_name: :file, file_label: "…or upload an .xlsx", file_accept: ".xlsx",
-            file_hint: "The first sheet's first row is read as the header. A file takes precedence " \
-                       "over pasted text." %>
-    </div>
+    <%= render Admin::Reimbursements::ImportSourceFieldsComponent.new(
+          financial_years: selectable_financial_years, financial_year: selected_financial_year,
+          cost_centres: selectable_cost_centres,
+          cost_centre: chosen_cost_centre || current_user.reimbursements_cost_centre,
+          pasted_text: params[:pasted_text], placeholder: ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t")) %>
   <% end %>
 <% end %>
 <% end %>
