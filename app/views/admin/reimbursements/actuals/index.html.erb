@@ -122,11 +122,11 @@
            link_to(edit_admin_reimbursements_expense_edit_path(actual.expense_id), class: "no-underline") do
              render(BadgeComponent.new(type: :primary, pill: true).with_content("Expense"))
            end
-         elsif actual.apportioned?
-           # Name the lines and shares: "Split" alone is only the state the row is in.
+         elsif actual.apportioned? || actual.shared?
+           # Name the lines or claims and their shares: "Split" alone is only the state the row is in.
            safe_join([
              render(BadgeComponent.new(type: :info, pill: true).with_content("Split")),
-             content_tag(:span, actual.allocation_summary,
+             content_tag(:span, actual.shared? ? actual.claim_share_summary : actual.allocation_summary,
                          class: "block text-xs text-gray-600")
            ], " ")
          elsif actual.budget_id?
@@ -152,8 +152,13 @@
                         class: btn_classes(:secondary, :sm)),
                 link_to("Create expense",
                         new_expense_admin_reimbursements_actual_path(actual.record_id, **filters),
-                        class: btn_classes(:secondary, :sm))
-              ], " ")
+                        class: btn_classes(:secondary, :sm)),
+                (if actual.shareable?
+                   link_to("Split across claims",
+                           share_claims_admin_reimbursements_actual_path(actual.record_id, **filters),
+                           class: btn_classes(:secondary, :sm))
+                 end)
+              ].compact, " ")
             elsif actual.apportionable?
               link_to("Split across budgets",
                       apportion_admin_reimbursements_actual_path(actual.record_id, **filters),
@@ -166,6 +171,12 @@
                         class: btn_classes(:secondary, :sm), form_class: "inline-block",
                         data: { turbo_confirm: "Undo this split? The row goes back to being an " \
                                                "unplaced credit and each budget loses its share." })
+            elsif actual.shared?
+              button_to("Remove split",
+                        remove_claim_shares_admin_reimbursements_actual_path(actual.record_id, **filters),
+                        class: btn_classes(:secondary, :sm), form_class: "inline-block",
+                        data: { turbo_confirm: "Undo this split? Its claims go back to Submitted " \
+                                               "and the row back to the unlinked list." })
             elsif actual.offset?
               # A wrong pair hides real spend from every rollup, so it must stay undoable.
               button_to("Not offsetting",

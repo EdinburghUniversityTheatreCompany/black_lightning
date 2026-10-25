@@ -34,6 +34,20 @@ module Reimbursements
         assert_nil row["Area"]
       end
 
+      test "a row that paid several claims names each claim and its share" do
+        budget = create_reimbursements_budget(name: "Props")
+        claims = [ [ 41, "29.85" ], [ 42, "14.84" ] ].map do |number, amount|
+          create_reimbursements_expense(auto_number: number, budget: budget, status: Status::SUBMITTED,
+                                        amount: BigDecimal(amount), amount_excl_vat: BigDecimal(amount), receipt: false)
+        end
+        payment = create_reimbursements_eusa_actual(debit: BigDecimal("44.69"), narrative: "BACS PAYMENT")
+        DatabaseStore.new.share_actual!(payment.id, claims.map { |c| { expense_id: c.id, amount: c.amount } })
+
+        row = csv_rows(DatabaseStore.new).find { |r| r["Description"] == "BACS PAYMENT" }
+
+        assert_equal "#41 £29.85; #42 £14.84", row["Linked expense"]
+      end
+
       test "a row attached to one budget whole still names just that budget" do
         @payout.update!(budget: @show_a)
 

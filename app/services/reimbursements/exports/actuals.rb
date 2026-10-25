@@ -30,7 +30,8 @@ module Reimbursements
           # A split row has no budget_id: name each share as the ledger page does
           # ("Show A £2,500.00; Show B £1,500.00").
           actual.apportioned? ? actual.allocation_summary : budget&.name,
-          expense&.auto_number,
+          # A row that paid several claims names each and its share ("#41 £29.85; #42 £14.84").
+          actual.shared? ? actual.claim_share_summary : expense&.auto_number,
           actual.period,
           actual.reconciliation_status.presence&.capitalize,
           cost_centre_name(actual.cost_centre_id),

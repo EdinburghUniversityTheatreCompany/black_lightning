@@ -1,0 +1,14 @@
+<%# locals: (note:) %>
+<%# The footer of both split screens (across budgets, across claims): Save stays disabled until the
+    parts add up (apportion-total), and the server refuses a short split anyway. ButtonComponent's
+    classes carry no disabled styling, so without these a disabled submit looks live. Local rather
+    than on BASE_CLASSES, which is every button. %>
+<div class="form-actions flex flex-wrap items-center gap-2">
+  <%= submit_tag "Save the split", disabled: true,
+        class: "#{btn_classes(:primary)} disabled:opacity-50 " \
+               "disabled:cursor-not-allowed disabled:hover:bg-white " \
+               "disabled:hover:text-primary",
+        data: { apportion_total_target: "submit" } %>
+  <%= link_to "Cancel", actuals_path_with_filters, class: btn_classes(:secondary) %>
+</div>
+<p class="mt-2 mb-0 text-sm text-gray-500"><%= note %></p>

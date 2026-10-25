@@ -8,10 +8,16 @@ module Admin
       before_action :set_convertible_actual, only: %i[new_expense create_expense
                                                       link_expense confirm_link]
       before_action :set_apportionable_actual, only: %i[apportion create_apportionment]
+      before_action :set_shareable_actual, only: %i[share_claims create_claim_shares]
       before_action :set_pairable_actual, only: %i[offset_pair confirm_offset]
 
       # Five covers a Stripe payout for a Fringe week's shows; the form's Stimulus controller adds more.
       DEFAULT_SHARE_ROWS = 5
+
+      SHARE_TITLE = "Split an EUSA debit across claims".freeze
+
+      # The claims EUSA combines into one payment are one payee's few, ranked first.
+      SHARE_CANDIDATE_LIMIT = 20
 
       # The list is sorted by closeness, so a claim past this was never the answer.
       LINK_CANDIDATE_LIMIT = 50
@@ -118,6 +124,12 @@ module Admin
           redirect_to actuals_path_with_filters, alert: "That claim no longer exists."
           return
         end
+        if part_payable?(expense, @actual)
+          store.add_part_payment!(@actual.record_id, expense.record_id)
+          redirect_to actuals_path_with_filters,
+                      notice: "Added to ##{expense.auto_number} as a further part of its payment."
+          return
+        end
         # Re-checked on the write: #link_candidates was a stale read.
         return refuse_settle(expense.status) unless link_offerable?(expense)
 
@@ -128,6 +140,8 @@ module Admin
       rescue ::Reimbursements::DatabaseStore::NotSettleableError => e
         # The claim changed between the check above and the store's locked re-read.
         refuse_settle(e.status)
+      rescue ::Reimbursements::DatabaseStore::PartRefusedError => e
+        redirect_to actuals_path_with_filters, alert: e.message
       end
 
       # Split one credit across several income budgets: a ledger row carries one budget_id, so a
@@ -176,6 +190,40 @@ module Admin
         redirect_to actuals_path_with_filters,
                     notice: "That row is an unlinked credit again, and is back on the " \
                             "unattributed list until it is placed."
+      end
+
+      # Divide one debit among the claims EUSA paid with it (it combines a payee's claims into one
+      # payment): each claim is settled to its share, which counts on that claim's budget.
+      def share_claims
+        @title = SHARE_TITLE
+        @candidates = share_candidates(@actual)
+        @typed = {}
+      end
+
+      def create_claim_shares
+        @candidates = share_candidates(@actual)
+        @typed = typed_claim_shares
+        shares, error = parse_claim_shares(@typed)
+        return render_share_error(error) if error
+
+        store.share_actual!(@actual.record_id, shares)
+        numbers = @candidates.select { |c| @typed.key?(c.record_id) }.map { |c| "##{c.auto_number}" }.sort_by { |n| n[1..].to_i }
+        redirect_to actuals_path_with_filters, notice: "Split across #{numbers.to_sentence}, which are now Paid."
+      rescue ::Reimbursements::DatabaseStore::ShareRefusedError => e
+        render_share_error(e.message)
+      end
+
+      # Undo a split across claims: they return to Submitted and the row to the unlinked list.
+      def remove_claim_shares
+        actual = find_or_404(:find_actual)
+        unless actual.shared?
+          redirect_to actuals_path_with_filters, alert: "That row is not split across claims."
+          return
+        end
+
+        store.unshare_actual!(actual.record_id)
+        redirect_to actuals_path_with_filters,
+                    notice: "That row is unlinked again, and its claims are back to Submitted."
       end
 
       # Pair this row with another as accrual and reversal by hand, for a pair the detector missed.
@@ -429,9 +477,68 @@ module Admin
       # can each have been paid outside a batch.
       def link_candidates(actual)
         store.expenses
-             .select { |expense| link_offerable?(expense) }
+             .select { |expense| link_offerable?(expense) || part_payable?(expense, actual) }
              .sort_by { |expense| link_candidate_rank(expense, actual) }
              .first(LINK_CANDIDATE_LIMIT)
+      end
+
+      # A claim other rows already settled that this one could add to (EUSA paid it in parts),
+      # without the parts coming to more than the claim (Reconciliation.part_fits?).
+      def part_payable?(expense, actual)
+        rows = paid_rows_by_expense[expense.id]
+        rows.present? && ::Reimbursements::Reconciliation.part_fits?(expense, rows, actual)
+      end
+
+      def paid_rows_by_expense
+        @paid_rows_by_expense ||= store.eusa_actuals.select(&:expense_id).group_by(&:expense_id)
+      end
+
+      # Claims this debit can be divided among: those Link to claim would settle, less international
+      # ones (EUSA pays those on their own), ranked as Link to claim ranks them.
+      def share_candidates(actual)
+        store.expenses
+             .select { |expense| link_offerable?(expense) && !expense.international? }
+             .sort_by { |expense| link_candidate_rank(expense, actual) }
+             .first(SHARE_CANDIDATE_LIMIT)
+      end
+
+      # { claim record id => typed amount }, blanks dropped: a claim takes a share by having one.
+      def typed_claim_shares
+        raw = params[:shares]
+        return {} unless raw.is_a?(ActionController::Parameters)
+
+        raw.keys.index_with { |id| raw[id].to_s }.reject { |_id, typed| typed.strip.empty? }
+      end
+
+      # [shares, nil] or [nil, the reason]: every amount readable, every claim one the page offered.
+      # The store checks the rest (two or more, adding up to the row) under its locks.
+      def parse_claim_shares(typed)
+        offered = @candidates.index_by(&:record_id)
+        if (typed.keys - offered.keys).any?
+          return [ nil, "One of those claims can no longer take a share. Reload the page and try again." ]
+        end
+
+        shares = typed.map { |id, text| { expense_id: offered[id].id, amount: ::Reimbursements::AmountParser.parse(text) } }
+        if shares.any? { |share| share[:amount].nil? || !share[:amount].positive? }
+          return [ nil, "Give each claim taking a share a readable amount, like 29.85 or £29.85." ]
+        end
+
+        [ shares, nil ]
+      end
+
+      def render_share_error(message)
+        @title = SHARE_TITLE
+        flash.now[:alert] = message
+        render :share_claims, status: :unprocessable_content
+      end
+
+      def set_shareable_actual
+        @actual = find_or_404(:find_actual)
+        return if @actual.shareable?
+
+        redirect_to actuals_path_with_filters,
+                    alert: "Only a debit nothing is linked to yet can be split across claims. " \
+                           "Unlink this row first if it is attached to the wrong thing."
       end
 
       # Draft and Rejected never: settling one marks paid something nobody agreed to pay. Paid only
@@ -445,7 +552,7 @@ module Admin
       end
 
       def linked_expense_ids
-        @linked_expense_ids ||= store.eusa_actuals.filter_map { |actual| actual.expense_id&.to_s }.to_set
+        @linked_expense_ids ||= store.reconciled_expense_ids
       end
 
       # +expense+ as it was before the link: a Paid one was only waiting for its row.

@@ -1,0 +1,67 @@
+<%= render "shared/back_link", text: "All actuals", path: actuals_path_with_filters %>
+
+<p class="mb-3 text-gray-600">
+  EUSA sometimes pays several of one payee's claims in a single payment. Type each claim's share
+  of this row: those claims are marked Paid on the row's date, and each share counts on its own
+  claim's budget. The shares have to add up to the row exactly.
+</p>
+
+<%= render "row_summary", actual: @actual, amount_label: "Amount",
+                          amount: reimbursements_money(@actual.debit) %>
+
+<% if @candidates.empty? %>
+  <%= render CardComponent.new(title: "Which claims did this pay?") do %>
+    <p class="mb-0 text-gray-600">
+      No claim here can take a share of this row: Paid claims are settled, drafts and rejected
+      claims are never offered, and EUSA pays international claims on their own.
+    </p>
+  <% end %>
+<% else %>
+  <%# form_with wraps the card, never the reverse: the footer is a component slot, so a form opened
+      inside the card renders its submit outside the <form>. %>
+  <%= form_with url: create_claim_shares_admin_reimbursements_actual_path(@actual.record_id, actual_filters),
+                method: :post,
+                data: { controller: "apportion-total",
+                        apportion_total_target_value: @actual.debit.to_s,
+                        apportion_total_currency_value: "£" } do %>
+    <%= render CardComponent.new(title: "Which claims did this pay?") do |card| %>
+      <p class="mb-3 text-sm text-gray-600">
+        A claim the row's narrative names or describes comes first. Leave a claim blank if this row
+        did not pay it.
+      </p>
+
+      <div class="space-y-1">
+        <% @candidates.each do |expense| %>
+          <% field_id = "claim_share_#{expense.record_id}" %>
+          <div class="flex flex-wrap items-center gap-3 rounded border border-gray-200 p-2">
+            <label for="<%= field_id %>" class="grow text-sm">
+              <span class="font-medium">#<%= expense.auto_number %></span>
+              <%= expense.effective_payee_name.presence || "(no payee)" %>,
+              claimed <span class="font-medium"><%= reimbursements_money(expense.amount_for_matching) %></span>
+              <span class="block text-gray-600">
+                <%= expense.budget&.display_name.presence || "(no budget)" %>
+                <%= "- #{expense.description}" if expense.description.present? %>
+              </span>
+            </label>
+            <%= text_field_tag "shares[#{expense.record_id}]", @typed[expense.record_id],
+                  id: field_id, inputmode: "decimal", autocomplete: "off",
+                  placeholder: expense.amount_for_matching&.to_s("F"),
+                  class: input_classes(width: "w-36"),
+                  data: { apportion_total_target: "amount",
+                          action: "input->apportion-total#recalculate" } %>
+          </div>
+        <% end %>
+      </div>
+
+      <p class="mt-3 mb-0 text-sm font-medium" data-apportion-total-target="summary" aria-live="polite">
+        <%= reimbursements_money(@actual.debit) %> left to allocate
+      </p>
+
+      <% card.with_footer do %>
+        <%= render "split_footer",
+                   note: "Nobody is emailed. Removing the split from the actuals list returns " \
+                         "these claims to Submitted." %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

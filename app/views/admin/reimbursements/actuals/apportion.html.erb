@@ -58,21 +58,9 @@
       </p>
 
       <% card.with_footer do %>
-        <div class="form-actions flex flex-wrap items-center gap-2">
-          <%# Disabled until the parts add up (the server refuses a short split anyway).
-              ButtonComponent's classes carry no disabled styling, so without these a disabled
-              submit looks live. Local rather than on BASE_CLASSES, which is every button. %>
-          <%= submit_tag "Save the split", disabled: true,
-                class: "#{btn_classes(:primary)} disabled:opacity-50 " \
-                       "disabled:cursor-not-allowed disabled:hover:bg-white " \
-                       "disabled:hover:text-primary",
-                data: { apportion_total_target: "submit" } %>
-          <%= link_to "Cancel", actuals_path_with_filters, class: btn_classes(:secondary) %>
-        </div>
-        <p class="mt-2 mb-0 text-sm text-gray-500">
-          Nobody is emailed. The row stays on the ledger and the split can be removed again from
-          the actuals list.
-        </p>
+        <%= render "split_footer",
+                   note: "Nobody is emailed. The row stays on the ledger and the split can be " \
+                         "removed again from the actuals list." %>
       <% end %>
     <% end %>
   <% end %>

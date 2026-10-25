@@ -787,12 +787,17 @@ module Reimbursements
     # Reconcile and #settle_from_matching_actual! both read it, so a save links exactly what an
     # import would.
     def matchable_expenses
-      reconciled = eusa_actuals.flat_map { |actual| [ actual.expense_id, *actual.claim_shares.map(&:expense_id) ] }
-                               .compact.to_set(&:to_s)
+      reconciled = reconciled_expense_ids
       expenses.select do |e|
         e.status.in?([ Status::SUBMITTED, Status::PAID ]) &&
           e.payment_confirmed_date.blank? && !reconciled.include?(e.record_id)
       end
+    end
+
+    # Record ids of the claims some ledger row pays: linked to one, or holding a share of one.
+    def reconciled_expense_ids
+      eusa_actuals.flat_map { |actual| [ actual.expense_id, *actual.claim_shares.map(&:expense_id) ] }
+                  .compact.to_set(&:to_s)
     end
 
     # Links a claim to the one unlinked ledger row Reconcile would have matched it to had it looked

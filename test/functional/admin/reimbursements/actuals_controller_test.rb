@@ -697,6 +697,135 @@ module Admin
       end
     end
 
+    # --- One row paying several claims (Split across claims) -----------------
+
+    def submitted_claim(auto_number, amount, **attrs)
+      create_reimbursements_expense(auto_number: auto_number, budget: @budget, status: ::Reimbursements::Status::SUBMITTED,
+                                    amount: BigDecimal(amount), amount_excl_vat: BigDecimal(amount), receipt: false,
+                                    **attrs)
+    end
+
+    test "share_claims offers claims to divide the row among, never an international or settled one" do
+      first = submitted_claim(90, "30.00")
+      international = submitted_claim(91, "12.00", payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+                                                   foreign_amount: BigDecimal("14"),
+                                                   foreign_currency: ::Reimbursements::Expense::CURRENCY_EUR)
+      settled = submitted_claim(92, "12.00", status: ::Reimbursements::Status::PAID,
+                                             payment_confirmed_date: Date.new(2026, 5, 1))
+      sign_in @user
+
+      get :share_claims, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert_select "input[name=?]", "shares[#{first.record_id}]"
+      assert_select "input[name=?]", "shares[#{international.record_id}]", count: 0
+      assert_select "input[name=?]", "shares[#{settled.record_id}]", count: 0
+    end
+
+    test "create_claim_shares settles each claim to its share" do
+      first = submitted_claim(90, "30.00")
+      second = submitted_claim(93, "12.00")
+      sign_in @user
+
+      post :create_claim_shares, params: { id: @unlinked.record_id,
+                                           shares: { first.record_id => "30.00", second.record_id => "£12" } }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_equal "Split across #90 and #93, which are now Paid.", flash[:notice]
+      assert_equal [ BigDecimal("30"), BigDecimal("12") ], @unlinked.reload.claim_shares.order(:amount).pluck(:amount).reverse
+      assert_equal ::Reimbursements::Status::PAID, first.reload.status
+    end
+
+    test "a split that does not add up to the row is refused with the reason, and nothing is written" do
+      first = submitted_claim(90, "30.00")
+      second = submitted_claim(93, "12.00")
+      sign_in @user
+
+      post :create_claim_shares, params: { id: @unlinked.record_id,
+                                           shares: { first.record_id => "30.00", second.record_id => "10.00" } }
+
+      assert_response :unprocessable_content
+      # A rendered page's flash reaches the browser as data for its alert script.
+      assert_includes response.body, "The shares come to £40.00, not the row"
+      assert_select "input[name=?][value=?]", "shares[#{second.record_id}]", "10.00"
+      assert_empty ::Reimbursements::ClaimShare.all
+    end
+
+    test "a share for a claim the page never offered, or an unreadable amount, is refused" do
+      first = submitted_claim(90, "30.00")
+      draft = submitted_claim(94, "12.00", status: ::Reimbursements::Status::DRAFT)
+      sign_in @user
+
+      post :create_claim_shares, params: { id: @unlinked.record_id,
+                                           shares: { first.record_id => "30.00", draft.record_id => "12.00" } }
+      assert_includes response.body, "can no longer take a share"
+
+      post :create_claim_shares, params: { id: @unlinked.record_id, shares: { first.record_id => "thirty" } }
+      assert_includes response.body, "a readable amount"
+      assert_empty ::Reimbursements::ClaimShare.all
+    end
+
+    test "remove_claim_shares returns the claims to Submitted and the row to the unlinked list" do
+      first = submitted_claim(90, "30.00")
+      second = submitted_claim(93, "12.00")
+      store = ::Reimbursements::DatabaseStore.new
+      store.share_actual!(@unlinked.id, [ { expense_id: first.id, amount: BigDecimal("30") },
+                                          { expense_id: second.id, amount: BigDecimal("12") } ])
+      sign_in @user
+
+      post :remove_claim_shares, params: { id: @unlinked.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_empty ::Reimbursements::ClaimShare.all
+      assert_equal ::Reimbursements::Status::SUBMITTED, first.reload.status
+    end
+
+    test "the ledger names a shared row's claims and offers its undo, not Link or Create" do
+      first = submitted_claim(90, "30.00")
+      second = submitted_claim(93, "12.00")
+      ::Reimbursements::DatabaseStore.new.share_actual!(@unlinked.id, [ { expense_id: first.id, amount: BigDecimal("30") },
+                                                                        { expense_id: second.id, amount: BigDecimal("12") } ])
+      sign_in @user
+
+      get :index, params: { state: "all" }
+
+      assert_select "main", text: /#90 £30\.00; #93 £12\.00/
+      assert_select "form[action^=?]", remove_claim_shares_admin_reimbursements_actual_path(@unlinked.record_id)
+      assert_select "a[href^=?]", link_expense_admin_reimbursements_actual_path(@unlinked.record_id), count: 0
+    end
+
+    # --- Several rows paying one claim (a further part via Link to claim) ----
+
+    test "Link to claim offers a claim another row paid in part, and adds this row as a further part" do
+      claim = submitted_claim(95, "76.18")
+      first_part = create_reimbursements_actual(nominal_code: "500000", narrative: "Part one",
+                                                debit: BigDecimal("34.18"), date: Date.new(2026, 6, 1))
+      ::Reimbursements::DatabaseStore.new.settle_expense_from_actual!(first_part.id, claim.id,
+                                                                      payment_date: first_part.date)
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+      assert_includes assigns(:candidates).map(&:auto_number), 95
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
+
+      assert_equal claim.id, @unlinked.reload.expense_id
+      assert_equal "Added to #95 as a further part of its payment.", flash[:notice]
+    end
+
+    test "Link to claim never offers a claim this row would pay more than its total" do
+      claim = submitted_claim(96, "42.00")
+      first_part = create_reimbursements_actual(nominal_code: "500000", narrative: "Full payment",
+                                                debit: BigDecimal("42.00"), date: Date.new(2026, 6, 1))
+      ::Reimbursements::DatabaseStore.new.settle_expense_from_actual!(first_part.id, claim.id,
+                                                                      payment_date: first_part.date)
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      assert_not_includes assigns(:candidates).map(&:auto_number), 96, "a second full payment is EUSA paying twice"
+    end
+
     # --- A Paid claim still waiting for its EUSA row (the claims import's) -----
     #
     # It has no payment date and no row until one is linked. Reconcile's pool already takes it, so

@@ -228,6 +228,10 @@ ChaosRails::Application.routes.draw do
           get :apportion
           post :create_apportionment
           post :remove_apportionment
+          # Divide one debit among several claims EUSA paid with it (a payee's claims combined).
+          get :share_claims
+          post :create_claim_shares
+          post :remove_claim_shares
         end
       end
 
