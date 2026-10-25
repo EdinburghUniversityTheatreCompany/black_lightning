@@ -30,6 +30,14 @@ module Admin
       def heading = single_line_named_after_area? ? "Its one budget" : "Budgets"
 
       def summary_for(line) = ::Reimbursements::SpendSummary.for_budget(line)
+
+      # Both tables' headings as [text, classes]: Name, finance's Nominal code, then the table's
+      # right-aligned money columns.
+      def head_columns(*money_columns)
+        columns = [ [ "Name", "px-3 py-2" ] ]
+        columns << [ "Nominal code", "px-3 py-2" ] if finance?
+        columns + money_columns.map { |text| [ text, "px-3 py-2 text-right" ] }
+      end
     end
   end
 end

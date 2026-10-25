@@ -15,12 +15,9 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Name</th>
-            <% if finance? %><th scope="col" class="px-3 py-2">Nominal code</th><% end %>
-            <th scope="col" class="px-3 py-2 text-right">Budget</th>
-            <th scope="col" class="px-3 py-2 text-right">Spent</th>
-            <th scope="col" class="px-3 py-2 text-right">Waiting</th>
-            <th scope="col" class="px-3 py-2 text-right">Left</th>
+            <% head_columns("Budget", "Spent", "Waiting", "Left").each do |text, classes| %>
+              <th scope="col" class="<%= classes %>"><%= text %></th>
+            <% end %>
             <% if finance? %><th scope="col" class="px-3 py-2"><span class="sr-only">Actions</span></th><% end %>
           </tr>
         </thead>
@@ -73,10 +70,9 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Name</th>
-            <% if finance? %><th scope="col" class="px-3 py-2">Nominal code</th><% end %>
-            <th scope="col" class="px-3 py-2 text-right">Expected</th>
-            <th scope="col" class="px-3 py-2 text-right">Received</th>
+            <% head_columns("Expected", "Received").each do |text, classes| %>
+              <th scope="col" class="<%= classes %>"><%= text %></th>
+            <% end %>
           </tr>
         </thead>
         <tbody>
