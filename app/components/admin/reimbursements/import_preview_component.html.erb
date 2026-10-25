@@ -1,0 +1,32 @@
+<%= render "shared/back_link", text: "Start again", path: back_path %>
+
+<% if alert.present? %>
+  <%= render AlertComponent.new(type: :danger) do %><%= alert %><% end %>
+<% end %>
+
+<%= render CardComponent.new(title: title) do %>
+  <p class="mb-4 text-sm text-gray-600">
+    Nothing has been written yet. Check the rows below, then confirm at the bottom.
+  </p>
+
+  <% if invalid_rows? %>
+    <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2">
+      <p class="font-medium text-red-800">
+        <%= pluralize(invalid_rows.size, "row") %> can't be <%= invalid_verb %>, so nothing can be imported yet.
+      </p>
+      <ul class="mt-2 list-disc pl-5 text-sm text-red-800">
+        <% invalid_rows.each do |row| %>
+          <li><%= row %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if errors.any? %>
+    <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+      <%= errors.to_sentence %>
+    </div>
+  <% end %>
+
+  <%= content %>
+<% end %>
