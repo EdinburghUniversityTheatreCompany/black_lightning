@@ -104,6 +104,8 @@ module Admin
         @offsetting_pairs = detect_pairs(new_entries)
         unpaired = entries_outside(new_entries, @offsetting_pairs)
         matched_debits, matched_credits, unmatched = build_matches(unpaired)
+        probable, unmatched = build_probable_matches(unmatched, matched_debits)
+        @probable_matches = probable.map(&:last)
         @matched_debits = matched_debits.map { |entry, expense| [ entry.row, expense ] }
         @matched_credits = matched_credits.map { |entry, budget| [ entry.row, budget ] }
         @unmatched_rows = unmatched.map(&:row)
@@ -119,15 +121,20 @@ module Admin
         @skipped_count = skipped_entries.size
 
         # An unticked pair's legs go back into ordinary matching.
-        ticked = ticked_offset_pair_keys
+        ticked = ticked_keys(:offset_pair_keys)
         pairs = detect_pairs(new_entries).select { |pair| ticked.include?(pair.key) }
         matched_debits, matched_credits, unmatched = build_matches(entries_outside(new_entries, pairs))
+        # A possible match settles only when ticked; the rest import unmatched, as before.
+        probable, unmatched = build_probable_matches(unmatched, matched_debits)
+        ticked_matches = ticked_keys(:probable_match_keys)
+        accepted, declined = probable.partition { |_entry, match| ticked_matches.include?(match.key) }
+        settled = matched_debits + accepted.map { |entry, match| [ entry, match.expense ] }
 
         imported_at = Time.current
         @offsets_linked = pairs.count { |pair| apply_offsetting_pair(new_entries, pair, imported_at) }
-        @expenses_paid = matched_debits.count { |entry, expense| apply_debit_row(entry, expense, imported_at) }
+        @expenses_paid = settled.count { |entry, expense| apply_debit_row(entry, expense, imported_at) }
         @credits_linked = matched_credits.count { |entry, budget| apply_credit_row(entry, budget, imported_at) }
-        @unmatched_saved = unmatched.count { |entry| apply_unmatched_row(entry, imported_at) }
+        @unmatched_saved = (unmatched + declined.map(&:first)).count { |entry| apply_unmatched_row(entry, imported_at) }
       end
 
       # The uploaded sheet as text, or nil when no file was picked. An unreadable file is reported on
@@ -195,10 +202,10 @@ module Admin
         )
       end
 
-      # The pair keys left ticked. Each proposed pair posts a blank hidden entry beside its checkbox, so
-      # an absent key means unticked, never "we didn't ask".
-      def ticked_offset_pair_keys
-        keys = params[:offset_pair_keys]
+      # The keys left ticked in one checkbox list (offsetting pairs, possible matches). Each list posts a
+      # blank hidden entry beside its checkboxes, so an absent key means unticked, never "we didn't ask".
+      def ticked_keys(param)
+        keys = params[param]
         return Set.new unless keys.is_a?(Array)
 
         keys.map(&:to_s).compact_blank.to_set
@@ -244,6 +251,33 @@ module Admin
         end
 
         [ matched_debits, matched_credits, unmatched ]
+      end
+
+      # Unmatched debits whose narrative names one claim at another amount, for a person to tick
+      # (Reconciliation.probable_debit_match). Returns [probable, still_unmatched]; a probable match is
+      # [entry, Reconciliation::ProbableMatch]. The pool is what exact matching left, so a claim another
+      # row paid is out of reach. A claim two rows point at is offered for neither: choosing between them
+      # is the guess this avoids. Byte-identical rows always point at one claim, so the key needs no
+      # occurrence number.
+      def build_probable_matches(unmatched, matched_debits)
+        claimed = matched_debits.map { |_entry, expense| expense.record_id }.to_set
+        pool = matchable_expenses.reject { |expense| claimed.include?(expense.record_id) }
+
+        proposals = unmatched.filter_map do |entry|
+          next unless entry.row.debit.positive?
+
+          expense, reasons = ::Reimbursements::Reconciliation.probable_debit_match(
+            entry.row, expenses_in(entry.cost_centre, pool)
+          )
+          next unless expense
+
+          [ entry, ::Reimbursements::Reconciliation::ProbableMatch.new(row: entry.row, expense: expense,
+                                                                         reasons: reasons) ]
+        end
+        shared = proposals.map { |_entry, match| match.expense.record_id }.tally.select { |_id, n| n > 1 }
+        proposals.reject! { |_entry, match| shared.key?(match.expense.record_id) }
+
+        [ proposals, unmatched.reject { |entry| proposals.any? { |offered, _| offered.equal?(entry) } } ]
       end
 
       # Every expense a debit may match, as a fresh array the caller consumes from (a matched expense is

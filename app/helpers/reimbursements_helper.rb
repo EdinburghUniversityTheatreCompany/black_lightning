@@ -60,6 +60,31 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # Why Reconcile offers a possible match, keyed by Reconciliation::ProbableMatch#reasons.
+  PROBABLE_MATCH_REASONS = { payee: "names the payee", description: "carries the description" }.freeze
+
+  def reimbursements_probable_reasons(match)
+    match.reasons.map { |reason| PROBABLE_MATCH_REASONS.fetch(reason) }.to_sentence.upcase_first
+  end
+
+  # How a possible match's EUSA figure differs from its claim: the operator ticks or leaves the row
+  # on this alone. A UK claim keeps its amount when settled, an international one takes EUSA's.
+  def reimbursements_probable_difference(match)
+    expense = match.expense
+    debit = match.row.debit
+    claimed = expense.amount_for_matching
+    text =
+      if claimed.nil?
+        "the claim has no amount yet"
+      elsif expense.amount && expense.amount > claimed &&
+            (debit - expense.amount).abs <= Reimbursements::Reconciliation::AMOUNT_TOLERANCE
+        "EUSA's figure is the claim's total including VAT"
+      else
+        "#{reimbursements_money((debit - claimed).abs)} #{debit < claimed ? 'less' : 'more'} than claimed"
+      end
+    expense.international? ? "#{text}; this international claim takes EUSA's figure" : text
+  end
+
   # The Left figure of a SpendSummary: unset, overspent or what is left.
   def reimbursements_spend_left(summary)
     return tag.span("no budget set", class: "text-gray-500") if summary.no_budget_set?

@@ -267,6 +267,29 @@ module Admin
         assert_text "Nobody is emailed"
       end
 
+      # The possible-match ticks must sit inside the Apply form, or a tick posts nothing and the row
+      # imports unmatched without a word.
+      test "a ticked possible match is settled when the reconciliation is applied" do
+        expense = seed_expense(status: "Submitted", receipt: false, amount: BigDecimal("50"),
+                               amount_excl_vat: BigDecimal("50"), submitted_to_eusa_date: Date.new(2026, 3, 10))
+
+        visit admin_reimbursements_reconciliation_path
+        fill_in "Actuals data (tab- or comma-separated, include the header row)",
+                with: "#{ACTUALS_HEADER}\n4000\tF40\tBACS001\t15/03/2026\t03\tPat Producer\t\t45.00\t\t45.00"
+        click_on "Parse and match"
+
+        assert_text "Possible matches (1)", wait: 5
+        assert_text "£5.00 less than claimed"
+        find("input[type=checkbox][name='probable_match_keys[]']").check
+        click_on "Apply reconciliation"
+        within(".swal2-popup") { click_on "Yes" }
+
+        assert_text "Reconciliation complete", wait: 5
+        expense.reload
+        assert_equal ::Reimbursements::Status::PAID, expense.status
+        assert_equal BigDecimal("50"), expense.amount
+      end
+
       # Identical offsetting pairs need distinct DOM ids, or the second row's label
       # activates the first checkbox and unticking one unticks both.
       test "unticking one of two identical offsetting pairs leaves the other ticked" do

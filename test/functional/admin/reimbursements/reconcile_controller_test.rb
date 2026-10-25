@@ -399,6 +399,97 @@ module Admin
       assert_select "a[data-turbo-frame='_top']"
     end
 
+    # --- Possible matches: the amount differs, the narrative names the claim --
+
+    def probable_key(text, expense)
+      row = ::Reimbursements::Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{text}").sole
+      ::Reimbursements::Reconciliation::ProbableMatch.new(row: row, expense: expense, reasons: []).key
+    end
+
+    test "preview offers a debit of another amount for the claim it names, unticked, with the difference" do
+      sign_in @user
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(debit: '118.45')}" }
+
+      assert_response :success
+      assert_empty assigns(:matched_debits)
+      assert_empty assigns(:unmatched_rows), "a possible match is listed once, not also as unmatched"
+      match = assigns(:probable_matches).sole
+      assert_equal @expense.record_id, match.expense.record_id
+      assert_select "input[type=checkbox][name='probable_match_keys[]'][value=?]", match.key
+      assert_select "input[type=checkbox][name='probable_match_keys[]'][checked]", count: 0
+      assert_includes response.body, "£5.00 less"
+    end
+
+    test "preview says when EUSA's figure is the claim's total including VAT" do
+      @expense.update!(amount: BigDecimal("148.14"))
+      sign_in @user
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(debit: '148.14')}" }
+
+      assert_equal @expense.record_id, assigns(:probable_matches).sole.expense.record_id
+      assert_select "td", text: "EUSA's figure is the claim's total including VAT"
+    end
+
+    test "apply settles a ticked possible match and keeps the amount the producer claimed" do
+      row = debit_row(debit: "118.45")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{row}",
+                             probable_match_keys: [ "", probable_key(row, @expense) ] }
+
+      assert_response :success
+      assert_equal @expense.id, ::Reimbursements::EusaActual.sole.expense_id
+      @expense.reload
+      assert_equal ::Reimbursements::Status::PAID, @expense.status
+      assert_equal BigDecimal("123.45"), @expense.amount, "a UK claim keeps what the producer spent"
+      assert_equal 1, assigns(:expenses_paid)
+      assert_equal 0, assigns(:unmatched_saved)
+    end
+
+    test "apply imports an unticked possible match unmatched and pays nothing" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(debit: '118.45')}",
+                             probable_match_keys: [ "" ] }
+
+      assert_nil ::Reimbursements::EusaActual.sole.expense_id
+      assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
+      assert_equal 1, assigns(:unmatched_saved)
+    end
+
+    # The key carries the claim: a tick made against one claim never settles another.
+    test "apply ignores a ticked key whose claim the re-parse no longer offers" do
+      row = debit_row(debit: "118.45")
+      other = create_reimbursements_expense(person: @person, budget: @budget,
+                                            status: ::Reimbursements::Status::SUBMITTED, receipt: false)
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{row}",
+                             probable_match_keys: [ "", probable_key(row, other) ] }
+
+      assert_nil ::Reimbursements::EusaActual.sole.expense_id
+      assert_equal ::Reimbursements::Status::SUBMITTED, other.reload.status
+    end
+
+    test "a claim two rows point at is offered for neither" do
+      sign_in @user
+      rows = [ debit_row(debit: "118.45"), debit_row(debit: "110.00") ].join("\n")
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{rows}" }
+
+      assert_empty assigns(:probable_matches)
+      assert_equal 2, assigns(:unmatched_rows).size
+    end
+
+    test "a claim another row matched exactly is not offered again" do
+      sign_in @user
+      rows = [ debit_row, debit_row(debit: "110.00") ].join("\n")
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{rows}" }
+
+      assert_equal 1, assigns(:matched_debits).size
+      assert_empty assigns(:probable_matches)
+    end
+
     test "an already-reconciled expense is not re-matched by a later paste" do
       # @expense was paid in an earlier period and linked to an actual. A later export carries a
       # near-identical row (different narrative) that dedup does not skip; the re-pay guard must.
