@@ -11,9 +11,7 @@
   <%= csrf_meta_tags %>
   <%= yield :head %>
 
-  <% if Rails.env.test? %>
-    <style>*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }</style>
-  <% end %>
+  <%= render "layouts/test_animations_off" %>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>

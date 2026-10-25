@@ -1,0 +1,6 @@
+<%# In tests, animations end at once: a SweetAlert dialog still scaling in moves its buttons between
+    Capybara finding "Yes" and clicking it, so the click misses and the dialog stays open. Every
+    layout that loads SweetAlert (admin, application, login) renders this. %>
+<% if Rails.env.test? %>
+  <style>*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }</style>
+<% end %>

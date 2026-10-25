@@ -1570,6 +1570,9 @@ Start the test database using `docker start /mysql8` before running any tests.
 - **A system test can never see a hover colour**: Tailwind v4 wraps `hover:` and `group-hover:` in
   `@media (hover: hover)`, which headless Chrome reports false. Assert the classes in a request
   test.
+- **Every layout that loads SweetAlert renders `layouts/test_animations_off`**, so animations end
+  at once in tests. Without it a dialog still scaling in moves its buttons and a "Yes" click
+  misses about one run in four, as on the public layout until 2026-10-25.
 - **The test env turns forgery protection off, so pages render no CSRF token.** A CSRF test sets
   `ActionController::Base.allow_forgery_protection = true` in setup, before any visit, and
   restores it in teardown. Warden's `login_as` voids no token; to make an open page stale, sign in
