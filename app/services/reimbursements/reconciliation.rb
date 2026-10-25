@@ -172,6 +172,17 @@ module Reimbursements
       candidates.first if candidates.one?
     end
 
+    # Whether +row+ can join +paid_rows+ as a further part of +expense+'s payment (EUSA paid the
+    # claim in instalments): a UK claim already Paid by at least one row, with the parts together
+    # no more than its total, a penny of rounding per part. A second full payment is EUSA paying
+    # twice, and must stay on the ledger to be seen.
+    def part_fits?(expense, paid_rows, row)
+      return false if expense.international? || expense.status != Status::PAID
+      return false if paid_rows.empty? || expense.amount.nil?
+
+      EusaActual.net(paid_rows) + row.debit <= expense.amount + (AMOUNT_TOLERANCE * (paid_rows.size + 1))
+    end
+
     # Word by word, because the ledger abbreviates and reorders ("SMITH A"), and only words of 3+
     # characters, so an initial cannot match half the ledger. +row+ is a parsed row or an EusaActual.
     def payee_named?(expense, row)

@@ -83,6 +83,11 @@ module Reimbursements
                            foreign_key: :eusa_actual_id, inverse_of: :eusa_actual,
                            dependent: :destroy
 
+    # Each claim's share of this row, when it paid several (EUSA combined a payee's claims); only
+    # ever on a debit with no claim of its own (see #shareable?).
+    has_many :claim_shares, class_name: "Reimbursements::ClaimShare",
+                            inverse_of: :eusa_actual, dependent: :destroy
+
     # Every write path normalises, so the ledger cannot gain a second spelling of a month. The
     # parser does too, so a paste's dedup key matches what is stored. Reconciliation.normalise_period
     # is the one definition.
@@ -104,9 +109,25 @@ module Reimbursements
       reconciliation_status == STATUS_OFFSET
     end
 
-    # An unlinked debit. An offsetting leg nets to zero, so converting it would invent spend.
+    # An unlinked debit. An offsetting leg nets to zero, so converting it would invent spend, and a
+    # shared row's spend already sits on its claims.
     def convertible_to_expense?
-      debit.present? && debit.positive? && expense_id.blank? && !offset?
+      debit.present? && debit.positive? && expense_id.blank? && !offset? && !shared?
+    end
+
+    def shared? = claim_shares.any?
+
+    # A debit nothing has placed yet, so its spend can be divided among several claims.
+    def shareable?
+      debit.present? && debit.positive? && needs_attention?
+    end
+
+    # "#41 £29.85; #42 £14.84", in claim order; blank when not shared. On the model so the ledger
+    # and the CSV print the same string.
+    def claim_share_summary
+      claim_shares.sort_by { |share| share.expense.auto_number.to_i }
+                  .map { |share| "##{share.expense.auto_number} #{ActiveSupport::NumberHelper.number_to_currency(share.amount, unit: '£')}" }
+                  .join("; ")
     end
 
     # An unattached credit that is not an offsetting leg (splitting one would invent income).
@@ -119,11 +140,11 @@ module Reimbursements
 
     def apportioned? = allocations.any?
 
-    # Attached to no claim or budget, not an offsetting leg, not split. The ONE definition: the
-    # ledger's default filter and DatabaseStore#unattributed_actuals both read it, or a row the
-    # ledger hid but the overview counted would be money with no screen to resolve it on.
+    # Attached to no claim or budget, not an offsetting leg, not split or shared. The ONE
+    # definition: the ledger's default filter and DatabaseStore#unattributed_actuals both read it,
+    # or a row the ledger hid but the overview counted would be money with no screen to resolve it on.
     def needs_attention?
-      !offset? && expense_id.blank? && budget_id.blank? && !apportioned?
+      !offset? && expense_id.blank? && budget_id.blank? && !apportioned? && !shared?
     end
 
     # #needs_attention? plus a figure. Only unfinished rows: offsetting a row linked to a claim

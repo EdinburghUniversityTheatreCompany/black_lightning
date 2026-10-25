@@ -42,6 +42,11 @@ module Reimbursements
       end
     end
 
+    # A row shared across claims (#share_actual!) or a further part of one (#add_part_payment!)
+    # was refused; the message is the operator's reason, worded for the screen.
+    class ShareRefusedError < StandardError; end
+    class PartRefusedError < StandardError; end
+
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
@@ -191,7 +196,7 @@ module Reimbursements
     def budgets_with_actuals
       @budgets_with_actuals ||= scoped(
         Budget.includes(:forecasts, :own_owners, :eusa_actuals, :actual_allocations,
-                        area: :owners, expenses: :eusa_actuals).to_a
+                        area: :owners, expenses: %i[eusa_actuals claim_share]).to_a
       )
     end
 
@@ -651,7 +656,7 @@ module Reimbursements
     # --- EUSA Actuals (reconciliation) ------------------------------------
 
     def eusa_actuals
-      @eusa_actuals ||= EusaActual.includes(:expense, :budget, allocations: :budget).to_a
+      @eusa_actuals ||= EusaActual.includes(:expense, :budget, allocations: :budget, claim_shares: :expense).to_a
     end
 
     # The selected centre's ledger rows, for the Actuals browser and its CSV. +eusa_actuals+
@@ -671,7 +676,7 @@ module Reimbursements
     end
 
     def find_actual(record_id)
-      EusaActual.includes(:expense, :budget, allocations: :budget).find_by(id: record_id)
+      EusaActual.includes(:expense, :budget, allocations: :budget, claim_shares: :expense).find_by(id: record_id)
     end
 
     # Stamped with the year the row's own date falls in: EUSA's March rows arrive after the
@@ -713,12 +718,77 @@ module Reimbursements
       settled
     end
 
+    # Settles several claims from one debit that paid them together (EUSA combines a payee's
+    # claims into one payment), each to its share, as one unit. The row takes no claim of its own:
+    # the shares are the only answer to whose spend it is. Re-checked under locks, as the screen's
+    # read goes stale: the row must still need attention, two or more settleable UK claims (an
+    # international claim is a payment of its own) must take shares adding up to the row's debit
+    # exactly. Nothing is written otherwise; the message says why.
+    def share_actual!(actual_id, shares)
+      EusaActual.transaction do
+        row = EusaActual.lock.find(actual_id)
+        raise ShareRefusedError, "That row is already placed, so it can't be shared." unless row.shareable?
+        raise ShareRefusedError, "Give two or more claims a share: one claim is a plain link." if shares.size < 2
+
+        total = shares.sum { |share| share[:amount] }
+        unless total == row.debit
+          raise ShareRefusedError, "The shares come to #{money(total)}, not the row's #{money(row.debit)}."
+        end
+
+        shares.each do |share|
+          expense = Expense.lock.find(share[:expense_id])
+          if (reason = share_refusal(expense, row))
+            raise ShareRefusedError, "##{expense.auto_number} can't take a share: it #{reason}."
+          end
+
+          ClaimShare.create!(eusa_actual: row, expense: expense, amount: share[:amount])
+          update_expense!(expense.record_id, status: Status::PAID, payment_confirmed_date: row.date)
+        end
+      end
+      bust_eusa_actuals!
+      bust_budgets!
+    end
+
+    # The way back out of a share: the shares go, each claim returns to Submitted with no payment
+    # date (as #unlink_actual_from_expense! returns one), and the row needs attention again.
+    def unshare_actual!(actual_id)
+      EusaActual.transaction do
+        row = EusaActual.lock.find(actual_id)
+        row.claim_shares.includes(:expense).each do |share|
+          share.destroy!
+          revert_settlement!(share.expense)
+        end
+      end
+      bust_eusa_actuals!
+      bust_budgets!
+    end
+
+    # Links a further debit to a claim another row already settled (EUSA paid it in parts). The
+    # claim does not move; its budget's EUSA actual sums every part. Refused under locks when the
+    # parts would come to more than the claim (Reconciliation.part_fits?), so EUSA paying twice
+    # stays on the ledger to be seen.
+    def add_part_payment!(actual_id, expense_id)
+      EusaActual.transaction do
+        row = EusaActual.lock.find(actual_id)
+        expense = Expense.lock.find(expense_id)
+        if (reason = part_refusal(expense, row))
+          raise PartRefusedError, reason
+        end
+
+        row.update!(expense_id: expense.id)
+      end
+      bust_eusa_actuals!
+      bust_budgets!
+    end
+
     # Every expense a debit may settle, as a fresh array the caller may consume from: Submitted or
-    # Paid, and neither linked to an imported actual nor payment-confirmed. Dedup only catches an
-    # identical row, so a near-duplicate would otherwise pay a claim twice. Reconcile and
-    # #settle_from_matching_actual! both read it, so a save links exactly what an import would.
+    # Paid, and neither linked to an imported actual, given a share of one, nor payment-confirmed.
+    # Dedup only catches an identical row, so a near-duplicate would otherwise pay a claim twice.
+    # Reconcile and #settle_from_matching_actual! both read it, so a save links exactly what an
+    # import would.
     def matchable_expenses
-      reconciled = eusa_actuals.filter_map { |actual| actual.expense_id&.to_s }.to_set
+      reconciled = eusa_actuals.flat_map { |actual| [ actual.expense_id, *actual.claim_shares.map(&:expense_id) ] }
+                               .compact.to_set(&:to_s)
       expenses.select do |e|
         e.status.in?([ Status::SUBMITTED, Status::PAID ]) &&
           e.payment_confirmed_date.blank? && !reconciled.include?(e.record_id)
@@ -856,18 +926,16 @@ module Reimbursements
     # The way back out of a wrong match to a claim, undoing the settlement as well as the link in
     # one transaction. #settle_expense_from_actual! wrote Paid + payment_confirmed_date, so
     # clearing the link alone would leave a Paid claim with no ledger row behind it. A claim this
-    # row settled goes back to Submitted, the status it held on reaching the ledger; one that is
-    # not Paid was only linked, so only the link goes. An international claim keeps the corrected
-    # amount: the estimate it overwrote is recorded nowhere, so it cannot be restored.
+    # row settled goes back to Submitted (#revert_settlement!); one that is not Paid was only
+    # linked, so only the link goes, and so does one another row still pays (a part payment).
     def unlink_actual_from_expense!(actual_id)
       actual = EusaActual.transaction do
         row = EusaActual.lock.find(actual_id)
         expense = row.expense_id && Expense.lock.find_by(id: row.expense_id)
         raise ClaimFromRowError if expense&.expense_type == Expense::TYPE_FROM_EUSA
 
-        if expense&.status == Status::PAID
-          update_expense!(expense.record_id, status: Status::SUBMITTED, payment_confirmed_date: nil)
-        end
+        other_parts = expense && EusaActual.where(expense_id: expense.id).where.not(id: row.id).exists?
+        revert_settlement!(expense) unless other_parts
         row.update!(expense_id: nil)
         row
       end
@@ -1003,9 +1071,44 @@ module Reimbursements
       nil
     end
 
+    # Why +expense+ cannot take a share of +row+ (completing "it …"), or nil when it can.
+    def share_refusal(expense, row)
+      return "is international, and EUSA pays those on their own" if expense.international?
+      return if settleable?(expense, row.id)
+
+      expense.status == Status::PAID ? "is already settled" : "is #{expense.status}"
+    end
+
+    # Why +row+ cannot be a further part of +expense+'s payment, or nil when it can.
+    def part_refusal(expense, row)
+      return "That row is already placed." unless row.needs_attention? && row.debit.to_d.positive?
+
+      paid = EusaActual.where(expense_id: expense.id).to_a
+      return if Reconciliation.part_fits?(expense, paid, row)
+
+      if paid.empty? || expense.status != Status::PAID
+        "##{expense.auto_number} has no payment yet, so link this row to it as its payment."
+      else
+        "With this row ##{expense.auto_number} would be paid more than its #{money(expense.amount)}, " \
+          "so EUSA may have paid it twice."
+      end
+    end
+
+    # Undoes what settling wrote: a Paid claim returns to Submitted, the status it held on reaching
+    # the ledger. An international claim keeps a corrected amount: the estimate is recorded nowhere.
+    def revert_settlement!(expense)
+      return unless expense&.status == Status::PAID
+
+      update_expense!(expense.record_id, status: Status::SUBMITTED, payment_confirmed_date: nil)
+    end
+
+    def money(amount) = ActiveSupport::NumberHelper.number_to_currency(amount, unit: "£")
+
     # Draft and Rejected never. Paid only while no payment date or other ledger row settles it: an
     # imported Paid claim with neither is still waiting for its EUSA row, and Reconcile matches it.
+    # A claim with a share of a row is settled, whatever its status.
     def settleable?(expense, actual_id)
+      return false if ClaimShare.exists?(expense_id: expense.id)
       return false if [ Status::DRAFT, Status::REJECTED ].include?(expense.status)
       return true unless expense.status == Status::PAID
 

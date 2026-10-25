@@ -81,7 +81,7 @@ class Admin::PermissionsController < AdminController
                   Reimbursements::Person, Reimbursements::PaymentDetails, Reimbursements::Budget,
                   Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::BudgetUpdate,
                   Reimbursements::Area, Reimbursements::AreaOwner,
-                  Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual,
+                  Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual, Reimbursements::ClaimShare,
                   Reimbursements::FinancialYear, Reimbursements::CostCentre, Reimbursements::NominalCode,
                   Climate::Sensor, Climate::Reading, EventOccurrence ]).uniq.sort_by(&:name)
 

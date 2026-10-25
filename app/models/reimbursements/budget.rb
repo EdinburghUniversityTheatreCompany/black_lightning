@@ -289,11 +289,14 @@ module Reimbursements
     # Debits less credits on the actuals of this line's expenses. Both branches
     # net through EusaActual.net (which drops offsetting legs), so preloaded and
     # fresh reads agree.
+    # Each claim's own rows plus its share of a row that paid several claims together; a claim has
+    # one or the other (DatabaseStore#share_actual!), so the sets never overlap.
     def debit_actual_total
-      if expenses.loaded? && expenses.all? { |e| e.association(:eusa_actuals).loaded? }
-        expenses.sum { |e| EusaActual.net(e.eusa_actuals) }
+      if expenses.loaded? && expenses.all? { |e| e.association(:eusa_actuals).loaded? && e.association(:claim_share).loaded? }
+        expenses.sum { |e| EusaActual.net(e.eusa_actuals) + (e.claim_share&.amount || 0) }
       else
-        EusaActual.net(EusaActual.where(expense_id: expenses.map(&:id)).to_a)
+        ids = expenses.map(&:id)
+        EusaActual.net(EusaActual.where(expense_id: ids).to_a) + ClaimShare.where(expense_id: ids).sum(:amount)
       end
     end
   end

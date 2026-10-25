@@ -114,6 +114,11 @@ module Reimbursements
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual",
                             dependent: :nullify, inverse_of: :expense
 
+    # This claim's part of a row that paid several claims together (DatabaseStore#share_actual!).
+    # A claim settles from its own rows or from one share, never both.
+    has_one :claim_share, class_name: "Reimbursements::ClaimShare",
+                          dependent: :restrict_with_exception, inverse_of: :expense
+
     # No cost-centre column: the budget decides which pot pays. nil means
     # "unplaced", never a centre of its own.
     def cost_centre
