@@ -30,5 +30,7 @@ module Reimbursements
     belongs_to :expense, class_name: "Reimbursements::Expense", inverse_of: :claim_share
 
     validates :amount, numericality: { greater_than: 0 }
+    # One share per claim, or its spend would count twice; the unique index is the backstop.
+    validates :expense_id, uniqueness: true
   end
 end
