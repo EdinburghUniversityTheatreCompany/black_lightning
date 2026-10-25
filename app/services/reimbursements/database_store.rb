@@ -712,6 +712,7 @@ module Reimbursements
         link_actual_to_expense!(actual_id, expense_id)
         attrs = { status: Status::PAID, payment_confirmed_date: payment_date }
         attrs[:amount] = gbp_charged if gbp_charged && expense.international?
+        attrs[:amount_excl_vat] = expense.amount if Reconciliation.vat_not_reclaimed?(expense, gbp_charged)
         update_expense!(expense_id, attrs)
       end
       bust_eusa_actuals!
@@ -742,7 +743,9 @@ module Reimbursements
           end
 
           ClaimShare.create!(eusa_actual: row, expense: expense, amount: share[:amount])
-          update_expense!(expense.record_id, status: Status::PAID, payment_confirmed_date: row.date)
+          attrs = { status: Status::PAID, payment_confirmed_date: row.date }
+          attrs[:amount_excl_vat] = expense.amount if Reconciliation.vat_not_reclaimed?(expense, share[:amount])
+          update_expense!(expense.record_id, attrs)
         end
       end
       bust_eusa_actuals!

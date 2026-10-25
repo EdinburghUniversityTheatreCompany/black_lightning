@@ -223,6 +223,17 @@ module Reimbursements
     end
     private_class_method :group_candidate?, :adding_up
 
+    # Whether EUSA paid a UK claim its total including VAT. It does so only when it has not
+    # reclaimed the VAT, so the claim's budget spent the total and its ex-VAT figure, which every
+    # budget total reads, must become that total. Never a reason to match: such a row is only
+    # offered (probable_debit_match), and linking it is a person's call.
+    def vat_not_reclaimed?(expense, charged)
+      return false if expense.international? || charged.nil? || expense.amount.nil?
+
+      excl = expense.amount_excl_vat
+      excl.present? && excl.nonzero? && excl < expense.amount && (charged - expense.amount).abs <= AMOUNT_TOLERANCE
+    end
+
     # Whether +row+ can join +paid_rows+ as a further part of +expense+'s payment (EUSA paid the
     # claim in instalments): a UK claim already Paid by at least one row, with the parts together
     # no more than its total, a penny of rounding per part. A second full payment is EUSA paying

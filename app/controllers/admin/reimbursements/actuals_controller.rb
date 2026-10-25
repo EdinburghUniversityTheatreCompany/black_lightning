@@ -207,8 +207,7 @@ module Admin
         return render_share_error(error) if error
 
         store.share_actual!(@actual.record_id, shares)
-        numbers = @candidates.select { |c| @typed.key?(c.record_id) }.map { |c| "##{c.auto_number}" }.sort_by { |n| n[1..].to_i }
-        redirect_to actuals_path_with_filters, notice: "Split across #{numbers.to_sentence}, which are now Paid."
+        redirect_to actuals_path_with_filters, notice: shared_notice(shares)
       rescue ::Reimbursements::DatabaseStore::ShareRefusedError => e
         render_share_error(e.message)
       end
@@ -526,6 +525,18 @@ module Admin
         [ shares, nil ]
       end
 
+      # Names the claims, and any whose share was its total including VAT (that VAT now counts as spent).
+      def shared_notice(shares)
+        by_id = @candidates.index_by(&:id)
+        claims = shares.map { |share| by_id[share[:expense_id]] }.sort_by { |claim| claim.auto_number.to_i }
+        notice = "Split across #{claims.map { |c| "##{c.auto_number}" }.to_sentence}, which are now Paid."
+        in_full = shares.select { |share| ::Reimbursements::Reconciliation.vat_not_reclaimed?(by_id[share[:expense_id]], share[:amount]) }
+                        .map { |share| "##{by_id[share[:expense_id]].auto_number}" }
+        return notice if in_full.empty?
+
+        "#{notice} EUSA paid #{in_full.to_sentence} in full including VAT, so that VAT now counts as spent."
+      end
+
       def render_share_error(message)
         @title = SHARE_TITLE
         flash.now[:alert] = message
@@ -558,8 +569,11 @@ module Admin
       # +expense+ as it was before the link: a Paid one was only waiting for its row.
       def linked_notice(expense)
         outcome = expense.status == ::Reimbursements::Status::PAID ? "was already Paid and now has its EUSA row" : "is now Paid"
-        "Linked to ##{expense.auto_number}, which #{outcome}" \
-          "#{' with the amount corrected to what EUSA charged' if expense.international?}."
+        notice = "Linked to ##{expense.auto_number}, which #{outcome}" \
+                 "#{' with the amount corrected to what EUSA charged' if expense.international?}."
+        return notice unless ::Reimbursements::Reconciliation.vat_not_reclaimed?(expense, @actual.debit)
+
+        "#{notice} EUSA paid its total including VAT, so the VAT now counts as spent."
       end
 
       def refuse_settle(status)

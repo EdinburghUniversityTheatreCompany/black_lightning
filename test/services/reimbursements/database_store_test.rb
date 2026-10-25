@@ -1074,6 +1074,47 @@ module Reimbursements
       assert_equal Status::PAID, settled.status
     end
 
+    # EUSA does not reclaim the VAT on a claim it pays in full, so the claim's budget spent the
+    # total: its ex-VAT figure, which every budget total reads, must become the total.
+    test "settling a UK claim at its total including VAT counts the VAT as spent" do
+      expense, actual = settle_setup(international: false, amount: BigDecimal("236.10"))
+      expense.update!(amount_excl_vat: BigDecimal("196.75"))
+
+      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                        payment_date: Date.new(2026, 5, 20), gbp_charged: BigDecimal("236.10"))
+
+      settled = expense.reload
+      assert_equal BigDecimal("236.10"), settled.amount_excl_vat
+      assert_equal BigDecimal("236.10"), settled.amount
+    end
+
+    test "settling at the ex-VAT figure or any other amount leaves the VAT alone" do
+      [ "196.75", "200.00" ].each do |charged|
+        expense, actual = settle_setup(international: false, amount: BigDecimal("236.10"))
+        expense.update!(amount_excl_vat: BigDecimal("196.75"))
+
+        store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                          payment_date: Date.new(2026, 5, 20), gbp_charged: BigDecimal(charged))
+
+        assert_equal BigDecimal("196.75"), expense.reload.amount_excl_vat, charged
+      end
+    end
+
+    test "a share of a combined row at a claim's total including VAT counts that VAT as spent" do
+      budget = Budget.create!(name: "Props", nominal_code: "432980")
+      with_vat = Expense.create!(budget: budget, status: Status::SUBMITTED, amount: BigDecimal("12.00"),
+                                 amount_excl_vat: BigDecimal("10.00"), description: "Glitter")
+      plain = Expense.create!(budget: budget, status: Status::SUBMITTED, amount: BigDecimal("30.00"),
+                              amount_excl_vat: BigDecimal("30.00"), description: "Fake blood")
+      row = EusaActual.create!(nominal_code: "432980", narrative: "BACS", debit: BigDecimal("42.00"),
+                               date: Date.new(2026, 7, 29))
+
+      store.share_actual!(row.id, [ { expense_id: with_vat.id, amount: BigDecimal("12.00") },
+                                    { expense_id: plain.id, amount: BigDecimal("30.00") } ])
+
+      assert_equal BigDecimal("12.00"), with_vat.reload.amount_excl_vat
+    end
+
     # Both callers filter first; this is the refusal for the next one that forgets.
     test "settling refuses a claim nobody agreed to pay or one already settled, and writes nothing" do
       other_row = EusaActual.create!(nominal_code: "432540", narrative: "Earlier run",

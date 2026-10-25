@@ -445,13 +445,24 @@ module Admin
       assert_includes response.body, "£5.00 less"
     end
 
-    test "preview says when EUSA's figure is the claim's total including VAT" do
+    test "preview says when EUSA paid the claim's total including VAT" do
       @expense.update!(amount: BigDecimal("148.14"))
       sign_in @user
       post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(debit: '148.14')}" }
 
       assert_equal @expense.record_id, assigns(:probable_matches).sole.expense.record_id
-      assert_select "td", text: "EUSA's figure is the claim's total including VAT"
+      assert_select "td", text: "EUSA paid the total including VAT, so ticking it counts the VAT as spent"
+    end
+
+    test "apply of a ticked match at the total including VAT counts the VAT as spent" do
+      @expense.update!(amount: BigDecimal("148.14"))
+      row = debit_row(debit: "148.14")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{row}",
+                             probable_match_keys: [ "", probable_key(row, @expense) ] }
+
+      assert_equal BigDecimal("148.14"), @expense.reload.amount_excl_vat
     end
 
     test "apply settles a ticked possible match and keeps the amount the producer claimed" do

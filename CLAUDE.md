@@ -1159,6 +1159,10 @@ form per international claim, all on the same draft.
   never overwritten**: it is what the producer spent. It re-reads the claim under a row lock and
   raises `NotSettleableError` for Draft, Rejected, or a Paid claim a payment date or another ledger
   row already settled.
+  - **EUSA paying a UK claim its total including VAT means EUSA did not reclaim the VAT** (finance
+    confirmed, 2026-10-25), so settling or sharing at that total makes `amount_excl_vat` the total
+    (`Reconciliation.vat_not_reclaimed?`). It is never a reason to match: such a row is only
+    offered, unticked. Unlink does not undo it; the old figure is recorded nowhere.
   - **A Paid claim with no payment date and no linked row is still waiting for its EUSA row**
     (the claims import leaves every settled claim so). Reconcile's `matchable_expenses`,
     `#settleable?` and Link to claim (`ActualsController#link_offerable?`) all take it; change

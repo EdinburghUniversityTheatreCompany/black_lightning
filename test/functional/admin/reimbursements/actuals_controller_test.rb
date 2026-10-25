@@ -722,6 +722,19 @@ module Admin
       assert_select "input[name=?]", "shares[#{settled.record_id}]", count: 0
     end
 
+    test "a share at a claim's total including VAT counts that VAT as spent, and the notice says so" do
+      with_vat = submitted_claim(90, "30.00", amount_excl_vat: BigDecimal("25.00"))
+      plain = submitted_claim(93, "12.00")
+      sign_in @user
+
+      post :create_claim_shares, params: { id: @unlinked.record_id,
+                                           shares: { with_vat.record_id => "30.00", plain.record_id => "12.00" } }
+
+      assert_equal BigDecimal("30.00"), with_vat.reload.amount_excl_vat
+      assert_equal "Split across #90 and #93, which are now Paid. EUSA paid #90 in full including VAT, " \
+                   "so that VAT now counts as spent.", flash[:notice]
+    end
+
     test "create_claim_shares settles each claim to its share" do
       first = submitted_claim(90, "30.00")
       second = submitted_claim(93, "12.00")
@@ -849,6 +862,17 @@ module Admin
       assert_includes numbers, waiting.auto_number
       assert_not_includes numbers, dated.auto_number
       assert_not_includes numbers, with_row.auto_number
+    end
+
+    test "linking a row at the claim's total including VAT says the VAT now counts as spent" do
+      claim = submitted_claim(97, "42.00", amount_excl_vat: BigDecimal("35.00"))
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
+
+      assert_equal BigDecimal("42.00"), claim.reload.amount_excl_vat
+      assert_equal "Linked to #97, which is now Paid. EUSA paid its total including VAT, so the VAT " \
+                   "now counts as spent.", flash[:notice]
     end
 
     test "confirm_link settles a Paid claim waiting for its row without calling it newly Paid" do

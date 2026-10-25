@@ -102,7 +102,7 @@ module ReimbursementsHelper
       elsif (debit - claimed).abs <= penny
         "same amount as claimed"
       elsif expense.amount && expense.amount > claimed && (debit - expense.amount).abs <= penny
-        "EUSA's figure is the claim's total including VAT"
+        "EUSA paid the total including VAT, so ticking it counts the VAT as spent"
       else
         "#{reimbursements_money((debit - claimed).abs)} #{debit < claimed ? 'less' : 'more'} than claimed"
       end
@@ -219,8 +219,8 @@ module ReimbursementsHelper
   def reimbursements_unlink_confirm(actual)
     if actual.expense_id?
       "Unlink this row from its claim? The row stays on the ledger and goes back to needing " \
-        "attention. If the claim was marked Paid by this match it returns to Submitted, and an " \
-        "international claim keeps the amount EUSA actually charged."
+        "attention. If the claim was marked Paid by this match it returns to Submitted. An " \
+        "international claim keeps the amount EUSA charged, and VAT counted as spent stays counted."
     else
       "Unlink this row from its income budget? The row stays on the ledger, that budget stops " \
         "counting this money, and the row can then be split across several budgets."
