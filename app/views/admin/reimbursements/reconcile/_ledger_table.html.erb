@@ -1,0 +1,29 @@
+<%# locals: (rows:, columns:) %>
+<%# One of the preview's ledger tables: the four columns every pasted row has, then the table's own.
+    `columns` are the headings after Narrative as [text, classes]; the block gets each entry of
+    `rows` (a row, or a row and what it matched) and renders that row's cells for them. %>
+<div class="overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-left border-b border-gray-200">
+        <th scope="col" class="py-1 pr-3">Nominal</th><th scope="col" class="py-1 pr-3">Period</th>
+        <th scope="col" class="py-1 pr-3">Date</th>
+        <th scope="col" class="py-1 pr-3">Narrative</th>
+        <% columns.each do |text, classes| %>
+          <th scope="col" class="<%= classes %>"><%= text %></th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows.each do |row, match| %>
+        <tr class="border-b border-gray-100">
+          <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+          <td class="py-1 pr-3 font-mono"><%= row.period %></td>
+          <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
+          <td class="py-1 pr-3"><%= row.narrative %></td>
+          <%= yield row, match %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

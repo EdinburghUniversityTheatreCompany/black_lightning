@@ -76,39 +76,21 @@
 <% else %>
   <%= render CardComponent.new(title: "Matched expenses (#{@matched_debits.size})") do %>
     <% if @matched_debits.any? %>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left border-b border-gray-200">
-              <th scope="col" class="py-1 pr-3">Nominal</th><th scope="col" class="py-1 pr-3">Period</th>
-              <th scope="col" class="py-1 pr-3">Date</th>
-              <th scope="col" class="py-1 pr-3">Narrative</th><th scope="col" class="py-1 pr-3 text-right">Debit</th>
-              <th scope="col" class="py-1 pr-3">Expense #</th><th scope="col" class="py-1 pr-3">Payee</th>
-              <th scope="col" class="py-1 text-right">Expense amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @matched_debits.each do |row, expense| %>
-              <tr class="border-b border-gray-100">
-                <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
-                <td class="py-1 pr-3 font-mono"><%= row.period %></td>
-                <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
-                <td class="py-1 pr-3"><%= row.narrative %></td>
-                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) %></td>
-                <%# "_top": a link inside a Turbo Frame navigates the frame, and the edit page has none. %>
-                <td class="py-1 pr-3">
-                  <%= link_to "##{expense.auto_number}",
-                              edit_admin_reimbursements_expense_edit_path(expense.record_id),
-                              class: "text-primary underline",
-                              data: { turbo_frame: "_top" } %>
-                </td>
-                <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
-                <td class="py-1 text-right"><%= reimbursements_money(expense.amount_for_matching || 0) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+      <%= render layout: "ledger_table",
+                 locals: { rows: @matched_debits,
+                           columns: [ [ "Debit", "py-1 pr-3 text-right" ], [ "Expense #", "py-1 pr-3" ],
+                                      [ "Payee", "py-1 pr-3" ], [ "Expense amount", "py-1 text-right" ] ] } do |row, expense| %>
+        <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) %></td>
+        <%# "_top": a link inside a Turbo Frame navigates the frame, and the edit page has none. %>
+        <td class="py-1 pr-3">
+          <%= link_to "##{expense.auto_number}",
+                      edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                      class: "text-primary underline",
+                      data: { turbo_frame: "_top" } %>
+        </td>
+        <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
+        <td class="py-1 text-right"><%= reimbursements_money(expense.amount_for_matching || 0) %></td>
+      <% end %>
     <% else %>
       <p class="py-2 text-gray-600">No debit rows matched any submitted expense.</p>
     <% end %>
@@ -116,30 +98,12 @@
 
   <%= render CardComponent.new(title: "Matched income budgets (#{@matched_credits.size})") do %>
     <% if @matched_credits.any? %>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left border-b border-gray-200">
-              <th scope="col" class="py-1 pr-3">Nominal</th><th scope="col" class="py-1 pr-3">Period</th>
-              <th scope="col" class="py-1 pr-3">Date</th>
-              <th scope="col" class="py-1 pr-3">Narrative</th><th scope="col" class="py-1 pr-3 text-right">Credit</th>
-              <th scope="col" class="py-1">Budget</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @matched_credits.each do |row, budget| %>
-              <tr class="border-b border-gray-100">
-                <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
-                <td class="py-1 pr-3 font-mono"><%= row.period %></td>
-                <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
-                <td class="py-1 pr-3"><%= row.narrative %></td>
-                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) %></td>
-                <td class="py-1"><%= reimbursements_budget_name_with_year(budget, selectable_financial_years) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+      <%= render layout: "ledger_table",
+                 locals: { rows: @matched_credits,
+                           columns: [ [ "Credit", "py-1 pr-3 text-right" ], [ "Budget", "py-1" ] ] } do |row, budget| %>
+        <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) %></td>
+        <td class="py-1"><%= reimbursements_budget_name_with_year(budget, selectable_financial_years) %></td>
+      <% end %>
     <% else %>
       <p class="py-2 text-gray-600">No credit rows matched any income budget.</p>
     <% end %>
@@ -147,41 +111,24 @@
 
   <%= render CardComponent.new(title: "Unmatched rows (#{@unmatched_rows.size})") do %>
     <% if @unmatched_rows.any? %>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left border-b border-gray-200">
-              <th scope="col" class="py-1 pr-3">Nominal</th><th scope="col" class="py-1 pr-3">Period</th>
-              <th scope="col" class="py-1 pr-3">Date</th>
-              <th scope="col" class="py-1 pr-3">Narrative</th><th scope="col" class="py-1 pr-3 text-right">Debit</th>
-              <th scope="col" class="py-1 pr-3 text-right">Credit</th><th scope="col" class="py-1">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @unmatched_rows.each do |row| %>
-              <tr class="border-b border-gray-100">
-                <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
-                <td class="py-1 pr-3 font-mono"><%= row.period %></td>
-                <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
-                <td class="py-1 pr-3"><%= row.narrative %></td>
-                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) if row.debit.positive? %></td>
-                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) if row.credit.positive? %></td>
-                <td class="py-1 text-gray-600">
-                  <%= if row.debit.positive?
-                        "No matching Submitted or Paid claim"
-                      elsif (shared = @shared_credit_codes[row])
-                        "#{shared} income budgets use this code: place it on the ledger with Split across budgets"
-                      elsif row.credit.positive?
-                        "No matching income budget"
-                      else
-                        "Zero debit and credit"
-                      end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+      <%= render layout: "ledger_table",
+                 locals: { rows: @unmatched_rows,
+                           columns: [ [ "Debit", "py-1 pr-3 text-right" ], [ "Credit", "py-1 pr-3 text-right" ],
+                                      [ "Reason", "py-1" ] ] } do |row| %>
+        <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) if row.debit.positive? %></td>
+        <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) if row.credit.positive? %></td>
+        <td class="py-1 text-gray-600">
+          <%= if row.debit.positive?
+                "No matching Submitted or Paid claim"
+              elsif (shared = @shared_credit_codes[row])
+                "#{shared} income budgets use this code: place it on the ledger with Split across budgets"
+              elsif row.credit.positive?
+                "No matching income budget"
+              else
+                "Zero debit and credit"
+              end %>
+        </td>
+      <% end %>
     <% else %>
       <p class="py-2 text-success">All rows matched.</p>
     <% end %>
