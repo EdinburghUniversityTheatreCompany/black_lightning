@@ -47,6 +47,7 @@
   <% if @expenses.empty? %>
     <p class="py-2 text-gray-600">No expenses linked to this batch.</p>
   <% else %>
+    <%# jscpd:ignore-start: the same claims as Build Batch's table (batches/new), with this page's own columns on purpose (status here; bank details and receipts there). %>
     <div class="table-scroll">
       <table class="w-full text-sm table-sticky-head">
         <thead class="text-left text-gray-500 border-b border-gray-200">
@@ -82,5 +83,6 @@
         </tbody>
       </table>
     </div>
+    <%# jscpd:ignore-end %>
   <% end %>
 <% end %>
