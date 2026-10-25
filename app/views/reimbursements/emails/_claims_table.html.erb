@@ -1,0 +1,34 @@
+<%# locals: (expenses:, total:, needs_attention: false) %>
+<%# The claims table of the operator emails. `needs_attention` adds the column saying why a claim
+    needs a look and tints its row. Inline styles: the mailer layout ships no stylesheet and
+    Outlook would ignore one. %>
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th scope="col">#</th><th scope="col">Payee</th><th scope="col">Amount</th>
+      <th scope="col">Budget</th><th scope="col">Description</th>
+      <% if needs_attention %>
+        <th scope="col">Needs attention</th>
+      <% end %>
+    </tr>
+  </thead>
+  <tbody>
+    <% expenses.each do |expense| %>
+      <% flags = Array(expense[:flags]) %>
+      <% highlight = flags.any? ? "background-color: #fff4e5;" : "" %>
+      <%= tag.tr(style: (highlight if needs_attention)) do %>
+        <td>#<%= expense[:auto_number] %></td>
+        <td><%= expense[:payee_name] %></td>
+        <td><%= reimbursements_money(expense[:amount]) %></td>
+        <td><%= expense[:budget_name] %></td>
+        <td><%= expense[:description] %></td>
+        <% if needs_attention %>
+          <td><%= reimbursements_value(flags.join("; ")) %></td>
+        <% end %>
+      <% end %>
+    <% end %>
+  </tbody>
+  <tfoot style="background-color: #f0f0f0; font-weight: bold;">
+    <tr><td colspan="2">Total</td><td><%= reimbursements_money(total) %></td><td colspan="<%= needs_attention ? 3 : 2 %>"></td></tr>
+  </tfoot>
+</table>

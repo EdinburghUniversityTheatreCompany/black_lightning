@@ -20,31 +20,7 @@
 </p>
 
 <p><strong><%= link_to "Approved queue", admin_reimbursements_review_url(tab: "approved", cost_centre: @cost_centre.key) %>:</strong></p>
-<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
-  <thead style="background-color: #f0f0f0;">
-    <tr>
-      <th scope="col">#</th><th scope="col">Payee</th><th scope="col">Amount</th>
-      <th scope="col">Budget</th><th scope="col">Description</th>
-      <th scope="col">Needs attention</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @expenses.each do |expense| %>
-      <%# Inline style: the mailer layout ships no stylesheet and Outlook would ignore one. %>
-      <tr style="<%= 'background-color: #fff4e5;' if Array(expense[:flags]).any? %>">
-        <td>#<%= expense[:auto_number] %></td>
-        <td><%= expense[:payee_name] %></td>
-        <td><%= reimbursements_money(expense[:amount]) %></td>
-        <td><%= expense[:budget_name] %></td>
-        <td><%= expense[:description] %></td>
-        <td><%= reimbursements_value(Array(expense[:flags]).join("; ")) %></td>
-      </tr>
-    <% end %>
-  </tbody>
-  <tfoot style="background-color: #f0f0f0; font-weight: bold;">
-    <tr><td colspan="2">Total</td><td><%= reimbursements_money(@total) %></td><td colspan="3"></td></tr>
-  </tfoot>
-</table>
+<%= render "reimbursements/emails/claims_table", expenses: @expenses, total: @total, needs_attention: true %>
 
 <% if @next_run_day.present? %>
   <p>The next scheduled check is <%= @next_run_day %>.</p>
