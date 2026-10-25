@@ -12,7 +12,9 @@ class UsersControllerTest < ActionController::TestCase
 
   test "a position on the projects grid is escaped, not run as markup" do
     user = FactoryBot.create(:user, public_profile: true)
-    FactoryBot.create(:team_member, user: user, teamwork: FactoryBot.create(:show), position: "<script>alert(1)</script>")
+    # is_public: the profile lists public shows only, and the factory picks it at random.
+    show = FactoryBot.create(:show, is_public: true)
+    FactoryBot.create(:team_member, user: user, teamwork: show, position: "<script>alert(1)</script>")
 
     get :show, params: { id: user }
 
