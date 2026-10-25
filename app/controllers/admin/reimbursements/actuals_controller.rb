@@ -442,13 +442,14 @@ module Admin
                     alert: "That claim is #{status} now, so this row can't settle it."
       end
 
-      # A claim whose payee is named in the narrative ("BACS PAYMENT A SMITH") comes first, whatever
-      # the amounts say; then amount closeness, then the newest claim.
+      # A claim the narrative names ("BACS PAYMENT A SMITH") or describes (EUSA copies the claim's
+      # description from the BACS spreadsheet) comes first, both before one, whatever the amounts
+      # say; then amount closeness, then the newest claim.
       def link_candidate_rank(expense, actual)
         target = actual.debit || 0
-        [ ::Reimbursements::Reconciliation.payee_named?(expense, actual) ? 0 : 1,
-          ((expense.amount || 0) - target).abs,
-          -expense.auto_number.to_i ]
+        signals = [ ::Reimbursements::Reconciliation.payee_named?(expense, actual),
+                    ::Reimbursements::Reconciliation.description_in_narrative?(expense, actual) ].count(true)
+        [ -signals, ((expense.amount || 0) - target).abs, -expense.auto_number.to_i ]
       end
 
       def conversion_params

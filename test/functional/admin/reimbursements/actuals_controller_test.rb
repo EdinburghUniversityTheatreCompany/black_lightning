@@ -573,6 +573,39 @@ module Admin
       assert_equal named.auto_number, assigns(:candidates).first.auto_number
     end
 
+    # EUSA copies the claim's description into the narrative far more often than it names the
+    # payee (88% against 56% of production's links on 2026-10-25).
+    test "a claim whose description the narrative carries outranks a closer amount" do
+      @unlinked.update!(narrative: "BACS", narrative_1: "VELVET CLOAK")
+      described = create_reimbursements_expense(auto_number: 96, budget: @budget, description: "Velvet cloak",
+                                                status: ::Reimbursements::Status::SUBMITTED,
+                                                amount: BigDecimal("500.00"), amount_excl_vat: BigDecimal("500.00"))
+      create_reimbursements_expense(auto_number: 97, budget: @budget, description: "Stage nails",
+                                    status: ::Reimbursements::Status::SUBMITTED,
+                                    amount: BigDecimal("42.00"), amount_excl_vat: BigDecimal("42.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      assert_equal described.auto_number, assigns(:candidates).first.auto_number
+    end
+
+    test "a claim the narrative both names and describes outranks one it only names" do
+      @unlinked.update!(narrative: "BACS KIRSTY TOLMIE", narrative_1: "VELVET CLOAK")
+      kirsty = create_reimbursements_person(name: "Kirsty Tolmie", email: "kirsty@example.com")
+      both = create_reimbursements_expense(auto_number: 98, budget: @budget, person: kirsty,
+                                           description: "Velvet cloak", status: ::Reimbursements::Status::SUBMITTED,
+                                           amount: BigDecimal("500.00"), amount_excl_vat: BigDecimal("500.00"))
+      create_reimbursements_expense(auto_number: 99, budget: @budget, person: kirsty, description: "Stage nails",
+                                    status: ::Reimbursements::Status::SUBMITTED,
+                                    amount: BigDecimal("42.00"), amount_excl_vat: BigDecimal("42.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      assert_equal both.auto_number, assigns(:candidates).first.auto_number
+    end
+
     # A claim resolves its centre through its budget, so the list names it: another centre's claim
     # is almost certainly the wrong answer.
     test "link_expense names each candidate's cost centre" do
