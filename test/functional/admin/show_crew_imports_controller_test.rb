@@ -44,6 +44,46 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_equal 2, assigns(:import).rows.size
   end
 
+  test "preview shows a section for every bucket, each row with its decision" do
+    on_team = FactoryBot.create(:user, first_name: "Olive", last_name: "Qonteam", student_id: "s1000007")
+    @show.team_members.create!(user: on_team, position: "Producer")
+    FactoryBot.create(:user, first_name: "Ian", last_name: "Qbyid", student_id: "s1000002")
+    FactoryBot.create(:user, first_name: "Emma", last_name: "Qbyemail", email: "emma.q@example.com")
+    alex = FactoryBot.create(:user, first_name: "Alex", last_name: "Qzarquon", student_id: "s1000004")
+    alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Qzarquon")
+    other_show = FactoryBot.create(:show, start_date: Date.current)
+    [ alex, alexander ].each { |user| other_show.team_members.create!(user: user, position: "Crew") }
+
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail\tPosition
+      Olive Qonteam\ts1000007\t\tDirector
+      Ian Qbyid\ts1000002\t\tLighting
+      Emma Qbyemail\t\temma.q@example.com\tSound
+      Alex Qzarquon\ts1000005\t\tStage Manager
+      Alex Qzarquon\t\t\tDesigner
+      New Qperson\ts1000006\t\tProducer
+      No Qdetails\t\t\tCrew
+    TSV
+
+    post :preview, params: { show_id: @show.slug, paste_data: tsv }
+
+    assert_response :success
+    [ "Already on Team (Review Required)", "Matched by ID", "Matched by Email", "Possible Matches (Review Required)", "New Users to Create" ].each do |title|
+      assert_select "span", text: title
+    end
+    assert_select "input[type=radio][name=?][value=skip][checked]", "existing_actions[#{on_team.id}]"
+    assert_select "input[name=?]", "actions[0]", count: 0
+    assert_select "input[type=hidden][name=?][value=link]", "actions[1]"
+    assert_select "input[type=hidden][name=?][value=link]", "actions[2]"
+    assert_select "small", text: "Matched by Student ID"
+    assert_select "input[type=radio][name=?][value=?][checked]", "actions[3]", "link_#{alex.id}"
+    assert_select "input[type=radio][name=?][value=?]:not([checked])", "actions[4]", "link_#{alexander.id}"
+    assert_select "input[type=radio][name=?]", "actions[4]", count: 4
+    assert_select "input[type=radio][name=?][value=create][checked]", "actions[5]"
+    assert_select "small", text: "(auto-generated)"
+    assert_select "em", text: "(will generate placeholder)"
+  end
+
   test "preview with empty data redirects back with error" do
     post :preview, params: { show_id: @show.slug, paste_data: "" }
 

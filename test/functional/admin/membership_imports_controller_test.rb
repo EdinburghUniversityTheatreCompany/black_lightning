@@ -49,6 +49,39 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert_select "small", text: /will be added/, count: 0
   end
 
+  test "preview shows a section for every bucket, each row with its decision" do
+    FactoryBot.create(:member, first_name: "Ada", last_name: "Qactive", student_id: "s1000001")
+    FactoryBot.create(:user, first_name: "Ian", last_name: "Qbyid", student_id: "s1000002")
+    FactoryBot.create(:user, first_name: "Emma", last_name: "Qbyemail", student_id: nil, email: "emma.q@example.com")
+    alex = FactoryBot.create(:user, first_name: "Alex", last_name: "Qzarquon", student_id: "s1000004")
+    alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Qzarquon")
+
+    tsv = <<~TSV
+      Name\tStudent ID\tDate Purchased\tMember Type\tPurchaser Email
+      Ada Qactive\ts1000001\t07/09/2025\tStudent\tada.q@example.com
+      Ian Qbyid\ts1000002\t07/09/2025\tStudent\tian.q@example.com
+      Emma Qbyemail\ts1000003\t07/09/2025\tStudent\temma.q@example.com
+      Alex Qzarquon\ts1000005\t07/09/2025\tStudent\talex.new@example.com
+      New Qperson\ts1000006\t07/09/2025\tStudent\tnew.q@example.com
+      No Qdetails\t\t07/09/2025\tStudent
+    TSV
+
+    post :preview, params: { paste_data: tsv }
+
+    assert_response :success
+    [ "Activate by Email Match", "Possible Matches (Review Required)", "New Users to Create", "Already Active Members", "Activate by ID" ].each do |title|
+      assert_select "span", text: title
+    end
+    assert_select "input[type=hidden][name=?][value=activate]", "actions[1]"
+    assert_select "input[type=hidden][name=?][value=activate]", "actions[2]"
+    assert_select "small", text: "+ will add student ID"
+    assert_select "input[type=radio][name=?][value=?][checked]", "actions[3]", "merge_#{alex.id}"
+    assert_select "input[type=radio][name=?][value=?]:not([checked])", "actions[3]", "merge_#{alexander.id}"
+    assert_select "input[type=radio][name=?]", "actions[3]", count: 4
+    assert_select "input[type=radio][name=?][value=create][checked]", "actions[4]"
+    assert_select "em", text: "(will generate placeholder)"
+  end
+
   test "preview with empty data redirects back with error" do
     post :preview, params: { paste_data: "" }
 

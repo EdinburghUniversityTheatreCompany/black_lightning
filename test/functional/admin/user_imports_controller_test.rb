@@ -36,6 +36,41 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     assert Rails.cache.read(assigns(:cache_key)).present?
   end
 
+  test "preview shows a section for every bucket, each row with its decision" do
+    FactoryBot.create(:user, first_name: "Ian", last_name: "Qbyid", student_id: "s1000002")
+    FactoryBot.create(:user, first_name: "Emma", last_name: "Qbyemail", email: "emma.q@example.com")
+    alex = FactoryBot.create(:user, first_name: "Alex", last_name: "Qzarquon", student_id: "s1000004")
+    alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Qzarquon")
+    recent_show = FactoryBot.create(:show, start_date: Date.current)
+    [ alex, alexander ].each { |user| recent_show.team_members.create!(user: user, position: "Crew") }
+
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail
+      Ian Qbyid\ts1000002\tian.q@example.com
+      Emma Qbyemail\t\temma.q@example.com
+      Alex Qzarquon\ts1000005\t
+      Alex Qzarquon\t\t
+      New Qperson\ts1000006\t
+      No Qdetails\t\t
+      Named Qemail\t\tnamed.q@example.com
+    TSV
+
+    post :preview, params: { paste_data: tsv }
+
+    assert_response :success
+    [ "Matched by ID", "Matched by Email", "Possible Matches (Review Required)", "New Users to Create" ].each do |title|
+      assert_select "span", text: title
+    end
+    assert_select "input[type=hidden][name=?][value=link]", "actions[0]"
+    assert_select "input[type=hidden][name=?][value=link]", "actions[1]"
+    assert_select "input[type=radio][name=?][value=?][checked]", "actions[2]", "link_#{alex.id}"
+    assert_select "input[type=radio][name=?][value=?]:not([checked])", "actions[3]", "link_#{alexander.id}"
+    assert_select "input[type=radio][name=?]", "actions[3]", count: 4
+    assert_select "input[type=radio][name=?][value=create][checked]", "actions[4]"
+    assert_select "small", text: "(auto-generated)"
+    assert_select "em", text: "(will generate placeholder)"
+  end
+
   test "preview with empty data redirects back with error" do
     post :preview, params: { paste_data: "" }
 
