@@ -106,6 +106,8 @@ module Admin
         matched_debits, matched_credits, unmatched = build_matches(unpaired)
         probable, unmatched = build_probable_matches(unmatched, matched_debits)
         @probable_matches = probable.map(&:last)
+        groups, unmatched = build_group_matches(unmatched, matched_debits, probable)
+        @group_matches = groups.map(&:last)
         @matched_debits = matched_debits.map { |entry, expense| [ entry.row, expense ] }
         @matched_credits = matched_credits.map { |entry, budget| [ entry.row, budget ] }
         @unmatched_rows = unmatched.map(&:row)
@@ -126,15 +128,19 @@ module Admin
         matched_debits, matched_credits, unmatched = build_matches(entries_outside(new_entries, pairs))
         # A possible match settles only when ticked; the rest import unmatched, as before.
         probable, unmatched = build_probable_matches(unmatched, matched_debits)
+        groups, unmatched = build_group_matches(unmatched, matched_debits, probable)
         ticked_matches = ticked_keys(:probable_match_keys)
         accepted, declined = probable.partition { |_entry, match| ticked_matches.include?(match.key) }
+        accepted_groups, declined_groups = groups.partition { |_entries, group| ticked_matches.include?(group.key) }
         settled = matched_debits + accepted.map { |entry, match| [ entry, match.expense ] }
 
         imported_at = Time.current
         @offsets_linked = pairs.count { |pair| apply_offsetting_pair(new_entries, pair, imported_at) }
-        @expenses_paid = settled.count { |entry, expense| apply_debit_row(entry, expense, imported_at) }
+        @expenses_paid = settled.count { |entry, expense| apply_debit_row(entry, expense, imported_at) } +
+                         accepted_groups.sum { |entries, group| apply_group(entries, group, imported_at) }
         @credits_linked = matched_credits.count { |entry, budget| apply_credit_row(entry, budget, imported_at) }
-        @unmatched_saved = (unmatched + declined.map(&:first)).count { |entry| apply_unmatched_row(entry, imported_at) }
+        @unmatched_saved = (unmatched + declined.map(&:first) + declined_groups.flat_map(&:first))
+                           .count { |entry| apply_unmatched_row(entry, imported_at) }
       end
 
       # The uploaded sheet as text, or nil when no file was picked. An unreadable file is reported on
@@ -278,6 +284,52 @@ module Admin
         proposals.reject! { |_entry, match| shared.key?(match.expense.record_id) }
 
         [ proposals, unmatched.reject { |entry| proposals.any? { |offered, _| offered.equal?(entry) } } ]
+      end
+
+      # Unmatched debits that add up with others: one row paying several claims
+      # (Reconciliation.combined_debit_match) or several rows paying one claim (.split_debit_match),
+      # offered unticked like possible matches. Returns [groups, still_unmatched]; a group is
+      # [entries, Reconciliation::GroupMatch]. The pool is what exact and possible matching left, and
+      # a row or claim two groups want is offered in neither: choosing is the guess this avoids.
+      def build_group_matches(unmatched, matched_debits, probable)
+        taken = (matched_debits.map(&:last) + probable.map { |_entry, match| match.expense }).to_set(&:record_id)
+        pool = matchable_expenses.reject { |expense| taken.include?(expense.record_id) }
+        debits = unmatched.select { |entry| entry.row.debit.positive? }
+        entry_of = debits.to_h { |entry| [ entry.row, entry ] }.compare_by_identity
+
+        groups = debits.filter_map do |entry|
+          claims = ::Reimbursements::Reconciliation.combined_debit_match(entry.row, expenses_in(entry.cost_centre, pool))
+          ::Reimbursements::Reconciliation::GroupMatch.new(rows: [ entry.row ], expenses: claims) if claims
+        end
+        pool.each do |expense|
+          rows = debits.select { |entry| in_cost_centre?(expense.budget&.cost_centre_id, entry.cost_centre) }.map(&:row)
+          parts = ::Reimbursements::Reconciliation.split_debit_match(expense, rows)
+          groups << ::Reimbursements::Reconciliation::GroupMatch.new(rows: parts, expenses: [ expense ]) if parts
+        end
+
+        row_uses = groups.flat_map(&:rows).map(&:object_id).tally
+        claim_uses = groups.flat_map(&:expenses).map(&:record_id).tally
+        groups.select! do |group|
+          group.rows.all? { |row| row_uses[row.object_id] == 1 } && group.expenses.all? { |e| claim_uses[e.record_id] == 1 }
+        end
+
+        grouped = groups.flat_map(&:rows).to_set(&:object_id)
+        [ groups.map { |group| [ group.rows.map { |row| entry_of[row] }, group ] },
+          unmatched.reject { |entry| grouped.include?(entry.row.object_id) } ]
+      end
+
+      # Writes a ticked group as one unit; returns how many claims it settled (0 when it failed).
+      def apply_group(entries, group, imported_at)
+        numbers = group.expenses.map { |expense| "##{expense.auto_number}" }.to_sentence
+        settled = with_row_rescue("the group paying #{numbers}") do
+          if group.combined?
+            store.create_shared_actual!(actuals_attrs(entries.first, imported_at),
+                                        group.expenses.map { |e| { expense_id: e.id, amount: e.amount_for_matching } })
+          else
+            store.create_split_payment!(entries.map { |entry| actuals_attrs(entry, imported_at) }, group.expenses.first.id)
+          end
+        end
+        settled ? group.expenses.size : 0
       end
 
       # Every expense a debit may match (DatabaseStore#matchable_expenses), as a fresh array the caller

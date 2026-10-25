@@ -172,6 +172,57 @@ module Reimbursements
       candidates.first if candidates.one?
     end
 
+    ##
+    # Several rows paying one claim, or one row paying several, for a person to tick or leave.
+    # +key+ names every row's content and every claim, so a tick never settles a group the
+    # re-parse at apply put together differently.
+    GroupMatch = Data.define(:rows, :expenses) do
+      def key
+        "#{rows.map { |row| Reconciliation.row_key(row) }.sort.join('-')}_#{expenses.map(&:record_id).sort.join('-')}"
+      end
+
+      def combined? = rows.one?
+    end
+
+    # Past this many candidates the groups multiply (2^n) and a single answer is unlikely anyway.
+    GROUP_CANDIDATE_LIMIT = 8
+
+    # The claims one debit paid together (EUSA combines a payee's claims into one payment), two or
+    # more, or nil. Candidates share the row's nominal code, sit in the date window, are on the UK
+    # rail (an international claim is a payment of its own) and are named or described by the
+    # narrative. Exactly one group of them must add up to the debit to the penny; several is a guess.
+    def combined_debit_match(row, expenses)
+      candidates = expenses.select { |expense| !expense.international? && expense.amount_for_matching && group_candidate?(expense, row) }
+      groups = adding_up(candidates) { |group| group.sum(&:amount_for_matching) == row.debit }
+      groups.first if groups.one?
+    end
+
+    # The debit rows that together paid one claim (EUSA paid it in parts), two or more, or nil, on
+    # the same terms as combined_debit_match. The parts may miss the claim by a penny of rounding
+    # each.
+    def split_debit_match(expense, rows)
+      target = expense.amount_for_matching
+      return if expense.international? || target.nil?
+
+      candidates = rows.select { |row| row.debit.positive? && group_candidate?(expense, row) }
+      groups = adding_up(candidates) { |group| (group.sum(&:debit) - target).abs <= AMOUNT_TOLERANCE * group.size }
+      groups.first if groups.one?
+    end
+
+    def group_candidate?(expense, row)
+      expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip) && days_from_claim(expense, row) &&
+        (payee_named?(expense, row) || description_in_narrative?(expense, row))
+    end
+
+    # Every group of two or more +candidates+ the block accepts, by position (two identical rows
+    # are two payments), or none past GROUP_CANDIDATE_LIMIT.
+    def adding_up(candidates, &accept)
+      return [] if candidates.size < 2 || candidates.size > GROUP_CANDIDATE_LIMIT
+
+      (2..candidates.size).flat_map { |size| candidates.combination(size).select(&accept) }
+    end
+    private_class_method :group_candidate?, :adding_up
+
     # Whether +row+ can join +paid_rows+ as a further part of +expense+'s payment (EUSA paid the
     # claim in instalments): a UK claim already Paid by at least one row, with the parts together
     # no more than its total, a penny of rounding per part. A second full payment is EUSA paying

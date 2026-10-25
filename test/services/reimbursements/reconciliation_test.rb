@@ -379,6 +379,43 @@ module Reimbursements
       assert_nil Reconciliation.probable_debit_match(narrated_row("STRIPE FEES"), [ named_expense ])
     end
 
+    # --- combined_debit_match / split_debit_match ---------------------------
+    #
+    # EUSA pays a payee's claims together (row 77 = #41 + #42 + #43 + #44 in production) and pays a
+    # claim in parts (#45 as two rows). Only exactly one group adding up is offered.
+
+    def alice_claim(amount, **attrs) = named_expense(amount: bd(amount), amount_excl_vat: bd(amount), **attrs)
+
+    test "one row is matched to the one group of named claims that adds up to it" do
+      a = alice_claim("29.85")
+      b = alice_claim("14.84")
+      c = alice_claim("13.63")
+      d = alice_claim("31.51")
+      unrelated = alice_claim("11.38")
+
+      assert_equal [ a, b, c, d ],
+                   Reconciliation.combined_debit_match(narrated_row("ALICE PRODUCER", debit: bd("89.83")), [ a, b, c, d, unrelated ])
+    end
+
+    test "two groups adding up, a claim the narrative does not name, or an international claim offer nothing" do
+      row = narrated_row("ALICE PRODUCER", debit: bd("30.00"))
+
+      assert_nil Reconciliation.combined_debit_match(row, [ alice_claim("10"), alice_claim("20"), alice_claim("10"), alice_claim("20") ]),
+                 "two different pairs make 30.00"
+      assert_nil Reconciliation.combined_debit_match(row, [ alice_claim("10"), alice_claim("20", payee: "Bob Builder", description: "Nails") ])
+      international = alice_claim("20").tap { |e| e.payment_method = Expense::PAYMENT_METHOD_INTERNATIONAL }
+      assert_nil Reconciliation.combined_debit_match(row, [ alice_claim("10"), international ])
+    end
+
+    test "several rows are matched to the claim they add up to, a penny of rounding per part" do
+      claim = alice_claim("76.18")
+      parts = [ narrated_row("ALICE PRODUCER", debit: bd("14.98")), narrated_row("ALICE PRODUCER", debit: bd("61.19")) ]
+      stray = narrated_row("ALICE PRODUCER", debit: bd("5.00"))
+
+      assert_equal parts, Reconciliation.split_debit_match(claim, parts + [ stray ])
+      assert_nil Reconciliation.split_debit_match(alice_claim("80.00"), parts), "£2.82 short is not rounding"
+    end
+
     # --- Claims brought in by the claims import ---------------------------
     #
     # The import records when a claim was submitted but never when it was sent to EUSA, and a

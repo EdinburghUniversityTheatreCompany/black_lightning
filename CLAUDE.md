@@ -1176,6 +1176,18 @@ form per international claim, all on the same draft.
     payee or description the narrative carries. Description counts as well as payee because in
     production's links (2026-10-25) the payee was named on 56%, the description on 88%. Its key
     carries the claim id, so a tick never settles a claim the re-parse chose differently.
+  - **EUSA combines a payee's claims into one row and pays a claim in several rows**, so a row is
+    not one claim. A combined row holds no `expense_id`: its `reimbursements_claim_shares`
+    (`DatabaseStore#share_actual!`, "Split across claims") are the only answer, and a claim takes
+    at most one share (unique index). A part payment is a further row with the claim's
+    `expense_id` (`#add_part_payment!`), refused past the claim's total
+    (`Reconciliation.part_fits?`), since that is more likely EUSA paying twice.
+    - **Every "is this row placed / is this claim settled" reader must count shares**:
+      `needs_attention?`, `convertible_to_expense?`, `#reconciled_expense_ids` (Reconcile's pool
+      and Link to claim), `#settleable?` and `Budget#debit_actual_total` (preload `claim_share`).
+    - **Reconcile offers both as unticked groups** (`combined_debit_match`, `split_debit_match`)
+      only when exactly one group adds up; a row or claim two groups want is offered in neither.
+    - **Unlinking one part keeps the claim Paid**; only the last row's unlink reverts it.
 - **An international claim's IBAN and BIC come only from its own overrides**
   (`EffectivePayee#effective_iban` / `#effective_bic`): a payee's People record holds no IBAN, so
   a screen must send finance to the claim's override.

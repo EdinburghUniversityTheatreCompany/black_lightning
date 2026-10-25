@@ -132,7 +132,15 @@ module Reimbursements
       Term.new(key: :apportion, term: "Split across budgets",
                definition: "Dividing one credit between several income budgets. A Stripe payout " \
                            "covering a week of shows lands as a single row, and without this " \
-                           "the whole of it would count as one show's income.")
+                           "the whole of it would count as one show's income."),
+      Term.new(key: :share_claims, term: "Split across claims",
+               definition: "Dividing one debit between the claims EUSA paid with it, when it " \
+                           "combined one payee's claims into a single payment. Each claim is " \
+                           "marked Paid and its share counts on its own budget."),
+      Term.new(key: :part_payment, term: "Paid in parts",
+               definition: "A claim EUSA paid as several rows. Each row is linked to the claim and " \
+                           "its budget adds them up. A row that would take the parts past the " \
+                           "claim's total is refused, as it is more likely EUSA paying twice.")
     ].freeze
 
     SECTIONS = [

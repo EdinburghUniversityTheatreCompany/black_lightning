@@ -505,6 +505,63 @@ module Admin
       assert_equal 2, assigns(:unmatched_rows).size
     end
 
+    # --- Groups: one row paying several claims, several rows paying one ------
+
+    def alice_claim(amount)
+      create_reimbursements_expense(person: @person, budget: @budget, amount: BigDecimal(amount),
+                                    amount_excl_vat: BigDecimal(amount), status: ::Reimbursements::Status::SUBMITTED,
+                                    submitted_to_eusa_date: Date.new(2026, 5, 10), receipt: false)
+    end
+
+    def group_key(texts, expenses)
+      rows = ::Reimbursements::Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{texts.join("\n")}")
+      ::Reimbursements::Reconciliation::GroupMatch.new(rows: rows, expenses: expenses).key
+    end
+
+    test "preview offers one row as paying the group of claims it adds up to, unticked" do
+      first = alice_claim("30.00")
+      second = alice_claim("12.00")
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(debit: '42.00')}" }
+
+      group = assigns(:group_matches).sole
+      assert_equal [ first.record_id, second.record_id ].sort, group.expenses.map(&:record_id).sort
+      assert_empty assigns(:unmatched_rows)
+      assert_select "input[type=checkbox][value=?]:not([checked])", group.key
+      assert_select "td", text: "one payment for 2 claims"
+    end
+
+    test "apply shares a ticked row across its claims; an unticked one is imported unmatched" do
+      first = alice_claim("30.00")
+      second = alice_claim("12.00")
+      text = debit_row(debit: "42.00")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{text}",
+                             probable_match_keys: [ "", group_key([ text ], [ first, second ]) ] }
+
+      actual = ::Reimbursements::EusaActual.sole
+      assert_equal [ BigDecimal("12"), BigDecimal("30") ], actual.claim_shares.pluck(:amount).sort
+      assert_equal ::Reimbursements::Status::PAID, first.reload.status
+      assert_equal 2, assigns(:expenses_paid)
+    end
+
+    test "apply settles a claim from the ticked rows that pay it in parts" do
+      claim = alice_claim("76.18")
+      texts = [ debit_row(debit: "14.98"), debit_row(debit: "61.19") ]
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{texts.join("\n")}" }
+      assert_equal [ claim.record_id ], assigns(:group_matches).sole.expenses.map(&:record_id)
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{texts.join("\n")}",
+                             probable_match_keys: [ "", group_key(texts, [ claim ]) ] }
+
+      assert_equal [ claim.id ] * 2, ::Reimbursements::EusaActual.pluck(:expense_id)
+      assert_equal ::Reimbursements::Status::PAID, claim.reload.status
+    end
+
     # --- Claims the claims import brought in as Paid ------------------------
     #
     # They carry no sent-to-EUSA or payment date, only when they were submitted, and a committee

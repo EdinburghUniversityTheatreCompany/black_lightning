@@ -1,0 +1,27 @@
+<%# locals: (cells:) %>
+<%# One line of the possible matches, built by reimbursements_possible_match_cells for either kind. %>
+<% checkbox_id = "probable-match-#{cells[:key]}" %>
+<tr class="border-b border-gray-100">
+  <td class="py-1 pr-3">
+    <%= check_box_tag "probable_match_keys[]", cells[:key], false, id: checkbox_id, class: "h-4 w-4" %>
+    <%= label_tag checkbox_id, cells[:label], class: "sr-only" %>
+  </td>
+  <td class="py-1 pr-3"><%= cells[:dates].map { |date| reimbursements_date(date) }.join(", ") %></td>
+  <td class="py-1 pr-3">
+    <%= cells[:narrative] %>
+    <% if cells[:note] %>
+      <span class="block text-xs text-gray-500"><%= cells[:note] %></span>
+    <% end %>
+  </td>
+  <td class="py-1 pr-3 text-right"><%= cells[:debits].map { |debit| reimbursements_money(debit) }.join(" + ") %></td>
+  <td class="py-1 pr-3">
+    <%# "_top": a link inside a Turbo Frame navigates the frame, and the edit page has none. %>
+    <%= safe_join(cells[:expenses].map do |expense|
+          link_to("##{expense.auto_number}", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                  class: "text-primary underline", data: { turbo_frame: "_top" })
+        end, ", ") %>
+  </td>
+  <td class="py-1 pr-3"><%= cells[:expenses].map(&:effective_payee_name).uniq.to_sentence %></td>
+  <td class="py-1 pr-3 text-right"><%= reimbursements_money(cells[:claimed]) %></td>
+  <td class="py-1"><%= cells[:difference] %></td>
+</tr>

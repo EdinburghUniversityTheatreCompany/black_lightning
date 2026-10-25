@@ -67,6 +67,28 @@ module ReimbursementsHelper
     match.reasons.map { |reason| PROBABLE_MATCH_REASONS.fetch(reason) }.to_sentence.upcase_first
   end
 
+  # One line of Reconcile's possible matches, for either kind: a row paying one claim at another
+  # amount (Reconciliation::ProbableMatch) or a group adding up (Reconciliation::GroupMatch).
+  def reimbursements_possible_match_cells(match)
+    return reimbursements_group_match_cells(match) if match.is_a?(Reimbursements::Reconciliation::GroupMatch)
+
+    { key: match.key, label: "This row pays expense ##{match.expense.auto_number}", dates: [ match.row.date ],
+      narrative: "#{match.row.narrative} #{match.row.narrative_1}", note: reimbursements_probable_reasons(match),
+      debits: [ match.row.debit ], expenses: [ match.expense ], claimed: match.expense.amount_for_matching,
+      difference: reimbursements_probable_difference(match) }
+  end
+
+  def reimbursements_group_match_cells(group)
+    numbers = group.expenses.map { |expense| "##{expense.auto_number}" }.to_sentence
+    claimed = group.expenses.sum(&:amount_for_matching)
+    gap = group.rows.sum(&:debit) - claimed
+    difference = group.combined? ? "one payment for #{group.expenses.size} claims" : "paid in #{group.rows.size} rows"
+    difference += "; #{reimbursements_money(gap.abs)} #{gap.negative? ? 'less' : 'more'} than claimed" unless gap.zero?
+    { key: group.key, label: group.combined? ? "This row pays expenses #{numbers}" : "These rows pay expense #{numbers}",
+      dates: group.rows.map(&:date).uniq, narrative: group.rows.map { |row| "#{row.narrative} #{row.narrative_1}".strip }.uniq.join(" · "),
+      note: nil, debits: group.rows.map(&:debit), expenses: group.expenses, claimed: claimed, difference: difference }
+  end
+
   # How a possible match's EUSA figure differs from its claim: the operator ticks or leaves the row
   # on this alone. A UK claim keeps its amount when settled, an international one takes EUSA's.
   def reimbursements_probable_difference(match)

@@ -858,6 +858,32 @@ module Reimbursements
       legs
     end
 
+    # Imports a row that paid several claims and shares it among them (#share_actual!) as one unit:
+    # a row written without its shares would read as unlinked spend, and dedup would stop a re-paste.
+    def create_shared_actual!(attrs, shares)
+      row = EusaActual.transaction do
+        created = create_actual!(attrs)
+        share_actual!(created.record_id, shares)
+        created
+      end
+      bust_eusa_actuals!
+      row
+    end
+
+    # Imports the rows that paid one claim in parts as one unit: the first settles the claim, the
+    # rest are further parts (#add_part_payment!).
+    def create_split_payment!(rows_attrs, expense_id)
+      rows = EusaActual.transaction do
+        created = rows_attrs.map { |attrs| create_actual!(attrs) }
+        first, *parts = created
+        settle_expense_from_actual!(first.record_id, expense_id, payment_date: first.date)
+        parts.each { |part| add_part_payment!(part.record_id, expense_id) }
+        created
+      end
+      bust_eusa_actuals!
+      rows
+    end
+
     # The way back out of an offset: both legs lose the stamp and cross-link and become ordinary
     # rows. Reachable from either leg, all-or-nothing, deletes nothing. The pairing heuristic can
     # be wrong, and a wrong pair hides real spend, so this must work without a console. Any row
