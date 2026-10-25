@@ -1107,6 +1107,122 @@ module Admin
         assert_select "form[action=?]",
                       admin_reimbursements_reopen_expense_edit_path(paid.record_id), count: 0
       end
+
+      # --- A save that makes the claim match an unlinked ledger row ---------
+      #
+      # Reconcile matches only when a row is imported, so a claim corrected afterwards would stay
+      # unlinked for ever. Saving it links it under Reconcile's own rule.
+
+      def ledger_row(debit: "45.00", date: Date.new(2026, 9, 15), **attrs)
+        create_reimbursements_eusa_actual(nominal_code: "4000", narrative: "Pat Producer",
+                                          debit: BigDecimal(debit), date: date, **attrs)
+      end
+
+      def sent_claim(status: "Submitted", amount: "50.00", **attrs)
+        expense_at(status, amount: BigDecimal(amount), amount_excl_vat: BigDecimal(amount),
+                           submitted_to_eusa_date: Date.new(2026, 9, 10), **attrs)
+      end
+
+      test "correcting a Submitted claim's amount links it to the ledger row it now matches" do
+        expense = sent_claim
+        row = ledger_row
+        sign_in @user
+
+        patch :update, params: edit_params(expense, amount: "45.00", amount_excl_vat: "45.00")
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal expense.id, row.reload.expense_id
+        expense.reload
+        assert_equal "Paid", expense.status
+        assert_equal Date.new(2026, 9, 15), expense.payment_confirmed_date
+        assert_equal "Saved, and linked to the EUSA actual of 2026-09-15 (£45.00), " \
+                     "so ##{expense.auto_number} is now Paid.", flash[:notice]
+      end
+
+      test "a save matching no ledger row only saves" do
+        expense = sent_claim
+        row = ledger_row(debit: "44.00")
+        sign_in @user
+
+        patch :update, params: edit_params(expense, amount: "45.00", amount_excl_vat: "45.00")
+
+        assert_nil row.reload.expense_id
+        assert_equal "Submitted", expense.reload.status
+        assert_equal "Saved changes to ##{expense.auto_number}.", flash[:notice]
+      end
+
+      # Mutual best: the claim edited second must not take the row from the claim it belongs to.
+      test "a row that better matches another claim is left for that claim" do
+        expense = sent_claim
+        sent_claim(amount: "45.00", submitted_to_eusa_date: Date.new(2026, 9, 15))
+        row = ledger_row
+        sign_in @user
+
+        patch :update, params: edit_params(expense, amount: "45.00", amount_excl_vat: "45.00")
+
+        assert_nil row.reload.expense_id
+        assert_equal "Submitted", expense.reload.status
+      end
+
+      test "two ledger rows the claim matches are a guess, so neither is linked" do
+        expense = sent_claim
+        rows = [ ledger_row, ledger_row(date: Date.new(2026, 9, 16)) ]
+        sign_in @user
+
+        patch :update, params: edit_params(expense, amount: "45.00", amount_excl_vat: "45.00")
+
+        assert rows.all? { |row| row.reload.expense_id.nil? }
+        assert_equal "Submitted", expense.reload.status
+      end
+
+      test "an Approved claim is never linked, as EUSA has not been sent it" do
+        expense = sent_claim(status: "Approved", amount: "45.00")
+        row = ledger_row
+        sign_in @user
+
+        patch :update, params: edit_params(expense)
+
+        assert_nil row.reload.expense_id
+        assert_equal "Approved", expense.reload.status
+      end
+
+      test "a row in another cost centre is never linked" do
+        @budget.update!(cost_centre: reimbursements_cost_centres(:fringe))
+        expense = sent_claim(amount: "45.00")
+        row = ledger_row(cost_centre: create_second_reimbursements_cost_centre)
+        sign_in @user
+
+        patch :update, params: edit_params(expense)
+
+        assert_nil row.reload.expense_id
+        assert_equal "Submitted", expense.reload.status
+      end
+
+      test "an international claim takes what EUSA charged when it links" do
+        expense = international_claim(status: "Submitted", amount: BigDecimal("230.00"),
+                                      amount_excl_vat: BigDecimal("230.00"),
+                                      submitted_to_eusa_date: Date.new(2026, 9, 10))
+        row = ledger_row(debit: "236.10")
+        sign_in @user
+
+        patch :update, params: edit_params(expense)
+
+        assert_equal expense.id, row.reload.expense_id
+        assert_equal BigDecimal("236.10"), expense.reload.amount
+        assert_match(/with its amount corrected to what EUSA charged/, flash[:notice])
+      end
+
+      test "an imported Paid claim waiting for its row is linked without being called newly Paid" do
+        expense = sent_claim(status: "Paid", amount: "45.00")
+        row = ledger_row
+        sign_in @user
+
+        patch :update, params: edit_params(expense)
+
+        assert_equal expense.id, row.reload.expense_id
+        assert_equal Date.new(2026, 9, 15), expense.reload.payment_confirmed_date
+        assert_equal "Saved, and linked to the EUSA actual of 2026-09-15 (£45.00).", flash[:notice]
+      end
     end
   end
 end

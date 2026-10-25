@@ -713,6 +713,36 @@ module Reimbursements
       settled
     end
 
+    # Every expense a debit may settle, as a fresh array the caller may consume from: Submitted or
+    # Paid, and neither linked to an imported actual nor payment-confirmed. Dedup only catches an
+    # identical row, so a near-duplicate would otherwise pay a claim twice. Reconcile and
+    # #settle_from_matching_actual! both read it, so a save links exactly what an import would.
+    def matchable_expenses
+      reconciled = eusa_actuals.filter_map { |actual| actual.expense_id&.to_s }.to_set
+      expenses.select do |e|
+        e.status.in?([ Status::SUBMITTED, Status::PAID ]) &&
+          e.payment_confirmed_date.blank? && !reconciled.include?(e.record_id)
+      end
+    end
+
+    # Links a claim to the one unlinked ledger row Reconcile would have matched it to had it looked
+    # like this when the row was imported, and settles it; returns the row, or nil. Matching runs only
+    # at import, so a claim corrected afterwards would otherwise stay unlinked for ever. Reconcile's
+    # rule (Reconciliation.match_debit_to_expense over #matchable_expenses, one cost centre), plus
+    # mutual best: the row must prefer this claim to every other matchable one, or the claim edited
+    # second takes the row from the claim it belongs to. Two rows answering is a guess, so nil.
+    def settle_from_matching_actual!(expense_id)
+      matchable = matchable_expenses
+      expense = matchable.find { |e| e.record_id == expense_id.to_s }
+      return nil unless expense
+
+      picks = eusa_actuals.select do |row|
+        row.needs_attention? && row.debit.to_d.positive? && same_pot?(expense, row) &&
+          Reconciliation.match_debit_to_expense(row, matchable.select { |e| same_pot?(e, row) }).equal?(expense)
+      end
+      settle_with_row!(picks.sole, expense) if picks.one?
+    end
+
     def link_actual_to_budget!(actual_id, budget_id)
       actual = EusaActual.find(actual_id)
       actual.update!(budget_id: budget_id)
@@ -947,6 +977,30 @@ module Reimbursements
       return records if centre.nil?
 
       records.select { |record| record.cost_centre_id.nil? || record.cost_centre_id == centre.id }
+    end
+
+    # Reconcile's cost-centre rule for a claim and a ledger row (ReconcileController#in_cost_centre?):
+    # the same centre, and one naming none counts only while a single centre is configured.
+    def same_pot?(expense, actual)
+      claim_centre = expense.budget&.cost_centre_id
+      return claim_centre == actual.cost_centre_id if claim_centre && actual.cost_centre_id
+
+      @single_cost_centre = CostCentre.count == 1 unless defined?(@single_cost_centre)
+      @single_cost_centre
+    end
+
+    # Settles +expense+ from +row+ under a lock on the row, which a concurrent link may have taken
+    # since it was read; nil then, as when the claim itself changed (NotSettleableError).
+    def settle_with_row!(row, expense)
+      EusaActual.transaction do
+        locked = EusaActual.lock.find(row.id)
+        next nil unless locked.needs_attention?
+
+        settle_expense_from_actual!(locked.id, expense.id, payment_date: locked.date, gbp_charged: locked.debit)
+        locked
+      end
+    rescue NotSettleableError
+      nil
     end
 
     # Draft and Rejected never. Paid only while no payment date or other ledger row settles it: an

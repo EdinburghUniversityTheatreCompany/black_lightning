@@ -280,17 +280,11 @@ module Admin
         [ proposals, unmatched.reject { |entry| proposals.any? { |offered, _| offered.equal?(entry) } } ]
       end
 
-      # Every expense a debit may match, as a fresh array the caller consumes from (a matched expense is
-      # deleted). Cost centre scoping is per row (expenses_in) from this one pool, so an expense claimed
-      # by any row is out of reach of every other row. Submitted or Paid, and neither linked to an
-      # imported actual nor payment-confirmed: dedup only catches an identical row, so a near-duplicate
-      # would otherwise pay a claim twice.
+      # Every expense a debit may match (DatabaseStore#matchable_expenses), as a fresh array the caller
+      # consumes from (a matched expense is deleted). Cost centre scoping is per row (expenses_in) from
+      # this one pool, so an expense claimed by any row is out of reach of every other row.
       def matchable_expenses
-        reconciled = store.eusa_actuals.filter_map { |actual| actual.expense_id&.to_s }.to_set
-        store.expenses.select do |e|
-          e.status.in?([ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]) &&
-            e.payment_confirmed_date.blank? && !reconciled.include?(e.record_id)
-        end
+        store.matchable_expenses
       end
 
       # The income lines a credit may link to: those in its cost centre and in the financial year its

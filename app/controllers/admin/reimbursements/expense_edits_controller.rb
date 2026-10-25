@@ -47,7 +47,8 @@ module Admin
         end
 
         store.update_expense!(expense.record_id, update_attrs(expense))
-        redirect_to_edit(expense, notice: "Saved changes to ##{expense.auto_number}.")
+        row = store.settle_from_matching_actual!(expense.record_id)
+        redirect_to_edit(expense, notice: row ? linked_notice(expense, row) : "Saved changes to ##{expense.auto_number}.")
       end
 
       # Back to PENDING, never Approved, so the claim re-enters the owner gate
@@ -315,6 +316,16 @@ module Admin
         "An Invoice pays the supplier directly, so it needs the payee overrides: #{fields}. " \
           "Without them this would pay #{expense.person&.name.presence || 'the submitter'} " \
           "instead. Use Reimbursement if they paid the bill themselves."
+      end
+
+      # What the save also did. +expense+ is the claim as it was before the save: an imported Paid
+      # claim was only waiting for its row, so it is not "now Paid".
+      def linked_notice(expense, row)
+        notice = "Saved, and linked to the EUSA actual of #{helpers.reimbursements_date(row.date)} " \
+                 "(#{helpers.reimbursements_money(row.debit)})"
+        notice += ", so ##{expense.auto_number} is now Paid" unless expense.status == ::Reimbursements::Status::PAID
+        notice += " with its amount corrected to what EUSA charged" if posted_rail_international?(expense)
+        "#{notice}."
       end
 
       def redirect_to_edit(expense, flash)
