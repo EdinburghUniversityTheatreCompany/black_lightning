@@ -70,27 +70,17 @@
     <%# No bulk approve here: it skips every gated claim, so could only ever
         report "0 approved". %>
     <div data-controller="bulk-review">
-      <div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
-        <label class="flex items-center gap-2 text-sm font-medium">
-          <%= check_box_tag "select_all", "1", false,
-                            data: { bulk_review_target: "selectAll", action: "bulk-review#toggleAll" },
-                            class: "h-4 w-4" %>
-          Select all
-        </label>
-        <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
-        <%= form_with url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab, **scope_params),
-                      method: :patch, id: "bulk-review-form",
-                      class: "flex flex-wrap items-center gap-2" do %>
-          <%= text_field_tag :override_note, nil,
-                             placeholder: "Why are you overriding? (required)",
-                             "aria-label": "Why you are overriding sign-off",
-                             data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
-                             class: input_classes(width: nil) %>
-          <%= submit_tag "Override sign-off and approve",
-                         data: { bulk_review_target: "overrideButton", disable_with: false },
-                         disabled: true, class: btn_classes(:warning, :sm) %>
-        <% end %>
-      </div>
+      <%= render layout: "bulk_toolbar",
+                 locals: { url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab, **scope_params) } do %>
+        <%= text_field_tag :override_note, nil,
+                           placeholder: "Why are you overriding? (required)",
+                           "aria-label": "Why you are overriding sign-off",
+                           data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
+                           class: input_classes(width: nil) %>
+        <%= submit_tag "Override sign-off and approve",
+                       data: { bulk_review_target: "overrideButton", disable_with: false },
+                       disabled: true, class: btn_classes(:warning, :sm) %>
+      <% end %>
 
       <% @awaiting_owner.each do |expense| %>
         <%= render "expense_card", expense: expense, allow_approve: true, selectable: true,
@@ -116,32 +106,22 @@
     </p>
 
     <div data-controller="bulk-review">
-      <%# The cards' checkboxes join this form through form="bulk-review-form". %>
-      <div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
-        <label class="flex items-center gap-2 text-sm font-medium">
-          <%= check_box_tag "select_all", "1", false,
-                            data: { bulk_review_target: "selectAll", action: "bulk-review#toggleAll" },
-                            class: "h-4 w-4" %>
-          Select all
-        </label>
-        <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
-        <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab, **scope_params), method: :patch,
-                      id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
-          <%# Deliberately NOT required: the box is shared with Approve selected.
-              bulk-review enables Reject only once it is filled. %>
-          <%= text_field_tag :rejection_reason, nil, placeholder: "Reason (required to reject)",
-                             data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
-                             class: input_classes(width: nil) %>
-          <%= submit_tag "Approve selected",
-                         data: { bulk_review_target: "approveButton" }, disabled: true,
-                         class: btn_classes(:success, :sm) %>
-          <%= submit_tag "Reject selected",
-                         formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab, **scope_params),
-                         data: { bulk_review_target: "rejectButton", disable_with: false,
-                                 turbo_confirm: "Reject the selected expenses and email each producer?" },
-                         disabled: true, class: btn_classes(:danger, :sm) %>
-        <% end %>
-      </div>
+      <%= render layout: "bulk_toolbar",
+                 locals: { url: admin_reimbursements_bulk_approve_review_path(tab: @tab, **scope_params) } do %>
+        <%# Deliberately NOT required: the box is shared with Approve selected.
+            bulk-review enables Reject only once it is filled. %>
+        <%= text_field_tag :rejection_reason, nil, placeholder: "Reason (required to reject)",
+                           data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
+                           class: input_classes(width: nil) %>
+        <%= submit_tag "Approve selected",
+                       data: { bulk_review_target: "approveButton" }, disabled: true,
+                       class: btn_classes(:success, :sm) %>
+        <%= submit_tag "Reject selected",
+                       formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab, **scope_params),
+                       data: { bulk_review_target: "rejectButton", disable_with: false,
+                               turbo_confirm: "Reject the selected expenses and email each producer?" },
+                       disabled: true, class: btn_classes(:danger, :sm) %>
+      <% end %>
 
       <h2 class="mt-4 mb-2 text-lg font-semibold">Ready to approve (<%= @ready.size %>)</h2>
       <% if @ready.empty? %>

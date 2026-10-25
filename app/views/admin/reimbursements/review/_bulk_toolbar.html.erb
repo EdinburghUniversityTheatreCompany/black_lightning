@@ -1,0 +1,16 @@
+<%# locals: (url:) %>
+<%# A bulk-review tab's toolbar: Select all, the count, and the bulk form posting to `url`, whose
+    controls the block renders. The cards' checkboxes join that form through form="bulk-review-form". %>
+<div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
+  <label class="flex items-center gap-2 text-sm font-medium">
+    <%= check_box_tag "select_all", "1", false,
+                      data: { bulk_review_target: "selectAll", action: "bulk-review#toggleAll" },
+                      class: "h-4 w-4" %>
+    Select all
+  </label>
+  <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
+  <%= form_with url: url, method: :patch, id: "bulk-review-form",
+                class: "flex flex-wrap items-center gap-2" do %>
+    <%= yield %>
+  <% end %>
+</div>
