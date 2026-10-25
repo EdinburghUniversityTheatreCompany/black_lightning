@@ -157,6 +157,31 @@ module Admin
       assert_equal @income.record_id, budget.record_id
     end
 
+    test "the preview lists matched expenses, matched income and unmatched rows under their own columns" do
+      sign_in @user
+      paste = [ ACTUALS_HEADER, debit_row, credit_row,
+                debit_row(nominal: "439000", narrative: "Stray debit", debit: "77.00"),
+                credit_row(nominal: "251000", narrative: "Stray credit", credit: "9.99") ].join("\n")
+
+      post :preview, params: { pasted_text: paste }
+
+      assert_response :success
+      tables = css_select("table").first(3)
+      assert_equal [ [ "Nominal", "Period", "Date", "Narrative", "Debit", "Expense #", "Payee", "Expense amount" ],
+                     %w[Nominal Period Date Narrative Credit Budget],
+                     %w[Nominal Period Date Narrative Debit Credit Reason] ],
+                   tables.map { |table| table.css("thead th").map { |th| th.text.squish } }
+      expenses, income, unmatched = tables.map do |table|
+        table.css("tbody tr").map { |tr| tr.css("td").map { |td| td.text.squish } }
+      end
+      assert_equal [ "439999", "03", "Alice Producer", "£123.45", "##{@expense.auto_number}", "Alice Producer", "£123.45" ],
+                   expenses.sole.values_at(0, 1, 3, 4, 5, 6, 7)
+      assert_equal [ "250000", "Box office", "£500.00", "Ticket income" ], income.sole.values_at(0, 3, 4, 5)
+      assert_equal [ [ "439000", "Stray debit", "£77.00", "", "No matching Submitted or Paid claim" ],
+                     [ "251000", "Stray credit", "", "£9.99", "No matching income budget" ] ],
+                   unmatched.map { |cells| cells.values_at(0, 3, 4, 5, 6) }
+    end
+
     test "a credit whose code two income budgets share is left for finance to place" do
       create_reimbursements_budget(name: "Sponsorship", nominal_code: "250000", budget_type: "Income")
       sign_in @user
