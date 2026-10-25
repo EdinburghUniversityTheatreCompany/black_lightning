@@ -20,4 +20,15 @@ module Admin::ImportsHelper
     else item[:row][item[:match_type]]
     end
   end
+
+  # The id a row carried: its student id, else its associate id.
+  def import_row_id(row)
+    row[:student_id] || row[:associate_id]
+  end
+
+  # The row's id on a line under its name, or nothing for a row without one.
+  def import_id_note(row)
+    id = import_row_id(row)
+    safe_join([ tag.br, tag.small("ID: #{id}", class: "text-gray-500") ]) if id
+  end
 end

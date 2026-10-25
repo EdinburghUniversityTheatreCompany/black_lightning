@@ -1,0 +1,5 @@
+<%= render Admin::ImportPreviewSectionComponent.new(items: [ item ], title: "Activate by Email Match", variant: :info, hint: "Will be activated automatically", headers: [ "Import Name", "Existing User", "Email Match", "Action" ]) do %>
+  <%= render Admin::ImportExactMatchRowComponent.new(item: item, value: item[:row][:email], action: "activate", badge: "Will Activate", badge_type: :info, show_row_id: true) do %>
+    <br><small class="text-success">+ will add student ID</small>
+  <% end %>
+<% end %>

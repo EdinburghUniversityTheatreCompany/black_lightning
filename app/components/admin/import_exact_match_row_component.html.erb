@@ -1,0 +1,17 @@
+<%= tag.tr(class: @row_class) do %>
+  <td>
+    <%= row[:original_name] %>
+    <%= helpers.import_id_note(row) if @show_row_id %>
+  </td>
+  <td>
+    <%= link_to user.name_or_email, helpers.admin_user_path(user) %>
+    <%= content %>
+  </td>
+  <td><span class="font-mono"><%= @value %></span></td>
+  <td>
+    <% if @action %>
+      <input type="hidden" name="actions[<%= @item[:index] %>]" value="<%= @action %>">
+    <% end %>
+    <%= render(BadgeComponent.new(type: @badge_type)) { @badge } %>
+  </td>
+<% end %>

@@ -19,4 +19,10 @@ class Admin::ImportsHelperTest < ActionView::TestCase
     assert_equal "ASSOC1", import_match_label(match_type: :associate_id, row: row)
     assert_equal "a@example.com", import_match_label(match_type: nil, row: row)
   end
+
+  test "import_id_note shows the student id, else the associate id, and nothing for neither" do
+    assert_dom_equal '<br><small class="text-gray-500">ID: s1234567</small>', import_id_note(student_id: "s1234567", associate_id: "ASSOC1")
+    assert_dom_equal '<br><small class="text-gray-500">ID: ASSOC1</small>', import_id_note(associate_id: "ASSOC1")
+    assert_nil import_id_note(email: "a@example.com")
+  end
 end

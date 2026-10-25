@@ -1,0 +1,8 @@
+<%= render Admin::ImportPreviewSectionComponent.new(items: [ "Finbar Viking", "Ophelia Dane" ], title: "Already on Team (Review Required)", variant: :warning, hint: "These people are already on The Tempest", headers: [ "Team Member", [ "Decision", "200px" ] ]) do |section| %>
+  <% section.items.each do |name| %>
+    <tr>
+      <td><%= name %></td>
+      <td>Skip (keep current)</td>
+    </tr>
+  <% end %>
+<% end %>
