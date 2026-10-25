@@ -446,21 +446,9 @@ module Admin
       # the amounts say; then amount closeness, then the newest claim.
       def link_candidate_rank(expense, actual)
         target = actual.debit || 0
-        [ named_in_narrative?(expense, actual) ? 0 : 1,
+        [ ::Reimbursements::Reconciliation.payee_named?(expense, actual) ? 0 : 1,
           ((expense.amount || 0) - target).abs,
           -expense.auto_number.to_i ]
-      end
-
-      # Word by word, because the ledger abbreviates and reorders ("SMITH A"), and only words of 3+
-      # characters, so an initial cannot match half the ledger.
-      def named_in_narrative?(expense, actual)
-        narrative = "#{actual.narrative} #{actual.narrative_1}".downcase
-        return false if narrative.blank?
-
-        names = [ expense.effective_payee_name, expense.person&.name ].compact_blank
-        names.flat_map { |name| name.downcase.split(/[^a-z]+/) }
-             .select { |word| word.length >= 3 }
-             .any? { |word| narrative.include?(word) }
       end
 
       def conversion_params

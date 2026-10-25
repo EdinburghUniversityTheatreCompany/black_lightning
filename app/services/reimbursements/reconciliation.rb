@@ -136,12 +136,73 @@ module Reimbursements
         next if compare_amount.nil? ||
                 (compare_amount - row.debit).abs > amount_tolerance_for(expense, compare_amount)
 
-        candidate_dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact
-        closest = candidate_dates.map { |date| (date - row.date).abs }.select { |diff| diff <= DATE_WINDOW_DAYS }.min
+        closest = days_from_claim(expense, row)
         [ expense, closest ] if closest
       end
       candidates.min_by { |(_expense, distance)| distance }&.first
     end
+
+    ##
+    # A debit the matcher left, and the one claim it plausibly pays despite a different amount, for a
+    # person to tick or leave (+reasons+: :payee, :description). +key+ names the row's content and
+    # the claim, so a tick never settles a claim the re-parse at apply chose differently.
+    ProbableMatch = Data.define(:row, :expense, :reasons) do
+      def key
+        "#{Reconciliation.row_key(row)}_#{expense.record_id}"
+      end
+    end
+
+    # The one expense a debit row plausibly pays although the amounts differ, as [expense, reasons],
+    # or nil. Same nominal code and date window as match_debit_to_expense, no amount test, and the
+    # narrative must name the claim: its payee (:payee) or its description (:description). Several
+    # candidates return nil, because choosing between them is the guess this avoids.
+    def probable_debit_match(row, expenses)
+      candidates = expenses.filter_map do |expense|
+        next unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
+        next unless days_from_claim(expense, row)
+
+        reasons = []
+        reasons << :payee if payee_named?(expense, row)
+        reasons << :description if description_in_narrative?(expense, row)
+        [ expense, reasons ] if reasons.any?
+      end
+      candidates.first if candidates.one?
+    end
+
+    # Word by word, because the ledger abbreviates and reorders ("SMITH A"), and only words of 3+
+    # characters, so an initial cannot match half the ledger. +row+ is a parsed row or an EusaActual.
+    def payee_named?(expense, row)
+      names = [ expense.effective_payee_name, expense.person&.name ].compact_blank
+      narrative = narrative_of(row)
+      names.flat_map { |name| words_of(name, 3) }.any? { |word| narrative.include?(word) }
+    end
+
+    # Two of the description's words of 4+ letters (or its only one), since a single common word
+    # ("props") would name half the claims on a nominal code. EUSA copies the description from the
+    # BACS spreadsheet into the narrative.
+    def description_in_narrative?(expense, row)
+      words = words_of(expense.description, 4).uniq
+      return false if words.empty?
+
+      narrative = narrative_of(row)
+      words.count { |word| narrative.include?(word) } >= [ 2, words.size ].min
+    end
+
+    # Days between the row and the nearer of the claim's submitted-to-EUSA and payment-confirmed
+    # dates, or nil when neither is within DATE_WINDOW_DAYS.
+    def days_from_claim(expense, row)
+      dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact
+      dates.map { |date| (date - row.date).abs }.select { |diff| diff <= DATE_WINDOW_DAYS }.min
+    end
+
+    def words_of(text, min_length)
+      text.to_s.downcase.split(/[^a-z]+/).select { |word| word.length >= min_length }
+    end
+
+    def narrative_of(row)
+      "#{row.narrative} #{row.narrative_1}".downcase
+    end
+    private_class_method :words_of, :narrative_of
 
     # How far a row's amount may sit from the claim's. Read off the EXPENSE because nothing on the
     # actuals row says whether a payment went by BACS or SWIFT, and nothing needs to: each expense

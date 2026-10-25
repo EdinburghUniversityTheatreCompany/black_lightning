@@ -314,6 +314,71 @@ module Reimbursements
       assert_nil Reconciliation.match_debit_to_expense(debit_row(row_date: Date.new(2026, 4, 24)), [ exp ])
     end
 
+    # --- probable_debit_match -------------------------------------------
+    #
+    # A debit whose amount differs from the claim it belongs to: the matcher above leaves it, and a
+    # person decides. EUSA's narrative names the payee on about half of real links and carries the
+    # claim's description on nearly nine in ten, so either one counts.
+
+    def named_expense(payee: "Alice Producer", description: "Fake blood", **attrs)
+      expense(**attrs).tap do |e|
+        e.person = Reimbursements::Person.new(name: payee)
+        e.description = description
+      end
+    end
+
+    def narrated_row(narrative, narrative_1: "", debit: bd("100.00"), **attrs)
+      debit_row(debit: debit, **attrs).with(narrative: narrative, narrative_1: narrative_1)
+    end
+
+    test "a debit of another amount is a probable match for the claim whose payee it names" do
+      exp = named_expense
+
+      assert_equal [ exp, [ :payee ] ],
+                   Reconciliation.probable_debit_match(narrated_row("BACS PAYMENT PRODUCER A"), [ exp ])
+    end
+
+    test "the claim's description in the narrative names it too" do
+      exp = named_expense(payee: "Sam Stagehand", description: "Velvet cloak for Cogito")
+
+      assert_equal [ exp, [ :description ] ],
+                   Reconciliation.probable_debit_match(narrated_row("BACS", narrative_1: "VELVET CLOAK"), [ exp ])
+    end
+
+    # Words, not substrings of the description: "props" alone sits on half the ledger.
+    test "a description needs two of its words, or its only one" do
+      two_words = named_expense(payee: "Sam Stagehand", description: "Props for Cogito")
+      one_word = named_expense(payee: "Sam Stagehand", description: "Gaffer")
+
+      assert_nil Reconciliation.probable_debit_match(narrated_row("PROPS"), [ two_words ])
+      assert_equal [ one_word, [ :description ] ],
+                   Reconciliation.probable_debit_match(narrated_row("GAFFER TAPE"), [ one_word ])
+    end
+
+    test "an initial cannot name a payee" do
+      exp = named_expense(payee: "Al Bo", description: "Fake blood")
+
+      assert_nil Reconciliation.probable_debit_match(narrated_row("BACS AL BO"), [ exp ])
+    end
+
+    test "two plausible claims are a guess, so neither is offered" do
+      first = named_expense
+      second = named_expense(description: "Stage nails")
+
+      assert_nil Reconciliation.probable_debit_match(narrated_row("ALICE PRODUCER"), [ first, second ])
+    end
+
+    test "another nominal code or a date outside the window rules a claim out" do
+      row = narrated_row("ALICE PRODUCER")
+
+      assert_nil Reconciliation.probable_debit_match(row, [ named_expense(nominal_code: "999999") ])
+      assert_nil Reconciliation.probable_debit_match(row, [ named_expense(submitted_date: Date.new(2025, 2, 28)) ])
+    end
+
+    test "a narrative naming neither payee nor description offers nothing" do
+      assert_nil Reconciliation.probable_debit_match(narrated_row("STRIPE FEES"), [ named_expense ])
+    end
+
     # --- match_credit_to_budget -------------------------------------------
 
     def credit_row(nominal_code: "250000")
