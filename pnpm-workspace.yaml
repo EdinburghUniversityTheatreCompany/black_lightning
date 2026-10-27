@@ -1,2 +1,8 @@
 allowBuilds:
   "@parcel/watcher": true
+
+overrides:
+  # @tailwindcss/typography 0.5.20 pins postcss-selector-parser 6.0.10, which has
+  # advisories fixed only from 6.1.5, so Dependabot cannot update it. Drop this once
+  # a typography release depends on a fixed version.
+  "@tailwindcss/typography>postcss-selector-parser": "^6.1.5"
