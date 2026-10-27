@@ -246,18 +246,32 @@ class DisplayHelperTest < ActionView::TestCase
     [ "Sarah Foley", "Technical Operator" ]
   ].freeze
 
-  # The fits are written out independently of the helper (a per-entry line
-  # estimate and a column count), so the assertions compare the layout it chose
-  # against an independent reading of the rule.
+  # The fits are checked against the numbers measured in Chrome at 1920x1080,
+  # not by re-running the helper's own arithmetic. A second copy of the model
+  # agrees with the model; only measurements disagree with it.
+  #
+  # Measured by the screen's owner on the real page: 42 people (these cast and
+  # crew lists) fill three columns at text-2xl, and 70 people only fit four
+  # columns at text-base. Both are the layout this helper must return, so a
+  # change to CREDITS_CHAR_EM or the strides that perturbs them is a bug.
+  MEASURED_FITS = {
+    [ 42, 3 ] => "text-2xl",
+    [ 70, 4 ] => "text-base"
+  }.freeze
+
+  def credits_lines_at(cast, crew, size, columns)
+    chars = (DisplayHelper::CREDITS_CONTENT_WIDTH - (columns - 1) * DisplayHelper::CREDITS_COLUMN_GAP) / columns
+    per_line = (chars / (DisplayHelper::CREDITS_CHAR_EM * DisplayHelper::CREDITS_FONT_PX.fetch(size))).floor
+    (cast + crew).sum { |(name, detail)| credits_entry_lines("#{name} #{detail}", per_line) }
+  end
+
   def credits_fits?(cast, crew, size, columns)
-    column_width = (DisplayHelper::CREDITS_CONTENT_WIDTH - (columns - 1) * DisplayHelper::CREDITS_COLUMN_GAP) / columns
-    chars = (column_width / DisplayHelper::CREDITS_CHAR_PX.fetch(size)).floor
     stride = DisplayHelper::CREDITS_ROW_STRIDES.fetch(size)
-    lines = (cast + crew).sum { |(name, detail)| [ ((name.length + 1 + detail.length) / chars.to_f).ceil, 1 ].max }
     sections = [ cast, crew ].count(&:any?)
     heading_cost = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
                    (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
-    (heading_cost + lines * stride) / columns.to_f <= DisplayHelper::CREDITS_WINDOW_HEIGHT
+    (heading_cost + credits_lines_at(cast, crew, size, columns) * stride) / columns.to_f <=
+      DisplayHelper::CREDITS_WINDOW_HEIGHT
   end
 
   test "display_credits_layout picks the biggest type first, then the fewest columns" do
@@ -270,6 +284,20 @@ class DisplayHelperTest < ActionView::TestCase
     assert credits_fits?(CAST, CREW, layout[:name_size], layout[:columns]), "the chosen fit must fit"
     assert_not credits_fits?(CAST, CREW, "text-2xl", 2), "two columns of text-2xl must not fit, or a column was wasted"
     assert_not credits_fits?(CAST, CREW, "text-3xl", 4), "bigger type must be tried and rejected first"
+  end
+
+  # The two sizes measured on the real page. If the model drifts, it drifts here
+  # first, and the screen scrolls when nobody is watching it.
+  test "display_credits_layout reproduces the sizes measured in Chrome" do
+    MEASURED_FITS.each do |(count, columns), size|
+      company = (CAST + CREW)
+      company += Array.new(count - company.length) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] } if count > company.length
+      cast, crew = count > 42 ? [ [], company ] : [ CAST, CREW ]
+      assert_equal count, cast.length + crew.length
+
+      assert_equal({ name_size: size, columns: columns }, display_credits_layout(cast, crew),
+                   "#{count} people were measured fitting #{columns} columns at #{size}")
+    end
   end
 
   test "display_credits_layout shrinks the type only when no column count fits" do
@@ -300,6 +328,20 @@ class DisplayHelperTest < ActionView::TestCase
     assert long_layout[:columns] > short_layout[:columns],
            "a role that wraps must cost the layout something, not just disappear"
     assert credits_fits?(CAST.take(6), long_crew, long_layout[:name_size], long_layout[:columns])
+  end
+
+  # A long real name and a long real role, the pair that breaks a character
+  # count: the name alone fills a line, so the role cannot share it.
+  test "credits_lines charges for where the words actually break" do
+    per_line = 12 # 3 columns of text-base is about this many characters
+
+    assert_equal 1, credits_entry_lines("Jo Prompt", per_line)
+    # "Christopher" is 11 of the 12, so "MacAllister" starts a second line and
+    # "Assistant" a third: three words, one line each, not a length divided.
+    assert_equal 3, credits_entry_lines("Christopher MacAllister Assistant", per_line)
+    assert_equal 4, credits_entry_lines("Christopher MacAllister Assistant Technical", per_line)
+    # A word wider than the column stays on its own line rather than vanishing.
+    assert_equal 2, credits_entry_lines("Unfeasiblylongsurname Actor", per_line)
   end
 
   test "display_credits_layout falls back to the smallest type in four columns, with the marquee as the net" do

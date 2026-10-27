@@ -111,9 +111,10 @@ module DisplayHelper
   #   - the panel chrome pinned in _credits.html.erb (CREDITS_CHROME_REM) leaves
   #     CREDITS_WINDOW_HEIGHT for the list;
   #   - CREDITS_ROW_STRIDES is a name's line height plus the 8px list gap;
-  #   - CREDITS_CHAR_PX is one character of mixed-case Source Sans 3 (a semibold
-  #     name, then a lighter role) at each size - re-measure alongside the
-  #     strides whenever either changes.
+  #   - CREDITS_FONT_PX is the rendered font size at each step, and
+  #     CREDITS_CHAR_EM the mean advance of one character of mixed-case Source
+  #     Sans 3 (a semibold name, then a lighter role) as a fraction of it —
+  #     re-measure alongside the strides whenever either changes.
   # Pixels, not people: roles run long ("Assistant Technical Stage Manager"),
   # and a person-count promise wraps into a scroll the moment names wrap.
   CREDITS_CHROME_REM = 26.8
@@ -128,10 +129,15 @@ module DisplayHelper
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
   }.freeze
-  CREDITS_CHAR_PX = {
-    "text-5xl" => 24, "text-4xl" => 18, "text-3xl" => 15, "text-2xl" => 12,
-    "text-xl" => 10, "text-base" => 8
+  CREDITS_FONT_PX = {
+    "text-5xl" => 48, "text-4xl" => 36, "text-3xl" => 30, "text-2xl" => 24,
+    "text-xl" => 20, "text-base" => 16
   }.freeze
+  # Source Sans 3's lowercase and space advance measure 0.45em, but the model is
+  # only ever safe in one direction: too small a figure promises a fit that
+  # wraps into the scroll. 0.48 was the smallest figure at which 300 random
+  # companies all fit at the size chosen; 0.45 broke 19 of them.
+  CREDITS_CHAR_EM = 0.48
 
   # The biggest type first, then the fewest columns (2 to 4) that fit one screen.
   # Only when nothing fits at any size does the layout give up and take the
@@ -214,15 +220,36 @@ module DisplayHelper
   end
 
   def credits_chars_per_line(columns, size)
-    (credits_column_width(columns) / CREDITS_CHAR_PX.fetch(size)).floor
+    (credits_column_width(columns) / (CREDITS_CHAR_EM * CREDITS_FONT_PX.fetch(size))).floor
   end
 
-  # Each entry is "Name Role" on one or more lines: estimate the lines from the
-  # characters it needs, the way Display::Panels::News budgets headlines with
-  # CHARS_PER_LINE. The + 1 is the space between name and role.
+  # Each entry is "Name Role" on one or more lines: estimate the lines it needs
+  # from the characters that fit a line, the way Display::Panels::News budgets
+  # headlines with CHARS_PER_LINE.
   def credits_lines(cast_members, crew_members, chars_per_line)
     (cast_members + crew_members).sum do |(name, detail)|
-      [ ((name.to_s.length + 1 + detail.to_s.length) / chars_per_line.to_f).ceil, 1 ].max
+      credits_entry_lines("#{name} #{detail}", chars_per_line)
     end
+  end
+
+  # Greedy wrap, one word at a time: a word that does not fit starts a new line.
+  # Dividing the characters by the line width is cheaper but blind to where the
+  # breaks fall, and where they fall is what decides the height — once "Assistant
+  # Technical Stage Manager" wraps, the rest of that line is dead space, and a
+  # long name can leave a line mostly empty.
+  def credits_entry_lines(text, chars_per_line)
+    lines = 1
+    used = 0
+    text.to_s.split.each do |word|
+      if used.zero?
+        used = word.length
+      elsif used + 1 + word.length <= chars_per_line
+        used += 1 + word.length
+      else
+        lines += 1
+        used = word.length
+      end
+    end
+    lines
   end
 end
