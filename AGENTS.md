@@ -1350,7 +1350,8 @@ panel with content; panels live in `app/services/display/panels/`.
   `display.css`.
 - **`Display::Panels::News` budgets in pixels measured in Chrome**, each constant mapping to one
   Tailwind class in `_news.html.erb` (`CHARS_PER_LINE = 68`, between mixed-case 76 and all-caps 66).
-  The list's `min-h-0 overflow-hidden` clips a headline rather than push the QR code off screen.
+  The list scrolls in the same `.display-marquee` as What's On, and `_news.html.erb` pins
+  `--display-marquee-chrome: 25rem` (label, mt-8, footer) so the QR below it never moves.
 - **The font is self-hosted Source Sans 3 (from `theme.css`), never Source Sans Pro**, which has no
   weight 500 and so renders every `font-medium` at 400. Metrics match, so the measurements hold.
 - **`OnThisDay` filters on the blob's filename (`Event.with_uploaded_image`), not on having an
@@ -1364,15 +1365,22 @@ panel with content; panels live in `app/services/display/panels/`.
   pick.
 - **The credits QR always resolves**: `Event#digital_programme_url` when set, else the event's own
   page; the caption names which.
-- **`display_credits_layout` picks side by side (Cast against Company) or flowed (one sequence down
-  both columns), whichever prints names bigger, ties to side by side.** No lopsidedness threshold is
-  needed: flowing only wins where a column was going to waste. It sizes in measured pixels, not rows
-  (the QR is a different fraction of a row at each size). Side by side puts the QR under the shorter
-  list and caps each list's height so a wrapping name clips the list, not the code; flowed makes the
-  QR a footer. Re-measure `CREDITS_*` if the header, row spacing or QR size changes.
+- **The credits are one list in CSS columns, sized in measured pixels, and CSS columns cannot
+  scroll cleanly** (all of them move at once, so the fold cuts the first column mid-list) — the
+  marquee is a safety net for a company past `text-base x 4` only. `display_credits_layout` takes the
+  name/detail pairs and counts LINES (long roles wrap), tries the biggest type first then the fewest
+  columns that fit. `CREDITS_CHROME_REM` must match the markup's `--display-marquee-chrome` (pinned
+  by two tests) or the fit promises a scroll; re-measure the `CREDITS_*` constants in Chrome at
+  1920x1080 when the header, row spacing or QR size changes.
+- **Never decode a poster on a GET.** `display_ambient_gradient` reads only the palette
+  `Display::PaletteExtractionJob` cached in `blob.metadata["palette_v2"]`, because Anthias polls
+  these pages forever. That metadata is the ledger: `[]` (colourless) and `false` (undecodable) mean
+  "asked, answered", so the hook and `display_palette_backfill.rake` skip the blob instead of
+  retrying on every save. The hook must stay ungated and skip `fetch_image` placeholders, and every
+  vips call must sit inside `blob.open` (its temp file dies at the block's end).
 - **Every panel's red label is `display_label`** (`text-4xl`), so the show's name is the only big
-  type. The credits label's `mb-2` keeps that header at the height `CREDITS_COLUMN_HEIGHT` was
-  measured at: a new label size or margin means re-measuring it.
+  type. The credits label's `mb-2` keeps that header at the height `CREDITS_CHROME_REM`
+  was measured at: a new label size or margin means re-measuring it.
 
 ## Event ticket prices
 
