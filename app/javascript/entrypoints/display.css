@@ -64,7 +64,3 @@
     animation: none;
   }
 }
-
-.display-credits-heading {
-  color: var(--color-display-credits-heading);
-}

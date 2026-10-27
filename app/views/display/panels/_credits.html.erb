@@ -50,14 +50,13 @@
       animation measures its travel against - a mid-line clip at the fold. %>
   <div class="display-marquee flex-none" style="--display-marquee-chrome: <%= DisplayHelper::CREDITS_CHROME_REM %>rem">
     <div class="display-marquee__track">
-    <%# One list: the cast first, then the company, flowing down CSS columns (the
-        column count is inline - a columns-N class is one Tailwind will not
-        generate). The helper picks the biggest type first, then the fewest
+    <%# One list: the cast first, then the company, flowing down CSS columns
+        (CREDITS_COLUMN_CLASSES). The helper picks the biggest type first, then the fewest
         columns that fit one screen; the marquee below is only a safety net for a
         company past what even 4 columns at text-base hold, because CSS columns
         cannot scroll cleanly (every column moves at once, so the fold cuts the
         first column mid-list). No fixed height: CSS multicol balances on its own. %>
-    <div style="column-count: <%= layout[:columns] %>; column-gap: 4rem">
+    <div class="<%= DisplayHelper::CREDITS_COLUMN_CLASSES.fetch(layout[:columns]) %> gap-x-16">
       <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
       <%= render "display/panels/credits_section", title: "Company", members: crew_members,
                  name_size: name_size, spaced: cast_members.any? %>

@@ -191,10 +191,7 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match ERB::Util.html_escape(crew_member.user_name), response.body
     # One flowed list in CSS columns, not two panels side by side: the layout
     # helper's column count reaches the markup that has to honour it.
-    assert_select "[style*=column-count]" do |nodes|
-      columns = nodes.first["style"][/column-count:\s*(\d+)/, 1].to_i
-      assert_includes 2..4, columns
-    end
+    assert_select ".columns-2, .columns-3, .columns-4", count: 1
     # The helper sizes the columns against a viewport the page must actually
     # give them, so the constant and the rendered chrome are pinned to each
     # other, and both to the measured 26.8rem: changing either without

@@ -126,6 +126,9 @@ module DisplayHelper
   # on purpose: it competes with name size.
   CREDITS_SECTION_GAP = 32
   CREDITS_ROW_GAP = 8 # space-y-2 between entries
+  # Spelled out so Tailwind's scanner sees them: a class built at render time
+  # ("columns-#{n}") is one it never generates.
+  CREDITS_COLUMN_CLASSES = { 2 => "columns-2", 3 => "columns-3", 4 => "columns-4" }.freeze
   CREDITS_ROW_STRIDES = {
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
