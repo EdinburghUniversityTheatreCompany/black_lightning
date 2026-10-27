@@ -29,7 +29,7 @@ module Reimbursements
   ##
   # A show, project or heading that several budget lines belong to. It holds the
   # AGREED TOTAL and the owners; its budgets hold the nominal code and an
-  # optional allocation. See CLAUDE.md, Reimbursements portal, "Areas".
+  # optional allocation. See AGENTS.md, Reimbursements portal, "Areas".
   class Area < ApplicationRecord
     include RecordId
     include PlannedAmount

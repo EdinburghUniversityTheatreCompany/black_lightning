@@ -1,5 +1,7 @@
-# Black Lightning - Claude Code Guidelines
+# Black Lightning - Agent Guidelines
 
+**Claude Code loads this file only because the repo has no `CLAUDE.md`.** Never add one (a
+stub, or `/init`'s output): this file then silently stops loading.
 
 ## Packages
 Rails 8.1, minitest, Tailwind v4 site-wide, Stimulus for all JavaScript sprinkles. Vite, not

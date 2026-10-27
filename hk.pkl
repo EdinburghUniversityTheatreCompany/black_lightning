@@ -10,7 +10,7 @@ local linters = new Mapping<String, Step> {
     }
     // --- JavaScript (eslint) ----------------------------------------------------
     // Stimulus controllers + custom lib modules (this is a Vite app — JS lives in
-    // app/javascript, see CLAUDE.md). Mirrors the `pnpm lint` script and CI's lint_js job;
+    // app/javascript, see AGENTS.md). Mirrors the `pnpm lint` script and CI's lint_js job;
     // preserves the JS coverage the old overcommit EsLint hook provided.
     ["eslint"] {
         glob = List("app/javascript/controllers/**/*.js", "app/javascript/lib/**/*.js")

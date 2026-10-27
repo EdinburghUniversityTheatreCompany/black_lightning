@@ -13,7 +13,7 @@ ActiveStorage::VariantRecord:
   enabled: false
 
 DatabaseConsistencyCheckers:
-  # Legacy integer primary keys, and the integer FKs pointing at them, are intentional (CLAUDE.md,
+  # Legacy integer primary keys, and the integer FKs pointing at them, are intentional (AGENTS.md,
   # Database & Migrations). Converting means rewriting every PK and FK in the legacy schema.
   PrimaryKeyTypeChecker:
     enabled: false

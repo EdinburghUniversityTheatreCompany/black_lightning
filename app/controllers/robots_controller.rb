@@ -10,7 +10,7 @@ class RobotsController < ActionController::Base
   def show
     # public: is safe only because nothing here touches the session. stale_if_error is a
     # mitigation: Cloudflare honours it only on Enterprise, and a dead Puma gives a 521/522 it
-    # cannot serve stale for, so turn on Always Online (see the Deployment note in CLAUDE.md).
+    # cannot serve stale for, so turn on Always Online (see the Deployment note in AGENTS.md).
     expires_in 1.hour, public: true, stale_if_error: 1.day
 
     render "robots/show", layout: false, content_type: "text/plain", formats: [ :text ]

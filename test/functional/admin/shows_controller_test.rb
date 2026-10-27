@@ -488,7 +488,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
                  "the failed save must not have written the order"
   end
 
-  # Keys chosen to sort as written: a functional test cannot pin row order (CLAUDE.md, Testing).
+  # Keys chosen to sort as written: a functional test cannot pin row order (AGENTS.md, Testing).
   test "the saved order follows the submitted rows, skipping destroyed and blank ones and ignoring a posted display_order" do
     show = FactoryBot.create(:show, team_member_count: 3)
     a, b, c = show.team_members.order(:id).to_a
