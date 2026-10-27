@@ -157,26 +157,6 @@ module DisplayHelper
     { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4 }
   end
 
-  private
-
-  def credits_column_width(columns)
-    (CREDITS_CONTENT_WIDTH - (columns - 1) * CREDITS_COLUMN_GAP) / columns
-  end
-
-  def credits_chars_per_line(columns, size)
-    (credits_column_width(columns) / CREDITS_CHAR_PX.fetch(size)).floor
-  end
-
-  # Each entry is "Name Role" on one or more lines: estimate the lines from the
-  # characters it needs, the way Display::Panels::News budgets headlines with
-  # CHARS_PER_LINE. The + 1 is the space between name and role.
-  def credits_lines(cast_members, crew_members, chars_per_line)
-    (cast_members + crew_members).sum do |(name, detail)|
-      [ ((name.to_s.length + 1 + detail.to_s.length) / chars_per_line.to_f).ceil, 1 ].max
-    end
-  end
-
-  public
 
   # Titles step down by length rather than truncate: naming the show is the page's
   # job. The text block is anchored to the bottom, so a taller title grows up into
@@ -226,5 +206,24 @@ module DisplayHelper
   rescue StandardError => e
     Rails.logger.warn("display_ambient_gradient failed: #{e.class}")
     nil
+  end
+
+  private
+
+  def credits_column_width(columns)
+    (CREDITS_CONTENT_WIDTH - (columns - 1) * CREDITS_COLUMN_GAP) / columns
+  end
+
+  def credits_chars_per_line(columns, size)
+    (credits_column_width(columns) / CREDITS_CHAR_PX.fetch(size)).floor
+  end
+
+  # Each entry is "Name Role" on one or more lines: estimate the lines from the
+  # characters it needs, the way Display::Panels::News budgets headlines with
+  # CHARS_PER_LINE. The + 1 is the space between name and role.
+  def credits_lines(cast_members, crew_members, chars_per_line)
+    (cast_members + crew_members).sum do |(name, detail)|
+      [ ((name.to_s.length + 1 + detail.to_s.length) / chars_per_line.to_f).ceil, 1 ].max
+    end
   end
 end

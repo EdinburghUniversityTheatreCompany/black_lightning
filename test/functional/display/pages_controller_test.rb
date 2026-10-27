@@ -189,10 +189,18 @@ class Display::PagesControllerTest < ActionController::TestCase
     # Faker names contain apostrophes, which reach the body escaped.
     assert_match ERB::Util.html_escape(actor.user_name), response.body
     assert_match ERB::Util.html_escape(crew_member.user_name), response.body
-    # The helper's window arithmetic (DisplayHelper::CREDITS_CHROME_REM) is
-    # pinned against this value: the columns are sized against a viewport the
-    # page must actually give them.
-    assert_match /--display-marquee-chrome:\s*26\.8rem/, response.body
+    # One flowed list in CSS columns, not two panels side by side: the layout
+    # helper's column count reaches the markup that has to honour it.
+    assert_select "[style*=column-count]" do |nodes|
+      columns = nodes.first["style"][/column-count:\s*(\d+)/, 1].to_i
+      assert_includes 2..4, columns
+    end
+    # The helper sizes the columns against a viewport the page must actually
+    # give them, so the constant and the rendered chrome are pinned to each
+    # other, and both to the measured 26.8rem: changing either without
+    # re-measuring in Chrome has to fail here.
+    assert_equal 26.8, DisplayHelper::CREDITS_CHROME_REM
+    assert_match /--display-marquee-chrome:\s*#{DisplayHelper::CREDITS_CHROME_REM}rem/, response.body
   end
 
   test "get_involved renders an active opportunity's display title" do

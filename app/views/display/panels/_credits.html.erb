@@ -27,8 +27,8 @@
 <div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12" style="<%= display_ambient_gradient(event) %>">
   <div class="mb-10 flex shrink-0 items-start justify-between gap-10">
     <div class="min-w-0">
-      <%# mb-2, not the mb-3 the smaller label had: the header keeps its height, so
-          CREDITS_COLUMN_HEIGHT holds. %>
+      <%# mb-2, not the mb-3 the smaller label had: the header keeps its height,
+          so CREDITS_CHROME_REM holds. %>
       <%= display_label(tonight ? "Tonight's Credits" : "Next Show's Credits", css_class: "mb-2") %>
       <%# leading-descender pairs with truncate -- see display.css. %>
       <h1 class="truncate text-7xl font-bold leading-descender text-white"><%= event.name %></h1>
