@@ -1,7 +1,7 @@
 require "vips" # Gemfile brings ruby-vips in, but nothing in the app
-               # auto-requires it; without this the first extraction
-               # raises NameError and the rescue would tombstone every
-               # blob instead of extracting a palette.
+# auto-requires it; without this the first extraction
+# raises NameError and the rescue would tombstone every
+# blob instead of extracting a palette.
 
 module Display
   # The key colours of an event's artwork, for the credits panel's ambient
@@ -29,19 +29,19 @@ module Display
   class Palette
     VARIANT_SIZE = 64        # px; enough for colour counts, cheap to decode
     BUCKET = 32              # each channel quantised to 8 steps, so near-identical
-                             # pixels collapse into one colour
+    # pixels collapse into one colour
     TARGET_SATURATION = 0.45 # post-gain mean saturation, on the 0-1 HSV scale
     GAIN_MIN = 0.6           # clamp: neon posters are tamed, not greyed out
     GAIN_MAX = 2.2           # ...and faded ones lifted, not falsified
     SAT_FLOOR = 0.12         # near-greys stay near-greys (keeps black & white
     SAT_CEIL = 0.85          # posters from getting an invented colour cast)
     MAX_VALUE = 0.6          # brightness cap: a pale poster tints the panel, not
-                             # whitewashes it (the saturation gain's twin)
+    # whitewashes it (the saturation gain's twin)
     GREY_EPS = 0.02          # saturation at or below this is a true grey: no hue
-                             # to protect, so it keeps its (lack of) colour
+    # to protect, so it keeps its (lack of) colour
     GREY_DELTA = 0.08        # a colour whose (max-min) RGB spread is under this
-                             # reads as grey; if EVERY palette colour does, the
-                             # wash is skipped and the panel stays black
+    # reads as grey; if EVERY palette colour does, the
+    # wash is skipped and the panel stays black
 
     # The render path. Returns the job's cached palette (a flat array of RGB
     # triples) or nil when there is none yet, the poster is colourless (an empty
@@ -92,14 +92,14 @@ module Display
         # would raise, tombstoning every greyscale poster. Replicate to RGB.
         if img.bands == 1
           grey = img[0]
-          img = grey.bandjoin([grey, grey])
+          img = grey.bandjoin([ grey, grey ])
         end
         img.copy_memory
       end
 
       height = image.height
       band = (height / 3.0).ceil
-      colours = [0, band, 2 * band].filter_map do |top|
+      colours = [ 0, band, 2 * band ].filter_map do |top|
         band_pixels(image, top, band)
       end.first(3)
 
@@ -123,14 +123,14 @@ module Display
     # wash the whole panel mid-grey; the empty array is still cached, so the
     # answer is never recomputed.
     def self.normalise_saturation(colours, mean_s)
-      gain = (TARGET_SATURATION / [mean_s, 0.01].max).clamp(GAIN_MIN, GAIN_MAX)
+      gain = (TARGET_SATURATION / [ mean_s, 0.01 ].max).clamp(GAIN_MIN, GAIN_MAX)
       normalised = colours.map do |rgb|
         h, sat, v = rgb_to_hsv(*rgb)
         # A true grey (s ~ 0) has no hue to protect; leave it grey rather
         # than let the floor invent a colour cast on mono posters.
         next rgb if sat <= GREY_EPS
 
-        hsv_to_rgb(h, (sat * gain).clamp(SAT_FLOOR, SAT_CEIL), [v, MAX_VALUE].min)
+        hsv_to_rgb(h, (sat * gain).clamp(SAT_FLOOR, SAT_CEIL), [ v, MAX_VALUE ].min)
       end
 
       grey = normalised.all? { |rgb| (rgb.max - rgb.min) / 255.0 < GREY_DELTA }
@@ -140,20 +140,20 @@ module Display
     # Small integer helpers on 0-255 RGB / 0-1 HSV. Palette colours number
     # three per poster, so clarity beats speed here.
     def self.rgb_to_hsv(r, g, b)
-      r, g, b = [r, g, b].map { |c| c / 255.0 }
-      max = [r, g, b].max
-      min = [r, g, b].min
+      r, g, b = [ r, g, b ].map { |c| c / 255.0 }
+      max = [ r, g, b ].max
+      min = [ r, g, b ].min
       delta = max - min
       h = if delta.zero?
             0.0
-          else
+      else
             case max
             when r then ((g - b) / delta) % 6
             when g then (b - r) / delta + 2
             else (r - g) / delta + 4
             end * 60
-          end
-      [h, max.zero? ? 0 : delta / max, max]
+      end
+      [ h, max.zero? ? 0 : delta / max, max ]
     end
 
     def self.hsv_to_rgb(h, s, v)
@@ -161,19 +161,19 @@ module Display
       x = c * (1 - ((h / 60.0) % 2 - 1).abs)
       m = v - c
       rgb = case h
-            when 0...60 then [c, x, 0]
-            when 60...120 then [x, c, 0]
-            when 120...180 then [0, c, x]
-            when 180...240 then [0, x, c]
-            when 240...300 then [x, 0, c]
-            else [c, 0, x]
-            end
+      when 0...60 then [ c, x, 0 ]
+      when 60...120 then [ x, c, 0 ]
+      when 120...180 then [ 0, c, x ]
+      when 180...240 then [ 0, x, c ]
+      when 240...300 then [ x, 0, c ]
+      else [ c, 0, x ]
+      end
       rgb.map { |f| ((f + m) * 255).round }
     end
 
     def self.band_pixels(image, top, band)
-      top = [[top, 0].max, image.height - 1].min
-      rows = [band, image.height - top].min
+      top = [ [ top, 0 ].max, image.height - 1 ].min
+      rows = [ band, image.height - top ].min
       region = image.crop(0, top, image.width, rows)
       counts = Hash.new(0)
       # to_a returns rows of pixels, so iterate both levels; keep RGB only

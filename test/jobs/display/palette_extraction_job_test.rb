@@ -19,7 +19,7 @@ module Display
 
     test "extracts for an event with a fresh uploaded artwork" do
       event = FactoryBot.create(:event, attach_image: true)
-      assert event.image.blob.metadata["palette_v2"].nil?
+      assert_nil event.image.blob.metadata["palette_v2"]
 
       Display::PaletteExtractionJob.perform_now(event)
 

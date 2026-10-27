@@ -225,25 +225,25 @@ class DisplayHelperTest < ActionView::TestCase
   # wraps), not people. The names are real-world lengths: synthetic "Person 1"
   # data hides exactly the wrapping this layout exists to catch.
   CAST = [
-    ["Eleanor Ashworth", "Actor"], ["Tom O'Sullivan", "Actor"], ["Priya Natarajan", "Actor"],
-    ["Callum Reid", "Actor"], ["Maeve Fitzpatrick", "Actor"], ["Daniel Okonkwo", "Actor"],
-    ["Sofia Marchetti", "Actor"], ["Robin Whitfield", "Actor"], ["Grace Lindqvist", "Actor"],
-    ["Aaron Doyle", "Actor"], ["Nina Petrova", "Actor"], ["Josh Beckett", "Actor"]
+    [ "Eleanor Ashworth", "Actor" ], [ "Tom O'Sullivan", "Actor" ], [ "Priya Natarajan", "Actor" ],
+    [ "Callum Reid", "Actor" ], [ "Maeve Fitzpatrick", "Actor" ], [ "Daniel Okonkwo", "Actor" ],
+    [ "Sofia Marchetti", "Actor" ], [ "Robin Whitfield", "Actor" ], [ "Grace Lindqvist", "Actor" ],
+    [ "Aaron Doyle", "Actor" ], [ "Nina Petrova", "Actor" ], [ "Josh Beckett", "Actor" ]
   ].freeze
   CREW = [
-    ["Rory Blackwood", "Director"], ["Hannah Meehan", "Producer"], ["Sam O'Rourke", "Stage Manager"],
-    ["Leah Connolly", "Deputy Stage Manager"], ["Peter Nakamura", "Lighting Designer"],
-    ["Aisha Kerr", "Sound Designer"], ["Michael Farrell", "Set Construction"], ["Erin Walsh", "Set Construction"],
-    ["David Mulcahy", "Set Construction"], ["Claire Breen", "Costume Designer"],
-    ["Sean Gallagher", "Assistant Technical Stage Manager"],
-    ["Kate Donnelly", "Assistant Technical Stage Manager"], ["Liam O'Carroll", "Master Carpenter"],
-    ["Fiona Slattery", "Props Manager"], ["Mark Herron", "Make-up Artist"], ["Jodie Palmer", "Hair and Wigs"],
-    ["Owen Fitzgerald", "Front of House"], ["Niamh Kinsella", "Front of House"], ["Paul Doherty", "Publicity"],
-    ["Aoife Brennan", "Publicity"], ["Ryan Tierney", "Photography"], ["Ella Sweeney", "Videography"],
-    ["Jack Corcoran", "Musical Director"], ["Megan Byrne", "Rehearsal Pianist"],
-    ["Conor Leahy", "Fight Choreography"], ["Zoe Kavanagh", "Choreography"],
-    ["Harry Dunne", "Wardrobe Assistant"], ["Lucy Hegarty", "Prompt"], ["Ben Corrigan", "Technical Operator"],
-    ["Sarah Foley", "Technical Operator"]
+    [ "Rory Blackwood", "Director" ], [ "Hannah Meehan", "Producer" ], [ "Sam O'Rourke", "Stage Manager" ],
+    [ "Leah Connolly", "Deputy Stage Manager" ], [ "Peter Nakamura", "Lighting Designer" ],
+    [ "Aisha Kerr", "Sound Designer" ], [ "Michael Farrell", "Set Construction" ], [ "Erin Walsh", "Set Construction" ],
+    [ "David Mulcahy", "Set Construction" ], [ "Claire Breen", "Costume Designer" ],
+    [ "Sean Gallagher", "Assistant Technical Stage Manager" ],
+    [ "Kate Donnelly", "Assistant Technical Stage Manager" ], [ "Liam O'Carroll", "Master Carpenter" ],
+    [ "Fiona Slattery", "Props Manager" ], [ "Mark Herron", "Make-up Artist" ], [ "Jodie Palmer", "Hair and Wigs" ],
+    [ "Owen Fitzgerald", "Front of House" ], [ "Niamh Kinsella", "Front of House" ], [ "Paul Doherty", "Publicity" ],
+    [ "Aoife Brennan", "Publicity" ], [ "Ryan Tierney", "Photography" ], [ "Ella Sweeney", "Videography" ],
+    [ "Jack Corcoran", "Musical Director" ], [ "Megan Byrne", "Rehearsal Pianist" ],
+    [ "Conor Leahy", "Fight Choreography" ], [ "Zoe Kavanagh", "Choreography" ],
+    [ "Harry Dunne", "Wardrobe Assistant" ], [ "Lucy Hegarty", "Prompt" ], [ "Ben Corrigan", "Technical Operator" ],
+    [ "Sarah Foley", "Technical Operator" ]
   ].freeze
 
   # The fits are written out independently of the helper (a per-entry line
@@ -289,8 +289,8 @@ class DisplayHelperTest < ActionView::TestCase
     # "Assistant Technical Stage Manager" is 34 characters: it wraps at the
     # bigger sizes, and the layout must charge for every wrapped line or it
     # promises a fit that scrolls.
-    long_crew = Array.new(8) { ["Sean Gallagher", "Assistant Technical Stage Manager"] }
-    short_crew = Array.new(8) { ["Aisha Kerr", "Sound Designer"] }
+    long_crew = Array.new(8) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] }
+    short_crew = Array.new(8) { [ "Aisha Kerr", "Sound Designer" ] }
     long_layout = display_credits_layout(CAST.take(6), long_crew)
     short_layout = display_credits_layout(CAST.take(6), short_crew)
 
@@ -303,10 +303,10 @@ class DisplayHelperTest < ActionView::TestCase
   end
 
   test "display_credits_layout falls back to the smallest type in four columns, with the marquee as the net" do
-    layout = display_credits_layout(CAST, Array.new(90) { ["Sean Gallagher", "Assistant Technical Stage Manager"] })
+    layout = display_credits_layout(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] })
 
     assert_equal({ name_size: "text-base", columns: 4 }, layout)
-    assert_not credits_fits?(CAST, Array.new(90) { ["Sean Gallagher", "Assistant Technical Stage Manager"] },
+    assert_not credits_fits?(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] },
                              "text-base", 4),
                "this is the marquee's case: the fit is allowed to fail, and the scroll takes over"
   end
