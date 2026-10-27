@@ -125,6 +125,7 @@ module DisplayHelper
   # Air above a heading that follows another section (the company's mt-8). Modest
   # on purpose: it competes with name size.
   CREDITS_SECTION_GAP = 32
+  CREDITS_ROW_GAP = 8 # space-y-2 between entries
   CREDITS_ROW_STRIDES = {
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
@@ -153,17 +154,9 @@ module DisplayHelper
   # that fits would make it taller than the window by exactly its own height and
   # start a scroll that has nothing to show.
   def display_credits_layout(cast_members, crew_members)
-    sections = [ cast_members, crew_members ].count(&:any?)
-    headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
-
-    CREDITS_ROW_STRIDES.each do |size, stride|
+    CREDITS_ROW_STRIDES.each_key do |size|
       2.upto(4) do |columns|
-        chars_per_line = credits_chars_per_line(columns, size)
-        lines = credits_lines(cast_members, crew_members, chars_per_line)
-
-        # CSS multicol balances the flow across the columns, so the track's height
-        # is roughly the content's total divided by the column count.
-        if headings + lines * stride <= CREDITS_WINDOW_HEIGHT * columns
+        if credits_fit?(cast_members, crew_members, size, columns)
           return { name_size: size, columns: columns, fits: true }
         end
       end
@@ -232,13 +225,35 @@ module DisplayHelper
     (credits_column_width(columns) / (CREDITS_CHAR_EM * CREDITS_FONT_PX.fetch(size))).floor
   end
 
-  # Each entry is "Name Role" on one or more lines: estimate the lines it needs
-  # from the characters that fit a line, the way Display::Panels::News budgets
-  # headlines with CHARS_PER_LINE.
-  def credits_lines(cast_members, crew_members, chars_per_line)
-    (cast_members + crew_members).sum do |(name, detail)|
-      credits_entry_lines("#{name} #{detail}", chars_per_line)
+  # A fill, not an average: the browser cannot split an entry across columns, so
+  # whole entries are poured down window-tall columns, each heading kept with its
+  # first name (break-after-avoid) and a margin dropped at the top of a column.
+  # Total over columns let 4 cast and 20 company at text-4xl pass with 3px to spare
+  # while the first column ran 5px past the window. Each entry is "Name Role" on
+  # one or more lines, estimated the way Display::Panels::News budgets headlines.
+  def credits_fit?(cast_members, crew_members, size, columns)
+    line = CREDITS_ROW_STRIDES.fetch(size) - CREDITS_ROW_GAP
+    chars_per_line = credits_chars_per_line(columns, size)
+    used = 1
+    y = 0
+    [ cast_members, crew_members ].reject(&:empty?).each_with_index do |members, section|
+      members.each_with_index do |(name, detail), i|
+        height = credits_entry_lines("#{name} #{detail}", chars_per_line) * line
+        margin = CREDITS_ROW_GAP
+        if i.zero?
+          height += CREDITS_HEADING_HEIGHT
+          margin = section.zero? ? 0 : CREDITS_SECTION_GAP
+        end
+
+        if y.positive? && y + margin + height > CREDITS_WINDOW_HEIGHT
+          used += 1
+          y = height
+        else
+          y += (y.positive? ? margin : 0) + height
+        end
+      end
     end
+    used <= columns
   end
 
   def wash_stop(rgb, alpha)

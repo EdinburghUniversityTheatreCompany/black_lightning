@@ -246,33 +246,13 @@ class DisplayHelperTest < ActionView::TestCase
     [ "Sarah Foley", "Technical Operator" ]
   ].freeze
 
-  # The fits are checked against the numbers measured in Chrome at 1920x1080,
-  # not by re-running the helper's own arithmetic. A second copy of the model
-  # agrees with the model; only measurements disagree with it.
-  #
-  # Measured by the screen's owner on the real page: 42 people (these cast and
-  # crew lists) fill three columns at text-2xl, and 70 people only fit four
-  # columns at text-base. Both are the layout this helper must return, so a
-  # change to CREDITS_CHAR_EM or the strides that perturbs them is a bug.
+  # The two sizes measured on the real page: 42 people (these cast and crew lists) fill
+  # three columns at text-2xl, and 70 people only fit four columns at text-base. A change
+  # to CREDITS_CHAR_EM or the strides that perturbs them is a bug.
   MEASURED_FITS = {
     [ 42, 3 ] => "text-2xl",
     [ 70, 4 ] => "text-base"
   }.freeze
-
-  def credits_lines_at(cast, crew, size, columns)
-    chars = (DisplayHelper::CREDITS_CONTENT_WIDTH - (columns - 1) * DisplayHelper::CREDITS_COLUMN_GAP) / columns
-    per_line = (chars / (DisplayHelper::CREDITS_CHAR_EM * DisplayHelper::CREDITS_FONT_PX.fetch(size))).floor
-    (cast + crew).sum { |(name, detail)| credits_entry_lines("#{name} #{detail}", per_line) }
-  end
-
-  def credits_fits?(cast, crew, size, columns)
-    stride = DisplayHelper::CREDITS_ROW_STRIDES.fetch(size)
-    sections = [ cast, crew ].count(&:any?)
-    heading_cost = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
-                   (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
-    (heading_cost + credits_lines_at(cast, crew, size, columns) * stride) / columns.to_f <=
-      DisplayHelper::CREDITS_WINDOW_HEIGHT
-  end
 
   test "display_credits_layout picks the biggest type first, then the fewest columns" do
     layout = display_credits_layout(CAST, CREW)
@@ -281,9 +261,9 @@ class DisplayHelperTest < ActionView::TestCase
     # window in every column count, text-2xl needs three columns, not two.
     assert_equal "text-2xl", layout[:name_size]
     assert_equal 3, layout[:columns]
-    assert credits_fits?(CAST, CREW, layout[:name_size], layout[:columns]), "the chosen fit must fit"
-    assert_not credits_fits?(CAST, CREW, "text-2xl", 2), "two columns of text-2xl must not fit, or a column was wasted"
-    assert_not credits_fits?(CAST, CREW, "text-3xl", 4), "bigger type must be tried and rejected first"
+    assert credits_fit?(CAST, CREW, layout[:name_size], layout[:columns]), "the chosen fit must fit"
+    assert_not credits_fit?(CAST, CREW, "text-2xl", 2), "two columns of text-2xl must not fit, or a column was wasted"
+    assert_not credits_fit?(CAST, CREW, "text-3xl", 4), "bigger type must be tried and rejected first"
   end
 
   # The two sizes measured on the real page. If the model drifts, it drifts here
@@ -305,10 +285,10 @@ class DisplayHelperTest < ActionView::TestCase
 
     # Fewer roles, so the type goes up: text-5xl still does not fit anywhere.
     assert_equal "text-4xl", layout[:name_size]
-    assert credits_fits?(CAST, CREW.take(18), "text-4xl", layout[:columns]), "the chosen fit must fit"
-    assert_not credits_fits?(CAST, CREW.take(18), "text-4xl", 2), "two columns of text-4xl must not fit"
+    assert credits_fit?(CAST, CREW.take(18), "text-4xl", layout[:columns]), "the chosen fit must fit"
+    assert_not credits_fit?(CAST, CREW.take(18), "text-4xl", 2), "two columns of text-4xl must not fit"
     2.upto(4) do |columns|
-      assert_not credits_fits?(CAST, CREW.take(18), "text-5xl", columns),
+      assert_not credits_fit?(CAST, CREW.take(18), "text-5xl", columns),
                  "text-5xl in #{columns} columns must not fit, or the size-first rule was skipped"
     end
   end
@@ -327,7 +307,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal long_layout[:name_size], short_layout[:name_size]
     assert long_layout[:columns] > short_layout[:columns],
            "a role that wraps must cost the layout something, not just disappear"
-    assert credits_fits?(CAST.take(6), long_crew, long_layout[:name_size], long_layout[:columns])
+    assert credits_fit?(CAST.take(6), long_crew, long_layout[:name_size], long_layout[:columns])
   end
 
   # A long real name and a long real role, the pair that breaks a character
@@ -344,11 +324,38 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal 2, credits_entry_lines("Unfeasiblylongsurname Actor", per_line)
   end
 
+  # Measured in Chrome at 1920x1080: averaging this company over two columns of text-4xl
+  # left 3px to spare, but an entry cannot split across columns, and the first column ran
+  # to 656px of the 651px window, so the panel crawled.
+  SPILL_CAST = [
+    [ "Eleanor Ashworth", "Lady Macbeth" ], [ "Tom Whitfield", "Macbeth" ], [ "Priya MacAllister", "Banquo" ],
+    [ "Callum Breen", "First Witch" ]
+  ].freeze
+  SPILL_CREW = [
+    [ "Maeve Doherty", "Director" ], [ "Daniel Kavanagh", "Producer" ], [ "Sofia Ng", "Stage Manager" ],
+    [ "Robin Marchetti", "Deputy Stage Manager" ], [ "Grace Meehan", "Lighting Designer" ],
+    [ "Aaron Mulcahy", "Sound Designer" ], [ "Nina Kinsella", "Set Construction" ], [ "Josh Leahy", "Costume Designer" ],
+    [ "Rory Li", "Assistant Technical Stage Manager" ], [ "Hannah Okonkwo", "Master Carpenter" ],
+    [ "Sam Blackwood", "Props Manager" ], [ "Leah Walsh", "Make-up Artist" ], [ "Peter Palmer", "Hair and Wigs" ],
+    [ "Aisha Byrne", "Front of House" ], [ "Michael Fotheringham-Smythe", "Publicity" ],
+    [ "Erin Fitzpatrick", "Photography" ], [ "David Beckett", "Videography" ], [ "Claire Farrell", "Musical Director" ],
+    [ "Sean Herron", "Rehearsal Pianist" ], [ "Kate Corcoran", "Fight Choreography" ]
+  ].freeze
+
+  test "display_credits_layout fills columns with whole entries, not an average" do
+    layout = display_credits_layout(SPILL_CAST, SPILL_CREW)
+
+    assert_not_equal [ "text-4xl", 2 ], layout.values_at(:name_size, :columns),
+                     "the layout the browser measured spilling past the window"
+    # Measured: three columns of 464, 456 and 464px, and the panel holds still.
+    assert_equal({ name_size: "text-4xl", columns: 3, fits: true }, layout)
+  end
+
   test "display_credits_layout falls back to the smallest type in four columns, with the marquee as the net" do
     layout = display_credits_layout(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] })
 
     assert_equal({ name_size: "text-base", columns: 4, fits: false }, layout)
-    assert_not credits_fits?(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] },
+    assert_not credits_fit?(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] },
                              "text-base", 4),
                "this is the marquee's case: the fit is allowed to fail, and the scroll takes over"
   end
