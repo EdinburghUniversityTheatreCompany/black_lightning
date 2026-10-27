@@ -1342,12 +1342,14 @@ panel with content; panels live in `app/services/display/panels/`.
   rather than truncate, so the list can outgrow the frame. `.display-marquee` translates by
   `min(0px, calc(var(--display-marquee-viewport) - 100%))` (`100%` is the track's own height), and
   the box takes its `height` from the same variable (not `flex-1`) so the two cannot drift.
-  No `100cqh`: Anthias's QtWebEngine lacks container query units. **The `17.25rem` in the variable
-  is the header, footer and padding summed by hand**, so `_whats_on.html.erb` pins them (`h-18`,
-  `h-9`).
+  No `100cqh`: Anthias's QtWebEngine lacks container query units. **Each panel sets its own
+  `--display-marquee-chrome`**, its header, footer and padding summed by hand and pinned in its
+  markup (What's On: 17.25rem, `h-18` and `h-9`). That figure is the default, so a panel adopting the
+  marquee without setting it scrolls against the wrong window.
 - **The marquee pass is one fixed duration, so speed varies with the overflow**: the playlist has
   one slot length. Never pace it per event. A test asserts the slot covers the duration in
-  `display.css`.
+  `display.css`. A capped list keeps its worst case inside What's On's (~1030px): Get Involved's
+  `LIMIT` of 10 overflows by 900px at most.
 - **`Display::Panels::News` budgets in pixels measured in Chrome**, each constant mapping to one
   Tailwind class in `_news.html.erb` (`CHARS_PER_LINE = 68`, between mixed-case 76 and all-caps 66).
   The list scrolls in the same `.display-marquee` as What's On, and `_news.html.erb` pins
@@ -1365,19 +1367,28 @@ panel with content; panels live in `app/services/display/panels/`.
   pick.
 - **The credits QR always resolves**: `Event#digital_programme_url` when set, else the event's own
   page; the caption names which.
-- **The credits are one list in CSS columns, sized in measured pixels, and CSS columns cannot
-  scroll cleanly** (all of them move at once, so the fold cuts the first column mid-list) — the
-  marquee is a safety net for a company past `text-base x 4` only. `display_credits_layout` takes the
-  name/detail pairs and counts LINES (long roles wrap), tries the biggest type first then the fewest
-  columns that fit. `CREDITS_CHROME_REM` must match the markup's `--display-marquee-chrome` (pinned
-  by the credits controller test) or the fit promises a scroll; re-measure the `CREDITS_*`
-  constants in Chrome at 1920x1080 when the header, row spacing or QR size changes.
+- **The credits are one list in CSS columns, and the fit is a fill, not an average**
+  (`credits_fit?`): the browser cannot split an entry across columns, so dividing the height by
+  the column count let near fits spill by up to 13px. It tries the biggest type first, then the
+  fewest columns; the marquee is the net only past `text-base` in 4 columns, as columns cannot
+  scroll cleanly (the fold cuts every column at once). `CREDITS_CHROME_REM` is the header and QR
+  summed by hand, so re-measure the `CREDITS_*` constants in Chrome when either changes, **at
+  exactly 1920x1080**: in a laptop-sized window nearly every layout scrolls.
 - **Never decode a poster on a GET.** `display_ambient_gradient` reads only the palette
   `Display::PaletteExtractionJob` cached in `blob.metadata["palette_v2"]`, because Anthias polls
   these pages forever. That metadata is the ledger: `[]` (colourless) and `false` (undecodable) mean
   "asked, answered", so the hook and `display_palette_backfill.rake` skip the blob instead of
   retrying on every save. The hook must stay ungated and skip `fetch_image` placeholders, and every
   vips call must sit inside `blob.open` (its temp file dies at the block's end).
+  - **The job waits for ActiveStorage's analysis and writes under `with_lock`.** `AnalyzeJob` saves
+    the whole metadata hash from the copy it loaded, so either write can erase the other: a lost
+    palette, or a poster without the width and height `ImageComponent` reads.
+  - **Tell a placeholder by `filename.to_s.start_with?(PREFIX)`, with no slash.** `Filename#to_s`
+    turns the stored slash into a dash, so `"#{PREFIX}/"` never matches (SQL `LIKE` on the raw
+    column, as in `with_uploaded_image`, does keep it).
+  - **The contrast cap lives in `display_ambient_gradient`, not in the cached palette**: each stop
+    is darkened to a luminance of 0.04 over neutral-950, where the roles keep 4.5:1 and the label
+    3:1. A new text colour on the credits panel needs checking against that cap.
 - **Every panel's red label is `display_label`** (`text-4xl`), so the show's name is the only big
   type. The credits label's `mb-2` keeps that header at the height `CREDITS_CHROME_REM`
   was measured at: a new label size or margin means re-measuring it.
