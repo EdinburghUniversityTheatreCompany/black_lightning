@@ -342,7 +342,9 @@ run `mise install && hk install` once.
 - **A model with `ransackable_attributes` must also define `ransackable_associations`** (`[]` if
   none). Ransack 6's `Search#respond_to?` walks the associations list, and the default one raises,
   so simple_form and `TableComponent` 500 that model's index page. A list method returns `[]`,
-  never `nil`. `test/models/ransack_allowlist_test.rb` checks every model.
+  never `nil`. `test/models/ransack_allowlist_test.rb` checks every model. **Pass `params[:q]` to
+  `ransack` unpermitted**: given permitted params, ransack 6 lets a model with no lists (every
+  `Reimbursements::*`) be searched on any column the controller permitted.
 - **A stale CSRF token answers in words, never the 500 page** (`ApplicationController#report_stale_page`,
   declared after `rescue_from Exception` so it wins). Signing out, or in again
   (`clean_up_csrf_token_on_authentication`), in any tab voids every open page's token. Turbo gets
