@@ -87,7 +87,7 @@ module Display
     def palette_blob
       # linear() promotes to float; real uploads are 8-bit, and colourspace(:hsv)
       # only accepts uchar, so pin the format the pipeline expects.
-      png = yield.cast(:uchar).to_blob(".png")
+      png = yield.cast(:uchar).write_to_buffer(".png")
       event = FactoryBot.create(:event, attach_image: false)
       event.image.attach(io: StringIO.new(png), filename: "poster.png", content_type: "image/png")
       event.image.blob

@@ -42,6 +42,9 @@ module Display
       forbid_extraction!
 
       Display::PaletteExtractionJob.perform_now(event)
+
+      assert_not event.image.attached?,
+                 "the job must not attach anything when there is no artwork"
     end
 
     test "skips the fetch_image placeholder" do
@@ -52,6 +55,9 @@ module Display
       forbid_extraction!
 
       Display::PaletteExtractionJob.perform_now(event.reload)
+
+      assert_nil event.image.blob.reload.metadata["palette_v2"],
+                 "the placeholder prefix must stay unprocessed"
     end
   end
 end
