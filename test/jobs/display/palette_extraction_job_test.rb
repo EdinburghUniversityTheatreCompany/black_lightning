@@ -32,7 +32,7 @@ module Display
       event.image.blob.update!(metadata: { "palette_v2" => [] })
       forbid_extraction!
 
-      Display::PaletteExtractionJob.perform_now(event)
+      Display::PaletteExtractionJob.perform_now(event.reload)
 
       assert_equal [], event.image.blob.reload.metadata["palette_v2"]
     end
@@ -48,10 +48,10 @@ module Display
       event = FactoryBot.create(:event, attach_image: true)
       # Force the blob's filename onto the placeholder prefix: the factory
       # uploads a real file, but the same rule must hold for fetched art.
-      event.image.blob.update!(filename: ActiveStorageHelper::PREFIX + "/cover.png")
+      event.image.blob.update!(filename: "#{ActiveStorageHelper::PREFIX}/cover.png")
       forbid_extraction!
 
-      Display::PaletteExtractionJob.perform_now(event)
+      Display::PaletteExtractionJob.perform_now(event.reload)
     end
   end
 end

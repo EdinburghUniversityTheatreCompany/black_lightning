@@ -34,19 +34,20 @@ module Display
     end
 
     test "normalise_saturation caps a pale colour's brightness" do
-      pale = Palette.normalise_saturation([[250, 230, 220]], 0.2)
+      pale = normalise([[ 250, 230, 220 ]], 0.2)
 
-      value = Palette.rgb_to_hsv(*pale.first)[2]
-      assert value <= Palette::MAX_VALUE + 0.01,
-             "a pale poster must tint the panel, not whitewash it"
+      # HSV value is the brightest channel; the cap is MAX_VALUE on the 0-1
+      # scale, so the returned 0-255 pixel may not exceed it.
+      assert_operator pale.first.max, :<=, (Palette::MAX_VALUE * 255).round,
+                      "a pale poster must tint the panel, not whitewash it"
     end
 
     test "normalise_saturation leaves a grey artwork with no wash" do
-      assert_equal [], Palette.normalise_saturation([[128, 128, 128], [130, 128, 126], [128, 129, 130]], 0.05)
+      assert_equal [], normalise([[ 128, 128, 128 ], [ 130, 128, 126 ], [ 128, 129, 130 ]], 0.05)
     end
 
     test "normalise_saturation keeps a true grey grey instead of inventing a cast" do
-      colours = Palette.normalise_saturation([[128, 128, 128], [90, 90, 92], [10, 0, 255]], 0.02)
+      colours = normalise([[ 128, 128, 128 ], [ 90, 90, 92 ], [ 10, 0, 255 ]], 0.02)
       assert_equal [128, 128, 128], colours.first, "a true grey keeps its hue (none) under any gain"
     end
 
@@ -73,6 +74,12 @@ module Display
     end
 
     private
+
+    # normalise_saturation is deliberately private (the render path must only
+    # ever read the cache), so reach it from the test the honest way.
+    def normalise(colours, mean_s)
+      Palette.send(:normalise_saturation, colours, mean_s)
+    end
 
     # Builds a blob whose file is the image vips builds in the block, through
     # the same Active Storage path a real upload takes.

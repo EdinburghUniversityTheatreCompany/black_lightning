@@ -413,15 +413,26 @@ class EventTest < ActionView::TestCase
 
   # The palette is extracted when artwork lands, off the request path, and only
   # for real uploads: the fetch_image placeholder must never be decoded.
+  # Transactional tests never commit, so after_commit will not fire here: the
+  # callback is pinned against the commit chain and then called directly, which
+  # is where every guard lives.
+  test "the palette extraction is hooked to commit, not to a render" do
+    assert_includes Event._commit_callbacks.map(&:filter), :schedule_palette_extraction
+  end
+
   test "a new uploaded artwork queues the palette extraction" do
+    event = FactoryBot.create(:event, attach_image: true)
+
     assert_enqueued_with(job: Display::PaletteExtractionJob) do
-      FactoryBot.create(:event, attach_image: true)
+      event.schedule_palette_extraction
     end
   end
 
   test "an event without artwork queues nothing" do
+    event = FactoryBot.create(:event, attach_image: false)
+
     assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
-      FactoryBot.create(:event, attach_image: false)
+      event.schedule_palette_extraction
     end
   end
 
@@ -431,7 +442,7 @@ class EventTest < ActionView::TestCase
     blob.update!(metadata: blob.metadata.merge("palette_v2" => false))
 
     assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
-      event.update!(name: event.name + " (revised)")
+      event.schedule_palette_extraction
     end
   end
 end

@@ -203,6 +203,21 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match /--display-marquee-chrome:\s*#{DisplayHelper::CREDITS_CHROME_REM}rem/, response.body
   end
 
+  test "credits still renders, with no gradient, when the artwork could not be decoded" do
+    show = FactoryBot.create(:show, is_public: true, start_date: Date.current,
+                            end_date: Date.current + 1, attach_image: true)
+    FactoryBot.create(:team_member, teamwork: show, position: "Actor (Abigail)")
+    # The tombstone the job leaves on an undecodable upload.
+    show.image.blob.update!(metadata: { "palette_v2" => false })
+
+    get :credits
+
+    assert_response :success
+    assert_match "Cast", response.body
+    assert_no_match(/linear-gradient/, response.body,
+                    "a tombstoned palette must leave the panel on its base colour")
+  end
+
   test "get_involved renders an active opportunity's display title" do
     get :get_involved
 

@@ -20,10 +20,12 @@ module Display
   # Extraction runs in Display::PaletteExtractionJob when a poster is uploaded,
   # never on a GET: Anthias polls these pages continuously, and extracting (or
   # worse, writing blob metadata) per render would hammer storage. The render
-  # path (for) only reads what the job cached on the blob's metadata. Handles
-  # every content type the event model accepts except GIF (excluded from
-  # production use): PNG (RGB, RGBA, greyscale, 16-bit), JPEG (incl. CMYK) and
-  # WebP. libvips autodetects the container from magic bytes.
+  # path (for) only reads what the job cached on the blob's metadata. Anything
+  # libvips can decode works - PNG (RGB, RGBA, greyscale, 16-bit), JPEG (incl.
+  # CMYK), WebP, and a GIF's first frame; the container is detected from the
+  # magic bytes, not the declared content type. A file it cannot decode is
+  # tombstoned by extract!, so an odd upload costs one failed decode, not a
+  # 500 and not a retry loop.
   class Palette
     VARIANT_SIZE = 64        # px; enough for colour counts, cheap to decode
     BUCKET = 32              # each channel quantised to 8 steps, so near-identical
@@ -131,7 +133,7 @@ module Display
         hsv_to_rgb(h, (sat * gain).clamp(SAT_FLOOR, SAT_CEIL), [v, MAX_VALUE].min)
       end
 
-      grey = normalised.all? { |r, g, b| (r.to_f - b).abs / 255 < GREY_DELTA && (g.to_f - b).abs / 255 < GREY_DELTA }
+      grey = normalised.all? { |rgb| (rgb.max - rgb.min) / 255.0 < GREY_DELTA }
       grey ? [] : normalised
     end
 
@@ -186,5 +188,9 @@ module Display
       end
       counts.max_by { |_, n| n }&.first&.map(&:to_i)
     end
+
+    # for, extract and extract! are the interface; these are extraction's
+    # innards, kept private so no render path is tempted to decode a poster.
+    private_class_method :mean_saturation, :rgb_to_hsv, :hsv_to_rgb, :band_pixels
   end
 end
