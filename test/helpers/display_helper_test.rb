@@ -302,11 +302,10 @@ class DisplayHelperTest < ActionView::TestCase
     long_layout = display_credits_layout(CAST.take(6), long_crew)
     short_layout = display_credits_layout(CAST.take(6), short_crew)
 
-    assert_equal "text-5xl", short_layout[:name_size]
-    # Same head-count, same type size: the long roles simply need another column.
-    assert_equal long_layout[:name_size], short_layout[:name_size]
-    assert long_layout[:columns] > short_layout[:columns],
-           "a role that wraps must cost the layout something, not just disappear"
+    assert_equal({ name_size: "text-5xl", columns: 2, fits: true }, short_layout)
+    # Same head-count: at text-5xl the long roles wrap in 8 of 14 entries, past the
+    # quarter allowed, so they cost a size step rather than disappear.
+    assert_equal({ name_size: "text-4xl", columns: 2, fits: true }, long_layout)
     assert credits_fit?(CAST.take(6), long_crew, long_layout[:name_size], long_layout[:columns])
   end
 
@@ -349,6 +348,33 @@ class DisplayHelperTest < ActionView::TestCase
                      "the layout the browser measured spilling past the window"
     # Measured: three columns of 464, 456 and 464px, and the panel holds still.
     assert_equal({ name_size: "text-4xl", columns: 3, fits: true }, layout)
+  end
+
+  # Measured in Chrome: at text-5xl in four columns 19 of these 20 broke across lines,
+  # mid-role and mid-name ("Fotheringham-" / "Smythe"); at text-4xl in two none did.
+  RAGGED_CAST = [
+    [ "Eleanor Ashworth", "Lady Macbeth" ], [ "Tom Whitfield", "Macbeth" ], [ "Priya MacAllister", "Banquo" ],
+    [ "Callum Breen", "First Witch" ], [ "Maeve Doherty", "Second Witch" ], [ "Daniel Kavanagh", "Third Witch" ]
+  ].freeze
+  RAGGED_CREW = [
+    [ "Sofia Ng", "Director" ], [ "Robin Marchetti", "Producer" ], [ "Grace Meehan", "Stage Manager" ],
+    [ "Aaron Mulcahy", "Deputy Stage Manager" ], [ "Nina Kinsella", "Lighting Designer" ],
+    [ "Josh Leahy", "Sound Designer" ], [ "Rory Li", "Set Construction" ], [ "Hannah Okonkwo", "Costume Designer" ],
+    [ "Sam Blackwood", "Assistant Technical Stage Manager" ], [ "Leah Walsh", "Master Carpenter" ],
+    [ "Peter Palmer", "Props Manager" ], [ "Aisha Byrne", "Make-up Artist" ],
+    [ "Michael Fotheringham-Smythe", "Hair and Wigs" ], [ "Erin Fitzpatrick", "Front of House" ]
+  ].freeze
+
+  test "display_credits_layout skips a layout where more than a quarter of the entries wrap" do
+    assert_equal({ name_size: "text-4xl", columns: 2, fits: true }, display_credits_layout(RAGGED_CAST, RAGGED_CREW))
+  end
+
+  # The budget is a preference, never a reason to scroll.
+  test "display_credits_layout wraps rather than scroll when every layout that fits wraps" do
+    role = "Assistant to the Assistant Technical Stage Manager and Deputy Lighting Programmer for the Second Week"
+    crew = Array.new(10) { |i| [ "Bartholomew Fotheringham-Smythe #{i}", role ] }
+
+    assert display_credits_layout([], crew)[:fits]
   end
 
   test "display_credits_layout falls back to the smallest type in four columns, with the marquee as the net" do

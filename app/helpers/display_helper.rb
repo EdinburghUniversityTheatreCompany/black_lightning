@@ -143,8 +143,9 @@ module DisplayHelper
   # companies all fit at the size chosen; 0.45 broke 19 of them.
   CREDITS_CHAR_EM = 0.48
 
-  # The biggest type first, then the fewest columns (2 to 4) that fit one screen.
-  # Only when nothing fits at any size does the layout give up and take the
+  # The biggest type first, then the fewest columns (2 to 4) that fit one screen,
+  # skipping any layout where more than a quarter of the entries wrap (unless all
+  # do). Only when nothing fits at any size does the layout give up and take the
   # smallest text in the most columns: the marquee is the safety net for that
   # case alone, and CSS columns cannot scroll cleanly (every column moves at
   # once, so the fold cuts the first column mid-list), which is why the net is
@@ -157,13 +158,13 @@ module DisplayHelper
   # that fits would make it taller than the window by exactly its own height and
   # start a scroll that has nothing to show.
   def display_credits_layout(cast_members, crew_members)
-    CREDITS_ROW_STRIDES.each_key do |size|
-      2.upto(4) do |columns|
-        if credits_fit?(cast_members, crew_members, size, columns)
-          return { name_size: size, columns: columns, fits: true }
-        end
-      end
+    fitting = CREDITS_ROW_STRIDES.keys.product([ 2, 3, 4 ]).select do |size, columns|
+      credits_fit?(cast_members, crew_members, size, columns)
     end
+    # Prefer the biggest layout that keeps most entries on one line; wrap rather than scroll.
+    size, columns = fitting.find { |size, columns| credits_few_wraps?(cast_members + crew_members, size, columns) } ||
+                    fitting.first
+    return { name_size: size, columns: columns, fits: true } if size
 
     { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4, fits: false }
   end
@@ -226,6 +227,15 @@ module DisplayHelper
 
   def credits_chars_per_line(columns, size)
     (credits_column_width(columns) / (CREDITS_CHAR_EM * CREDITS_FONT_PX.fetch(size))).floor
+  end
+
+  # At most a quarter of the entries may wrap. Past that a size down reads better: 20
+  # people at text-5xl in four columns broke 19 entries mid-role and mid-name, where
+  # text-4xl in two kept every one on its line.
+  def credits_few_wraps?(members, size, columns)
+    chars_per_line = credits_chars_per_line(columns, size)
+    wrapped = members.count { |name, detail| credits_entry_lines("#{name} #{detail}", chars_per_line) > 1 }
+    wrapped * 4 <= members.size
   end
 
   # A fill, not an average: the browser cannot split an entry across columns, so

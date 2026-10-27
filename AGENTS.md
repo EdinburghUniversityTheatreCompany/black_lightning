@@ -1370,7 +1370,9 @@ panel with content; panels live in `app/services/display/panels/`.
 - **The credits are one list in CSS columns, and the fit is a fill, not an average**
   (`credits_fit?`): the browser cannot split an entry across columns, so dividing the height by
   the column count let near fits spill by up to 13px. It tries the biggest type first, then the
-  fewest columns; the marquee is the net only past `text-base` in 4 columns, as columns cannot
+  fewest columns, skipping a layout where over a quarter of the entries wrap (`credits_few_wraps?`;
+  biggest-first alone broke 19 of 20 entries mid-role). The marquee is the net only past
+  `text-base` in 4 columns, as columns cannot
   scroll cleanly (the fold cuts every column at once). `CREDITS_CHROME_REM` is the header and QR
   summed by hand, so re-measure the `CREDITS_*` constants in Chrome when either changes, **at
   exactly 1920x1080**: in a laptop-sized window nearly every layout scrolls.
