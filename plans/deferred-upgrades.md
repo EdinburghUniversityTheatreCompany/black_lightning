@@ -3,8 +3,7 @@
 Upgrades that could **not** be applied during a dependency sweep, with the reason and what lands
 them. Last reviewed: **2026-10-27**.
 
-Every Ruby entry below except `doorkeeper-openid_connect` is blocked by a constraint outside this
-repo. Re-check with
+Every Ruby entry below is blocked by a constraint outside this repo. Re-check with
 `bundle outdated` / `pnpm outdated`: anything still listed here is expected to appear.
 
 ## `active_storage_validations` 4: landed, with its new `accept` behaviour switched off
@@ -21,17 +20,6 @@ over every upload form first.
 4.0 also gave analyzer commands (ffprobe, pdfinfo, identify, libvips) a 10s `command_timeout` that
 fails closed. Left at the default, since receipt photos and PDFs analyse well inside it, but that is
 the knob if a large upload ever starts reporting an unreadable file.
-
-## `doorkeeper-openid_connect` 1.10.5 → 2.1.0 (Ruby): prepared, waiting for a review
-
-**Why held:** it is the OpenID provider behind the pretix shop's member login, so a regression
-locks members out of member pricing (see "Pretix membership sync" in AGENTS.md). The upgrade is the
-last commit on the `deps-upgrade` branch. A code → token → id_token → userinfo → discovery run
-through the real initializer gave identical output on both versions (token fields, id_token claims,
-`sub` as the user id, userinfo's `email`, JWKS) except one new discovery field,
-`authorization_response_iss_parameter_supported: false`. It needs no migration: 2.0's
-`post_logout_redirect_uris` column is only for RP-Initiated Logout, which this app does not use, and
-the gem skips the column when it is absent. Merge that commit and delete this entry.
 
 ## `diff-lcs` 1.6.2 → 2.0.0 (Ruby): blocked by an upstream constraint
 
