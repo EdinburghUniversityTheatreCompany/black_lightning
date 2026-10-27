@@ -53,6 +53,10 @@ class Role < ApplicationRecord
     %w[name]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def self.hardcoded_name?(name)
     HARDCODED_NAMES.any? { |hardcoded| hardcoded.casecmp?(name.to_s.strip) }
   end

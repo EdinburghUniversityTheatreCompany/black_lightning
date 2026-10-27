@@ -49,6 +49,10 @@ class FaultReport < ApplicationRecord
     %w[description fixed_by_id item reported_by_id severity status created_at updated_at]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def reported_by_name
     reported_by.try(:name) || "Unknown"
   end

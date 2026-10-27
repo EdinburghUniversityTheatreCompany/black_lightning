@@ -31,7 +31,7 @@ class Complaint < ApplicationRecord
 
   def self.ransackable_attributes(auth_object = nil)
     # By default, there should be an accessible_by call on this, but just to be safe, I am also including it here.
-    return unless auth_object.can?(:index, Complaint)
+    return [] unless auth_object.can?(:index, Complaint)
 
     %w[subject description comments]
   end

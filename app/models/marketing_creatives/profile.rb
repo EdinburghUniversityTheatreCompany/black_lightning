@@ -45,4 +45,8 @@ class MarketingCreatives::Profile < ApplicationRecord
   def self.ransackable_attributes(auth_object = nil)
     [ "about", "approved", "contact", "name", "url", "user_id" ]
   end
+
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
 end
