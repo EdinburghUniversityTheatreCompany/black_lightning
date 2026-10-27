@@ -9,12 +9,18 @@ module Display
   class PaletteExtractionJob < ApplicationJob
     limits_concurrency key: "display_palette_extraction", duration: 5.minutes
 
+    # ActiveStorage's AnalyzeJob saves the whole metadata hash from the copy it
+    # loaded, so a palette written before it finishes is lost. Wait for it, five
+    # minutes at most: a failed analysis never finishes.
+    ANALYSIS_WAITS = 10
+
     def perform(event)
       blob = event.image&.blob
       return unless blob && event.uploaded_image?
       # An attach callback can fire for a blob the job already handled (a
       # re-save of the event); metadata presence, not the queue, is the ledger.
       return if blob.metadata.key?("palette_v2")
+      return retry_job(wait: 30.seconds) if !blob.analyzed? && executions < ANALYSIS_WAITS
 
       Display::Palette.extract!(blob)
     end

@@ -59,11 +59,16 @@ module Display
     # Any other failure (a storage timeout, say) is left unmarked: it is
     # transient, and the job's retry should fix it.
     def self.extract!(blob)
-      palette = extract(blob)
-      blob.update!(metadata: blob.metadata.merge("palette_v2" => palette))
-    rescue Vips::Error
-      Rails.logger.warn("Display::Palette could not decode #{blob.filename}: marking failed")
-      blob.update!(metadata: blob.metadata.merge("palette_v2" => false))
+      palette = begin
+        extract(blob)
+      rescue Vips::Error
+        Rails.logger.warn("Display::Palette could not decode #{blob.filename}: marking failed")
+        false
+      end
+      # with_lock reloads the row first: merge into the metadata as saved now, not
+      # the copy this blob was loaded with, or a write since (AnalyzeJob's width
+      # and height) is lost.
+      blob.with_lock { blob.update!(metadata: blob.metadata.merge("palette_v2" => palette)) }
     end
 
     # Three vertical bands (top/mid/low thirds, where titles and faces sit),

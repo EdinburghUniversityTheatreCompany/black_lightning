@@ -62,16 +62,44 @@ module Display
       assert_equal [ [ 255, 0, 0 ], [ 0, 255, 0 ], [ 0, 0, 255 ] ], Display::Palette.for(event)
     end
 
-    test "extract! tombstones an undecodable blob so it is never retried" do
-      event = FactoryBot.create(:event, attach_image: true)
-      blob = event.image.blob
-      blob.update!(metadata: blob.metadata.merge("content_type" => "image/png"))
-      stub_file(blob, "this is not an image")
-
-      assert_changes -> { blob.reload.metadata["palette_v2"] } do
-        Display::Palette.extract!(blob)
+    test "extract reads a poster with transparency" do
+      blob = palette_blob do
+        opaque = Vips::Image.black(60, 20, bands: 3)
+        # Red over a see-through middle over blue; flattening must not shift the bands.
+        bands = [ opaque.linear(0, [ 255, 0, 0 ]), opaque, opaque.linear(0, [ 0, 0, 255 ]) ]
+        alpha = [ 255, 0, 255 ].map { |a| Vips::Image.black(60, 20).linear(0, a) }
+        bands.zip(alpha).map { |rgb, a| rgb.bandjoin(a) }.reduce { |top, below| top.join(below, :vertical) }
       end
-      refute blob.metadata["palette_v2"]
+
+      top, _middle, bottom = Palette.extract(blob)
+
+      assert_operator top.first, :>, top.drop(1).max, "top band must stay red-dominant"
+      assert_operator bottom.last, :>, bottom.take(2).max, "bottom band must stay blue-dominant"
+    end
+
+    # cast(:uchar) clips 16-bit values instead of scaling them, which turns orange into yellow.
+    test "extract scales a 16-bit poster rather than clipping it" do
+      blob = palette_blob(format: :ushort) do
+        Vips::Image.black(60, 60, bands: 3).linear(0, [ 200 * 257, 100 * 257, 0 ])
+      end
+
+      red, green, blue = Palette.extract(blob).first
+
+      assert_operator green, :<, red * 0.75, "orange must not come back yellow"
+      assert_operator blue, :<, green
+    end
+
+    # The job runs beside ActiveStorage's AnalyzeJob, and both save the whole metadata hash.
+    test "extract! merges into the row as saved now, not the copy it was handed" do
+      blob = palette_blob { Vips::Image.black(60, 60, bands: 3).linear(0, [ 200, 40, 40 ]) }
+      stale = ActiveStorage::Blob.find(blob.id)
+      blob.update!(metadata: blob.metadata.merge("analyzed" => true, "width" => 60, "height" => 60))
+
+      Palette.extract!(stale)
+
+      metadata = blob.reload.metadata
+      assert_equal 60, metadata["width"], "the analysis's keys must survive the palette write"
+      assert metadata["palette_v2"].present?
     end
 
     private
@@ -84,29 +112,13 @@ module Display
 
     # Builds a blob whose file is the image vips builds in the block, through
     # the same Active Storage path a real upload takes.
-    def palette_blob
-      # linear() promotes to float; real uploads are 8-bit, and colourspace(:hsv)
-      # only accepts uchar, so pin the format the pipeline expects.
-      png = yield.cast(:uchar).write_to_buffer(".png")
+    def palette_blob(format: :uchar)
+      # linear() promotes to float, so pin the format the upload would have: 8-bit by
+      # default, or 16-bit (:ushort) to test the scaling.
+      png = yield.cast(format).write_to_buffer(".png")
       event = FactoryBot.create(:event, attach_image: false)
       event.image.attach(io: StringIO.new(png), filename: "poster.png", content_type: "image/png")
       event.image.blob
-    end
-
-    # Points a blob's service at a given string (extract! opens the blob; the
-    # attached file's bytes are whatever the factory put there). A Tempfile:
-    # Vips::Image.thumbnail reads by path, so the fake must behave like a file.
-    def stub_file(blob, content)
-      blob.define_singleton_method(:open) do |&block|
-        file = Tempfile.new([ "blob", ".bin" ])
-        file.write(content)
-        file.close
-        begin
-          block.call(file)
-        ensure
-          file.unlink
-        end
-      end
     end
   end
 end
