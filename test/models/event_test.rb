@@ -410,4 +410,28 @@ class EventTest < ActionView::TestCase
 
     assert_equal Date.current + 3, event.next_occurrence(Date.current + 2)
   end
+
+  # The palette is extracted when artwork lands, off the request path, and only
+  # for real uploads: the fetch_image placeholder must never be decoded.
+  test "a new uploaded artwork queues the palette extraction" do
+    assert_enqueued_with(job: Display::PaletteExtractionJob) do
+      FactoryBot.create(:event, attach_image: true)
+    end
+  end
+
+  test "an event without artwork queues nothing" do
+    assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
+      FactoryBot.create(:event, attach_image: false)
+    end
+  end
+
+  test "a blob already carrying a palette verdict is not queued again" do
+    event = FactoryBot.create(:event, attach_image: true)
+    blob = event.image.blob
+    blob.update!(metadata: blob.metadata.merge("palette_v2" => false))
+
+    assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
+      event.update!(name: event.name + " (revised)")
+    end
+  end
 end
