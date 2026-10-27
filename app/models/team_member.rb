@@ -87,6 +87,10 @@ class TeamMember < ActiveRecord::Base
     %w[position user_id teamwork_id teamwork_type]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   # Public because SchemaHelper reads it; a second copy of this regex would drift.
   def position_segments
     position.split(/\/(?![^(]*\))/).map(&:strip)

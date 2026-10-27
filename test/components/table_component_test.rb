@@ -29,6 +29,15 @@ class TableComponentTest < ViewComponent::TestCase
     assert_selector "th a.sort_link"
   end
 
+  # GHSA-58rx-96gf-w92x: ransack < 6.0.1 passed these params to url_for
+  test "sort links ignore url options smuggled in through the query string" do
+    with_request_url "/admin/venues?script_name=javascript:alert(1)//&host=evil.example&only_path=false" do
+      render_inline(TableComponent.new(headers: [ :name ], field_sets: [], q: Venue.ransack))
+    end
+
+    assert_selector "th a.sort_link[href^='/admin/venues?']"
+  end
+
   test "column widths switch the table to a fixed layout" do
     render_inline(TableComponent.new(headers: [ "a" ], field_sets: [], col_widths: [ "70%", "30%" ]))
 

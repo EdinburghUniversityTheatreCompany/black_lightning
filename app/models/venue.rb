@@ -49,6 +49,10 @@ class Venue < ApplicationRecord
     %w[address description location name tagline]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob("bedlam.png")) unless image.attached?
 

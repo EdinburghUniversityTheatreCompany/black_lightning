@@ -53,6 +53,10 @@ class Admin::Staffing < ApplicationRecord
     %w[start_time show_title end_time counts_towards_debt slug reminder_job_executed scheduled_job_id]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   ##
   # Returns the number of jobs that have been filled
   ##

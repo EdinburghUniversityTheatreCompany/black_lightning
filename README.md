@@ -20,7 +20,7 @@ Current key versions (kept in sync with the manifests — `Gemfile.lock`, `packa
 | Language | Ruby | 4.0.9 |
 | Database | MySQL | 8 (multi-database: primary, queue, cache) |
 | Auth | Devise | 5.0 |
-| Components | ViewComponent | 4.15 |
+| Components | ViewComponent | 4.19 |
 | Hotwire | Turbo | 8.0 |
 | JS bundler | Vite (`vite_rails`) | 8.3 / 3.11 |
 | JS runtime | Node | 24.13.0 |

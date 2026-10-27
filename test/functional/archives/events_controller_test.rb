@@ -50,4 +50,11 @@ class Archives::EventsControllerTest < ActionController::TestCase
     # Regression: turbo_stream once returned an empty body, so live search did nothing.
     assert_match "index-results", response.body
   end
+
+  test "the search box still holds what was searched" do
+    # Ransack 5 dropped the form-helper patch that once read this value back.
+    get :index, params: { q: { name_cont: "pericles" } }
+
+    assert_select "input[name='q[name_cont]'][value=?]", "pericles"
+  end
 end

@@ -42,6 +42,10 @@ class VideoLink < ApplicationRecord
     [ "name", "link", "access_level", "order", "item_type", "item_id" ]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def video_id
     id = YOUTUBE_ID_REGEX.match(link)
 

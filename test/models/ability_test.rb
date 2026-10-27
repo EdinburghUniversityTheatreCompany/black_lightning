@@ -10,6 +10,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   test "unspecified models have no permissions" do
     all_actions = %i[read show index edit update delete create new answer approve manage]
 
+    # descendants lists only the classes loaded so far, which depends on what ran before.
+    Rails.application.eager_load!
     models = ApplicationRecord.descendants
     exclusions = [ Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt,

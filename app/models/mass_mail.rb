@@ -33,6 +33,10 @@ class MassMail < ApplicationRecord
     %w[body draft send_date sender_id subject]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def send_date_is_not_in_the_past
     errors.add(:send_date, "cannot be in the past") if send_date_is_in_the_past?
   end

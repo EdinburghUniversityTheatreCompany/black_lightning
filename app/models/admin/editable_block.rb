@@ -54,6 +54,10 @@ class Admin::EditableBlock < ApplicationRecord
     %w[admin_page content group name ordering url]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def cached_rendered_content
     Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}_v2", expires_in: 7.days) do
       render_markdown(content)

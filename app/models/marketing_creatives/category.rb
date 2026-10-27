@@ -36,6 +36,10 @@ class MarketingCreatives::Category < ApplicationRecord
     %w[name name_on_profile url]
   end
 
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   ##
   # Display kittens if the image for whatever reason does not exist.
   ##

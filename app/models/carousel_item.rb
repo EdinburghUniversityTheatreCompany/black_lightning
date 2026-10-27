@@ -42,4 +42,8 @@ class CarouselItem < ApplicationRecord
   def self.ransackable_attributes(auth_object = nil)
     %w[carousel_name is_active ordering tagline title url]
   end
+
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
 end
