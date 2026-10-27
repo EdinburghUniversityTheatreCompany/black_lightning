@@ -411,29 +411,38 @@ class EventTest < ActionView::TestCase
     assert_equal Date.current + 3, event.next_occurrence(Date.current + 2)
   end
 
-  # The palette is extracted when artwork lands, off the request path, and only
-  # for real uploads: the fetch_image placeholder must never be decoded.
-  # Transactional tests never commit, so after_commit will not fire here: the
-  # callback is pinned against the commit chain and then called directly, which
-  # is where every guard lives.
-  test "the palette extraction is hooked to commit, not to a render" do
-    assert_includes Event._commit_callbacks.map(&:filter), :schedule_palette_extraction
+  # The palette is extracted when artwork lands, off the request path, and only for real
+  # uploads. after_commit fires inside these transactional tests, so they go through the
+  # real create and replace paths.
+  test "uploading artwork queues the palette extraction" do
+    assert_enqueued_with(job: Display::PaletteExtractionJob) do
+      FactoryBot.create(:event, attach_image: true)
+    end
   end
 
-  test "a new uploaded artwork queues the palette extraction" do
-    event = FactoryBot.create(:event, attach_image: true)
+  test "replacing the artwork queues it again" do
+    event = FactoryBot.create(:event, attach_image: false)
+    png = Vips::Image.black(8, 8, bands: 3).cast(:uchar).write_to_buffer(".png")
 
     assert_enqueued_with(job: Display::PaletteExtractionJob) do
-      event.schedule_palette_extraction
+      event.update!(image: { io: StringIO.new(png), filename: "new-poster.png", content_type: "image/png" })
     end
   end
 
   test "an event without artwork queues nothing" do
+    assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
+      FactoryBot.create(:event, attach_image: false)
+    end
+  end
+
+  # The default art fetch_image attaches is not the show's, so its colours must never be painted.
+  test "the fetch_image placeholder queues nothing" do
     event = FactoryBot.create(:event, attach_image: false)
 
     assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
-      event.schedule_palette_extraction
+      event.fetch_image
     end
+    assert_not event.uploaded_image?
   end
 
   test "a blob already carrying a palette verdict is not queued again" do
@@ -442,7 +451,7 @@ class EventTest < ActionView::TestCase
     blob.update!(metadata: blob.metadata.merge("palette_v2" => false))
 
     assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
-      event.schedule_palette_extraction
+      event.update!(name: "#{event.name} (revival)")
     end
   end
 end

@@ -223,19 +223,10 @@ class Event < ApplicationRecord
   end
 
   # True when the attached image is a real upload, not the fetch_image
-  # placeholder (which ActiveStorageHelper prefixes onto its filename).
+  # placeholder (which ActiveStorageHelper prefixes onto its filename). No slash
+  # after the prefix: Filename#to_s turns the stored one into a dash.
   def uploaded_image?
-    image.attached? && !image.blob.filename.to_s.start_with?("#{ActiveStorageHelper::PREFIX}/")
-  end
-
-  # The credits panel's ambient palette is extracted off the request path, when
-  # the artwork lands (or is replaced) - never on a GET, which Anthias polls
-  # forever. Metadata presence is the ledger: a blob already extracted, failed
-  # or marked colourless is never queued again.
-  def schedule_palette_extraction
-    return unless uploaded_image? && !image.blob.metadata.key?("palette_v2")
-
-    Display::PaletteExtractionJob.perform_later(self)
+    image.attached? && !image.blob.filename.to_s.start_with?(ActiveStorageHelper::PREFIX)
   end
 
   ##
@@ -454,6 +445,16 @@ class Event < ApplicationRecord
   end
 
   private
+
+  # The credits panel's ambient palette is extracted off the request path, when
+  # the artwork lands (or is replaced) - never on a GET, which Anthias polls
+  # forever. Metadata presence is the ledger: a blob already extracted, failed
+  # or marked colourless is never queued again.
+  def schedule_palette_extraction
+    return unless uploaded_image? && !image.blob.metadata.key?("palette_v2")
+
+    Display::PaletteExtractionJob.perform_later(self)
+  end
 
   # On every commit, not only an author change: after_commit sees only the last
   # save's changes, so a transaction saving twice would hide the author edit.
