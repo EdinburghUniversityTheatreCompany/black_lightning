@@ -5,9 +5,12 @@
   <%= display_label("Latest News", css_class: "mb-10") %>
 
   <%# Same auto-scroll as What's On: the kiosk has no pointer, so overflow would
-      be unreachable. Chrome (25rem) is the space around the track: py-16 4 + logo
-      row ~2.5 + mb-10 2.5 + mt-8 2 + footer 10 (the QR code, h-40) + py-16 4.
-      See display.css. %>
+      be unreachable. Chrome (25rem) is the space around the track: py-16 4 + the
+      "Latest News" label 2.5 + mb-10 2.5 + mt-8 2 + footer 10 (the QR code, h-40)
+      + py-16 4. (The logo is absolutely positioned and costs no flow.)
+      The scroll is a safety net, like all the marquees: Display::Panels::News
+      budgets the list to fit without it, so a clipping bug shows as a still
+      frame before it shows as motion. See display.css. %>
   <div class="display-marquee" style="--display-marquee-chrome: 25rem">
     <ul class="display-marquee__track flex flex-col gap-8">
       <% articles.each do |article| %>

@@ -105,96 +105,75 @@ module DisplayHelper
     sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
-  # The credits fit a 1080p screen by stepping the type down. Measured at 1920x1080:
-  # the page header leaves CREDITS_COLUMN_HEIGHT, a name costs its line height plus
-  # an 8px gap (CREDITS_ROW_STRIDES), the QR is a flat 160px. Pixels, not rows: the
-  # QR is a different fraction of a row at each size (under three at text-5xl, nearly
-  # five at text-xl), and a fixed count pushed it off the screen for an 18-name cast.
-  CREDITS_COLUMN_HEIGHT = 795
+  # The credits are one list (cast, then company) flowing down CSS columns, and
+  # they fit a 1080p screen by stepping the type down first, then widening the
+  # flow. Measured in Chrome at 1920x1080:
+  #   - the panel chrome pinned in _credits.html.erb (CREDITS_CHROME_REM) leaves
+  #     CREDITS_WINDOW_HEIGHT for the list;
+  #   - CREDITS_ROW_STRIDES is a name's line height plus the 8px list gap;
+  #   - CREDITS_CHAR_PX is one character of mixed-case Source Sans 3 (a semibold
+  #     name, then a lighter role) at each size - re-measure alongside the
+  #     strides whenever either changes.
+  # Pixels, not people: roles run long ("Assistant Technical Stage Manager"),
+  # and a person-count promise wraps into a scroll the moment names wrap.
+  CREDITS_CHROME_REM = 26.8
+  CREDITS_WINDOW_HEIGHT = (1080 - CREDITS_CHROME_REM * 16).floor # 651
+  CREDITS_CONTENT_WIDTH = 1920 - 2 * 64                          # px-16 both sides
+  CREDITS_COLUMN_GAP = 64                                        # gap-16
   CREDITS_HEADING_HEIGHT = 56
-  CREDITS_LIST_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_HEADING_HEIGHT
-  CREDITS_QR_HEIGHT = 160
-  CREDITS_FLOW_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_QR_HEIGHT
-  # Air above a heading that follows another section (flowed layout only). Modest on
-  # purpose: it competes with name size, and at 40px an 18-cast, 2-crew show missed
-  # text-5xl by one pixel.
+  # Air above a heading that follows another section (the company's mt-8). Modest
+  # on purpose: it competes with name size.
   CREDITS_SECTION_GAP = 32
   CREDITS_ROW_STRIDES = {
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
   }.freeze
+  CREDITS_CHAR_PX = {
+    "text-5xl" => 24, "text-4xl" => 18, "text-3xl" => 15, "text-2xl" => 12,
+    "text-xl" => 10, "text-base" => 8
+  }.freeze
 
-  # Side by side (Cast against Company) is the clearer read but sizes off the longer
-  # list, so 3 cast against 18 crew wastes a column. Flowed runs both lists down the
-  # first column and into the second. Whichever allows bigger names wins, a tie going
-  # to side by side: flow only wins where a column was going to waste.
-  def display_credits_layout(cast_count, crew_count)
-    side = credits_first_fit { |stride| side_by_side_height(cast_count, crew_count, stride) <= CREDITS_LIST_HEIGHT }
-    flowed = credits_first_fit { |stride| flowed_height(cast_count, crew_count, stride) <= CREDITS_FLOW_HEIGHT }
+  # The biggest type first, then the fewest columns (2 to 4) that fit one screen.
+  # Only when nothing fits at any size does the layout give up and take the
+  # smallest text in the most columns: the marquee is the safety net for that
+  # case alone, and CSS columns cannot scroll cleanly (every column moves at
+  # once, so the fold cuts the first column mid-list), which is why the net is
+  # the last resort and not the design.
+  def display_credits_layout(cast_members, crew_members)
+    sections = [ cast_members, crew_members ].count(&:any?)
+    headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
 
-    # A tie, or neither layout fitting, goes to side by side.
-    if flowed && (side.nil? || flowed < side)
-      flowed_layout(flowed)
-    else
-      side_by_side_layout(cast_count, crew_count, side)
+    CREDITS_ROW_STRIDES.each do |size, stride|
+      2.upto(4) do |columns|
+        chars_per_line = credits_chars_per_line(columns, size)
+        lines = credits_lines(cast_members, crew_members, chars_per_line)
+
+        # CSS multicol balances the flow across the columns, so the track's height
+        # is roughly the content's total divided by the column count.
+        return { name_size: size, columns: columns } if headings + lines * stride <= CREDITS_WINDOW_HEIGHT * columns
+      end
     end
+
+    { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4 }
   end
 
   private
 
-  def credits_first_fit
-    CREDITS_ROW_STRIDES.values.index { |stride| yield(stride) }
+  def credits_column_width(columns)
+    (CREDITS_CONTENT_WIDTH - (columns - 1) * CREDITS_COLUMN_GAP) / columns
   end
 
-  def side_by_side_height(cast_count, crew_count, stride)
-    qr_in_cast_column = cast_count <= crew_count
-
-    [ cast_count * stride + (qr_in_cast_column ? CREDITS_QR_HEIGHT : 0),
-      crew_count * stride + (qr_in_cast_column ? 0 : CREDITS_QR_HEIGHT) ].max
+  def credits_chars_per_line(columns, size)
+    (credits_column_width(columns) / CREDITS_CHAR_PX.fetch(size)).floor
   end
 
-  # What one of the two flowed columns holds: both lists and headings, halved.
-  # An empty list prints no heading.
-  def flowed_height(cast_count, crew_count, stride)
-    sections = [ cast_count, crew_count ].count(&:positive?)
-    headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
-
-    ((headings + (cast_count + crew_count) * stride) / 2.0).ceil
-  end
-
-  # nil = nothing fitted (a company past what the screen holds): shrink fully and let the caps clip.
-  def credits_size_at(index)
-    (index && CREDITS_ROW_STRIDES.keys[index]) || CREDITS_ROW_STRIDES.keys.last
-  end
-
-  def flowed_layout(flowed)
-    { mode: :flowed,
-      name_size: credits_size_at(flowed),
-      # The QR is a footer under both columns: the flow balances, so its height
-      # comes off the flow before it runs.
-      flow_height: CREDITS_FLOW_HEIGHT }
-  end
-
-  def side_by_side_layout(cast_count, crew_count, side)
-    # The QR goes under the shorter list (nearly always the cast, bottom left), so it takes spare room.
-    qr_in_cast_column = cast_count <= crew_count
-    name_size = credits_size_at(side)
-    tallest = side_by_side_height(cast_count, crew_count, CREDITS_ROW_STRIDES.fetch(name_size))
-
-    { mode: :side_by_side,
-      name_size: name_size,
-      qr_in_cast_column: qr_in_cast_column,
-      # A hard cap per list, so a name that wraps (the arithmetic assumes one line
-      # per person) clips its own list and never the QR beneath it.
-      cast_list_height: credits_column_list_height(qr_in_cast_column),
-      crew_list_height: credits_column_list_height(!qr_in_cast_column),
-      # Centre the columns unless the names need all the space: then start at the
-      # top so a long list loses its tail, not its heading.
-      block_position: tallest > CREDITS_LIST_HEIGHT ? "content-start" : "content-center" }
-  end
-
-  def credits_column_list_height(carries_qr)
-    carries_qr ? CREDITS_FLOW_HEIGHT : CREDITS_COLUMN_HEIGHT
+  # Each entry is "Name Role" on one or more lines: estimate the lines from the
+  # characters it needs, the way Display::Panels::News budgets headlines with
+  # CHARS_PER_LINE. The + 1 is the space between name and role.
+  def credits_lines(cast_members, crew_members, chars_per_line)
+    (cast_members + crew_members).sum do |(name, detail)|
+      [ ((name.to_s.length + 1 + detail.to_s.length) / chars_per_line.to_f).ceil, 1 ].max
+    end
   end
 
   public
@@ -223,29 +202,6 @@ module DisplayHelper
   def display_image_url(event)
     rails_representation_url(event.fetch_image.variant(large_display_variant).processed, only_path: true)
   rescue ActiveStorage::FileNotFoundError
-    nil
-  end
-
-  # A subtle gradient from the event artwork's key colours, for the credits
-  # panel's background. Colours are dimmed slightly (15% toward black) and
-  # painted at moderate alpha over the panel's neutral-950, so white/neutral
-  # text keeps its contrast while the poster's colours stay recognisable.
-  # nil (plain black) when no artwork, no palette, or anything at all went wrong:
-  # the unattended screen must never 500 over a background wash.
-  def display_ambient_gradient(event)
-    colours = Display::Palette.for(event)
-    return nil if colours.blank?
-
-    dimmed = colours.map { |c| c.map { |v| (v * 0.85).round } }
-    c1, c2, c3 = dimmed
-    stops = [
-      "rgba(#{c1.join(', ')}, 0.7) 0%",
-      ("rgba(#{c2.join(', ')}, 0.5) 50%" if c2),
-      "rgba(#{(c3 || c2 || c1).join(', ')}, 0.7) 100%"
-    ].compact
-    "background-image: linear-gradient(160deg, #{stops.join(', ')})"
-  rescue StandardError => e
-    Rails.logger.warn("display_ambient_gradient failed: #{e.class}")
     nil
   end
 end

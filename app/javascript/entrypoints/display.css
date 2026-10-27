@@ -12,6 +12,10 @@
    * than this font's content area (~1.36em), slicing every g, j, p, q and y.
    * Pair every `truncate` on this screen with `leading-descender`. */
   --leading-descender: 1.4;
+
+  /* CAST/COMPANY headings: between neutral-500 and the roles' neutral-400, so
+   * they read over the ambient gradient without competing with the names. */
+  --color-display-credits-heading: #8f8f8f;
 }
 
 /* The What's On marquee, pure CSS. The scroll distance is (viewport - track
@@ -28,7 +32,9 @@
   /* Each panel sets its own chrome (the space around the track, pinned in its
    * markup). What's On: py-12 3 + header 4.5 + mb-10 2.5 + mt-8 2 + footer 2.25
    * + py-12 3. Get Involved: py-12 3 + header 4.5 + mb-10 2.5 + mt-8 2 + footer
-   * 10 (the QR code, h-40) + py-12 3. */
+   * 10 (the QR code, h-40) + py-12 3. News: 25 (see _news.html.erb). Credits:
+   * 26.8 (see _credits.html.erb; DisplayHelper::CREDITS_CHROME_REM is pinned to
+   * it by a test, so the helper's fit and this box cannot drift). */
   --display-marquee-chrome: 17.25rem;
   --display-marquee-viewport: calc(100vh - var(--display-marquee-chrome));
 
@@ -59,8 +65,6 @@
   }
 }
 
-/* CAST/COMPANY headings: between neutral-500 and the roles' neutral-400, so
-   they read over the ambient gradient without competing with the names. */
 .display-credits-heading {
-  color: #8f8f8f;
+  color: var(--color-display-credits-heading);
 }
