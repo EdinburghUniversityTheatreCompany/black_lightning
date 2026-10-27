@@ -157,7 +157,6 @@ module DisplayHelper
     { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4 }
   end
 
-
   # Titles step down by length rather than truncate: naming the show is the page's
   # job. The text block is anchored to the bottom, so a taller title grows up into
   # the artwork instead of pushing the dates and price off screen.

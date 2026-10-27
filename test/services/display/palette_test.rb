@@ -6,9 +6,10 @@ module Display
       blob = palette_blob do |img|
         # Three distinct bands: red top, green middle, blue bottom. Broad enough
         # that each band's majority bucket is unambiguous after quantisation.
+        # 60x60 in thirds of 20 rows: thumbnail(64) leaves it at 60 (it does not
+        # upscale), so band = 60/3 = 20 lands each region inside one colour.
         bands = [ [255, 0, 0], [0, 200, 0], [0, 0, 255] ].map do |r, g, b|
-          # A solid 3-band colour: black offset to (r, g, b) per band.
-          Vips::Image.black(64, 22, bands: 3).linear(0, [ r, g, b ])
+          Vips::Image.black(60, 20, bands: 3).linear(0, [ r, g, b ])
         end
         bands[0].join(bands[1], :vertical).join(bands[2], :vertical)
       end
@@ -84,7 +85,9 @@ module Display
     # Builds a blob whose file is the image vips builds in the block, through
     # the same Active Storage path a real upload takes.
     def palette_blob
-      png = yield.to_blob(".png")
+      # linear() promotes to float; real uploads are 8-bit, and colourspace(:hsv)
+      # only accepts uchar, so pin the format the pipeline expects.
+      png = yield.cast(:uchar).to_blob(".png")
       event = FactoryBot.create(:event, attach_image: false)
       event.image.attach(io: StringIO.new(png), filename: "poster.png", content_type: "image/png")
       event.image.blob

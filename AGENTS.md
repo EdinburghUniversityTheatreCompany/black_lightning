@@ -1370,8 +1370,8 @@ panel with content; panels live in `app/services/display/panels/`.
   marquee is a safety net for a company past `text-base x 4` only. `display_credits_layout` takes the
   name/detail pairs and counts LINES (long roles wrap), tries the biggest type first then the fewest
   columns that fit. `CREDITS_CHROME_REM` must match the markup's `--display-marquee-chrome` (pinned
-  by two tests) or the fit promises a scroll; re-measure the `CREDITS_*` constants in Chrome at
-  1920x1080 when the header, row spacing or QR size changes.
+  by the credits controller test) or the fit promises a scroll; re-measure the `CREDITS_*`
+  constants in Chrome at 1920x1080 when the header, row spacing or QR size changes.
 - **Never decode a poster on a GET.** `display_ambient_gradient` reads only the palette
   `Display::PaletteExtractionJob` cached in `blob.metadata["palette_v2"]`, because Anthias polls
   these pages forever. That metadata is the ledger: `[]` (colourless) and `false` (undecodable) mean

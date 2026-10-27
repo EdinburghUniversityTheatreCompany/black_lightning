@@ -1,5 +1,5 @@
 namespace :display do
-  desc "Extract ambient palettes for every current or future event's uploaded artwork (REALLY=1 to redo those already cached)"
+  desc "Extract palettes for current/future events' artwork (REALLY=1 to redo cached ones)"
   task backfill_palette: :environment do
     # key?("palette_v2"), not presence: an empty array (a colourless poster) and
     # false (a failed decode) are both answers, and neither is a reason to decode
