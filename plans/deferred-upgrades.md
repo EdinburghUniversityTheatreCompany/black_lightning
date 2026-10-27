@@ -66,7 +66,6 @@ pnpm applies a 4-day `minimumReleaseAge`, Bundler the Gemfile's `cooldown: 4` an
 `-m 4`, so a release newer than that is skipped **by design** and lands on the next sweep. Do not
 disable the cooldown to grab one, except for a security fix someone has decided is urgent.
 
-On 2026-10-27 that held back **ransack 6.0.1** (published 2026-10-25), the fix for
-GHSA-58rx-96gf-w92x, a reflected XSS and open redirect through `sort_link`, which `TableComponent`
-renders on every admin table. It leaves the cooldown on 2026-10-29; once the advisory reaches
-ruby-advisory-db, CI's bundler-audit fails until it is in.
+To take one gem early, lift the cooldown for that run only:
+`BUNDLE_COOLDOWN=0 bundle update <gem> --conservative`. That was done for ransack 6.0.1 on
+2026-10-27, two days old, for GHSA-58rx-96gf-w92x (XSS through every admin table's sort links).
