@@ -6,6 +6,7 @@
 # == Schema Information
 #
 # Table name: team_members
+# Database name: primary
 #
 #  id            :integer          not null, primary key
 #  display_order :integer

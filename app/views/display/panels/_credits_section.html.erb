@@ -3,7 +3,7 @@
     event is normal. The break-* rules only bite in the flowed layout (second
     column): keep a heading with its names and never split a name. %>
 <% if members.any? %>
-  <h2 class="<%= "mt-8" if spaced %> mb-5 break-after-avoid text-3xl font-semibold uppercase tracking-widest text-neutral-500"><%= title %></h2>
+  <h2 class="<%= "mt-8" if spaced %> mb-5 break-after-avoid text-3xl font-semibold uppercase tracking-widest display-credits-heading"><%= title %></h2>
   <ul class="space-y-2">
     <% members.each do |name, detail| %>
       <li class="<%= name_size %> break-inside-avoid text-white">
