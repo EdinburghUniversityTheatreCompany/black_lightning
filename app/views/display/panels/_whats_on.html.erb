@@ -3,7 +3,7 @@
   <%# h-18 and h-9 are pinned, not content-sized: display.css subtracts them from
       100vh for the marquee's height. Change one and change the sum there. %>
   <div class="mb-10 flex h-18 items-center justify-between gap-10">
-    <h1 class="text-7xl font-bold tracking-tight text-display-accent">What's On</h1>
+    <%= display_label("What's On", tag: :h1) %>
     <%= display_logo %>
   </div>
 

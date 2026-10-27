@@ -1368,6 +1368,9 @@ panel with content; panels live in `app/services/display/panels/`.
   (the QR is a different fraction of a row at each size). Side by side puts the QR under the shorter
   list and caps each list's height so a wrapping name clips the list, not the code; flowed makes the
   QR a footer. Re-measure `CREDITS_*` if the header, row spacing or QR size changes.
+- **Every panel's red label is `display_label`** (`text-4xl`), so the show's name is the only big
+  type. The credits label's `mb-2` keeps that header at the height `CREDITS_COLUMN_HEIGHT` was
+  measured at: a new label size or margin means re-measuring it.
 
 ## Event ticket prices
 

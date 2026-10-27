@@ -50,6 +50,12 @@ module DisplayHelper
     image_tag("bedlam-logo_single-line-white-for-red.png", class: css_class, alt: "Bedlam Theatre")
   end
 
+  # The red label every panel opens with ("What's On", "Tonight", "Latest News"), one size
+  # on every screen so the event's name is the only big type. Margins are the caller's.
+  def display_label(text, tag: :p, css_class: nil)
+    content_tag(tag, text, class: [ "text-4xl font-bold uppercase tracking-[0.3em] text-display-accent", css_class ].compact.join(" "))
+  end
+
   QR_MODULE_SIZE = 4
 
   def self.qr_cache_key(url)

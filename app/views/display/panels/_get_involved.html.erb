@@ -1,7 +1,9 @@
 <%# locals: (opportunities:) %>
 <div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
-  <div class="mb-10 flex items-center justify-between gap-10">
-    <h1 class="text-7xl font-bold tracking-tight text-display-accent">Get Involved</h1>
+  <%# h-18, What's On's header height, so both lists start at the same place on the
+      screen. shrink-0, or a long list squeezes it down to the logo's. %>
+  <div class="mb-10 flex h-18 shrink-0 items-center justify-between gap-10">
+    <%= display_label("Get Involved", tag: :h1) %>
     <%= display_logo %>
   </div>
 

@@ -3,9 +3,7 @@
   <%= render "display/panels/artwork", event: event, dim: true %>
 
   <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-16 pt-48">
-    <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">
-      On this day, <%= pluralize(years_ago, "year") %> ago
-    </p>
+    <%= display_label("On this day, #{pluralize(years_ago, 'year')} ago", css_class: "mb-4") %>
 
     <%= render "display/panels/title", event: event %>
 

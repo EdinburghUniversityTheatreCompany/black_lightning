@@ -6,7 +6,7 @@
     <div class="flex items-end gap-14">
       <div class="min-w-0 flex-1">
         <% if tonight %>
-          <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">Tonight</p>
+          <%= display_label("Tonight", css_class: "mb-4") %>
         <% end %>
 
         <%= render "display/panels/title", event: event %>

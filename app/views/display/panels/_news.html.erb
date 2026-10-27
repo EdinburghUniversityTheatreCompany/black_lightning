@@ -2,7 +2,7 @@
 <div class="relative flex h-full w-full flex-col bg-neutral-950 px-24 py-16">
   <%= display_logo(css_class: "absolute right-24 top-12 h-14 w-auto") %>
 
-  <p class="mb-10 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">Latest News</p>
+  <%= display_label("Latest News", css_class: "mb-10") %>
 
   <%# Safety net under News's budget: a wrong count clips the last headline instead
       of pushing the QR code off the bottom. %>

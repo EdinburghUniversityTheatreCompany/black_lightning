@@ -52,6 +52,23 @@ class Display::PagesControllerTest < ActionController::TestCase
     end
   end
 
+  # What's On and Get Involved once titled themselves at text-7xl, twice the size of
+  # every other panel's label. The event's name is the only big type on the screen.
+  test "every panel labels itself at one size" do
+    show = FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 3)
+    FactoryBot.create(:team_member, teamwork: show, position: "Director")
+    FactoryBot.create(:news, show_public: true, publish_date: 1.day.ago)
+
+    { whats_on: "What's On", get_involved: "Get Involved", news: "Latest News",
+      credits: "Tonight's Credits" }.each do |action, text|
+      get action
+
+      label = css_select("h1, p").find { |element| element.text.squish == text }
+      assert label, "#{action} rendered no #{text.inspect} label"
+      assert_includes label["class"].split, "text-4xl", "#{action}'s label is not the shared size"
+    end
+  end
+
   # The scroll is pure CSS, so the box and the track must both be present. A
   # `truncate` on the title would cut "The Rocky Horror Picture Show by Richard O...".
   test "whats_on renders the board in a scrolling marquee, titles wrapping" do
@@ -61,7 +78,7 @@ class Display::PagesControllerTest < ActionController::TestCase
     get :whats_on
 
     assert_response :success
-    assert_match "What's On", response.body
+    assert_select "h1", text: "What's On"
     assert_select ".display-marquee ul.display-marquee__track li span:nth-child(2)", text: show.name do |titles|
       titles.each { |title| assert_not_includes title["class"].to_s.split, "truncate" }
     end
