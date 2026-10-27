@@ -199,23 +199,23 @@ module DisplayHelper
     nil
   end
 
-  # A subtle gradient from the event artwork's key colours, for the credits
-  # panel's background. Colours are dimmed slightly (15% toward black) and
-  # painted at moderate alpha over the panel's neutral-950, so white/neutral
-  # text keeps its contrast while the poster's colours stay recognisable.
-  # nil (plain black) when no artwork, no palette, or anything at all went wrong:
-  # the unattended screen must never 500 over a background wash.
+  # The wash is mixed over the panel's neutral-950 and each stop then darkened, in
+  # linear light, to at most WASH_MAX_LUMINANCE: there the roles (neutral-400) keep
+  # 4.5:1 and the red label 3:1, whatever the poster. Pale bands come out dark grey.
+  WASH_BASE = [ 10, 10, 10 ].freeze
+  WASH_ALPHAS = [ 0.7, 0.5, 0.7 ].freeze
+  WASH_MAX_LUMINANCE = 0.04
+
+  # A gradient from the event artwork's key colours, for the credits panel's
+  # background. nil (plain black) when no artwork, no palette, or anything at all
+  # went wrong: the unattended screen must never 500 over a background wash.
   def display_ambient_gradient(event)
     colours = Display::Palette.for(event)
     return nil if colours.blank?
 
-    dimmed = colours.map { |c| c.map { |v| (v * 0.85).round } }
-    c1, c2, c3 = dimmed
-    stops = [
-      "rgba(#{c1.join(', ')}, 0.7) 0%",
-      ("rgba(#{c2.join(', ')}, 0.5) 50%" if c2),
-      "rgba(#{(c3 || c2 || c1).join(', ')}, 0.7) 100%"
-    ].compact
+    stops = WASH_ALPHAS.zip(%w[0% 50% 100%]).each_with_index.map do |(alpha, at), i|
+      "rgb(#{wash_stop(colours[i] || colours.last, alpha).join(', ')}) #{at}"
+    end
     "background-image: linear-gradient(160deg, #{stops.join(', ')})"
   rescue StandardError => e
     Rails.logger.warn("display_ambient_gradient failed: #{e.class}")
@@ -239,6 +239,23 @@ module DisplayHelper
     (cast_members + crew_members).sum do |(name, detail)|
       credits_entry_lines("#{name} #{detail}", chars_per_line)
     end
+  end
+
+  def wash_stop(rgb, alpha)
+    linear = rgb.zip(WASH_BASE).map { |c, base| wash_linear(c * alpha + base * (1 - alpha)) }
+    luminance = [ 0.2126, 0.7152, 0.0722 ].zip(linear).sum { |weight, c| weight * c }
+    scale = [ WASH_MAX_LUMINANCE / luminance, 1 ].min
+    # floor, not round: rounding up could land a channel back over the cap.
+    linear.map { |c| (wash_encode(c * scale) * 255).floor }
+  end
+
+  def wash_linear(channel)
+    c = channel / 255.0
+    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055)**2.4
+  end
+
+  def wash_encode(linear)
+    linear <= 0.0031308 ? linear * 12.92 : 1.055 * linear**(1 / 2.4) - 0.055
   end
 
   # Greedy wrap, one word at a time: a word that does not fit starts a new line.

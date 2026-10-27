@@ -399,4 +399,46 @@ class DisplayHelperTest < ActionView::TestCase
     assert_match(/alt="Scan to read the news"/,
                  display_qr_code("https://example.com", label: "Scan to read the news"))
   end
+
+  def event_with_palette(palette)
+    FactoryBot.create(:event, attach_image: true).tap do |event|
+      event.image.blob.update!(metadata: event.image.blob.metadata.merge("palette_v2" => palette))
+    end
+  end
+
+  def relative_luminance(rgb)
+    linear = rgb.map { |c| (c /= 255.0) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055)**2.4 }
+    [ 0.2126, 0.7152, 0.0722 ].zip(linear).sum { |weight, c| weight * c }
+  end
+
+  def contrast(luminance, other)
+    lighter, darker = [ luminance, other ].sort.reverse
+    (lighter + 0.05) / (darker + 0.05)
+  end
+
+  test "display_ambient_gradient paints nothing until there is a palette to paint" do
+    assert_nil display_ambient_gradient(FactoryBot.create(:event, attach_image: false))
+    assert_nil display_ambient_gradient(event_with_palette(false)), "an undecodable poster"
+    assert_nil display_ambient_gradient(event_with_palette([])), "a colourless poster"
+  end
+
+  # Computed in Chrome: the roles are neutral-400, oklch(0.708 0 0), and an achromatic
+  # oklch colour's luminance is L cubed. The red label is --color-display-accent.
+  test "display_ambient_gradient keeps the roles at 4.5:1 and the red label at 3:1 whatever the poster" do
+    role = 0.708**3
+    label = relative_luminance([ 253, 43, 45 ])
+    { "white with a red title" => [ [ 224, 224, 224 ], [ 153, 23, 23 ], [ 224, 224, 224 ] ],
+      "purple, brown and teal" => [ [ 90, 51, 128 ], [ 153, 101, 61 ], [ 51, 128, 128 ] ],
+      "one bright yellow" => [ [ 255, 255, 0 ] ],
+      "all white" => [ [ 255, 255, 255 ] ] * 3 }.each do |poster, palette|
+      stops = display_ambient_gradient(event_with_palette(palette)).scan(/rgb\((\d+), (\d+), (\d+)\)/)
+
+      assert_equal 3, stops.size, "#{poster}: three opaque stops"
+      stops.map { |stop| stop.map(&:to_i) }.each do |stop|
+        background = relative_luminance(stop)
+        assert_operator contrast(role, background), :>=, 4.5, "#{poster}: roles over #{stop}"
+        assert_operator contrast(label, background), :>=, 3.0, "#{poster}: label over #{stop}"
+      end
+    end
+  end
 end
