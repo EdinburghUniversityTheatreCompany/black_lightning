@@ -202,6 +202,7 @@ class Event < ApplicationRecord
   after_initialize :set_default_members_only_text
   before_validation :derive_price_from_ticket_prices, if: :will_save_change_to_ticket_prices?
   after_commit :clear_author_name_list
+  after_commit :schedule_palette_extraction
   after_destroy :cleanup_orphaned_company
 
   # Formats the shows so they can be used in a selection field
@@ -219,6 +220,22 @@ class Event < ApplicationRecord
 
   def self.ransackable_associations(auth_object = nil)
     [ "attachments", "company", "event_tags", "pictures", "proposal", "questionnaires", "reviews", "roles", "season", "team_members", "users", "venue", "versions", "video_links" ]
+  end
+
+  # True when the attached image is a real upload, not the fetch_image
+  # placeholder (which ActiveStorageHelper prefixes onto its filename).
+  def uploaded_image?
+    image.attached? && !image.blob.filename.to_s.start_with?("#{ActiveStorageHelper::PREFIX}/")
+  end
+
+  # The credits panel's ambient palette is extracted off the request path, when
+  # the artwork lands (or is replaced) - never on a GET, which Anthias polls
+  # forever. Metadata presence is the ledger: a blob already extracted, failed
+  # or marked colourless is never queued again.
+  def schedule_palette_extraction
+    return unless uploaded_image? && !image.blob.metadata.key?("palette_v2")
+
+    Display::PaletteExtractionJob.perform_later(self)
   end
 
   ##

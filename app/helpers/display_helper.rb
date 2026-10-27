@@ -204,4 +204,27 @@ module DisplayHelper
   rescue ActiveStorage::FileNotFoundError
     nil
   end
+
+  # A subtle gradient from the event artwork's key colours, for the credits
+  # panel's background. Colours are dimmed slightly (15% toward black) and
+  # painted at moderate alpha over the panel's neutral-950, so white/neutral
+  # text keeps its contrast while the poster's colours stay recognisable.
+  # nil (plain black) when no artwork, no palette, or anything at all went wrong:
+  # the unattended screen must never 500 over a background wash.
+  def display_ambient_gradient(event)
+    colours = Display::Palette.for(event)
+    return nil if colours.blank?
+
+    dimmed = colours.map { |c| c.map { |v| (v * 0.85).round } }
+    c1, c2, c3 = dimmed
+    stops = [
+      "rgba(#{c1.join(', ')}, 0.7) 0%",
+      ("rgba(#{c2.join(', ')}, 0.5) 50%" if c2),
+      "rgba(#{(c3 || c2 || c1).join(', ')}, 0.7) 100%"
+    ].compact
+    "background-image: linear-gradient(160deg, #{stops.join(', ')})"
+  rescue StandardError => e
+    Rails.logger.warn("display_ambient_gradient failed: #{e.class}")
+    nil
+  end
 end

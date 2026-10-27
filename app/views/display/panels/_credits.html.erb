@@ -21,7 +21,10 @@
     <p class="text-3xl leading-snug text-neutral-300"><%= qr_label %></p>
   </div>
 <% end %>
-<div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
+<%# bg-neutral-950 stays as the base colour; the artwork's key colours are painted
+    over it at low alpha as a background-image gradient (see DisplayHelper). Empty
+    style when there is no artwork or no palette: the panel just stays black. %>
+<div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12" style="<%= display_ambient_gradient(event) %>">
   <div class="mb-10 flex shrink-0 items-start justify-between gap-10">
     <div class="min-w-0">
       <%# mb-2, not the mb-3 the smaller label had: the header keeps its height, so
