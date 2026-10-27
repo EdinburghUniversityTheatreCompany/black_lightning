@@ -6,25 +6,6 @@ them. Last reviewed: **2026-09-21**.
 Every Ruby entry below is blocked by a constraint outside this repo. Re-check with
 `bundle outdated` / `pnpm outdated`: anything still listed here is expected to appear.
 
-## `json` 2.21.2 → 3.x (Ruby): blocked by Rails, and now constrained in the Gemfile
-
-**Why deferred:** json 3 made `JSON.parse`'s options **keyword-only**
-(`parse(source, on_load:, object_class:, array_class:, **options)`), while Rails 8.1.3.1's
-`ActiveSupport::JSON.decode` still passes them positionally (`::JSON.parse(json, options)` at
-`active_support/json/decoding.rb:25`). So **every** serialized / JSON column raises
-`ArgumentError: wrong number of arguments (given 2, expected 1)` on read, measured at 866 errors
-and 9 failures. The first is any `ActiveStorage::Blob#custom_metadata` read, i.e. any
-attachment upload. Nothing in this app calls a removed json 3 API (checked: `fast_generate`,
-`unparse`, `restore`, `GenericObject`, `create_additions`, `escape_slash`, `JSON.load`/`JSON.dump`:
-none are used), so the blocker is entirely upstream.
-
-**This one needed a Gemfile constraint**, unlike the rest of this file: `json` is an
-unconstrained direct dependency, so bundler resolved it to 3.0.2 on its own. It is pinned
-`gem "json", "< 3"` with a comment pointing here.
-
-**To land it:** a Rails release whose `ActiveSupport::JSON.decode` calls `JSON.parse` with
-keywords. Then delete the constraint and its comment and re-run `bundle update json`.
-
 ## `active_storage_validations` 4: landed, with its new `accept` behaviour switched off
 
 Not deferred: **4.1.1 is in.** Recorded here because of the flag it needed. 4.0 began deriving an
