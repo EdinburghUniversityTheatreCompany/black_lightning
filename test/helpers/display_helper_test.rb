@@ -295,7 +295,7 @@ class DisplayHelperTest < ActionView::TestCase
       cast, crew = count > 42 ? [ [], company ] : [ CAST, CREW ]
       assert_equal count, cast.length + crew.length
 
-      assert_equal({ name_size: size, columns: columns }, display_credits_layout(cast, crew),
+      assert_equal({ name_size: size, columns: columns, fits: true }, display_credits_layout(cast, crew),
                    "#{count} people were measured fitting #{columns} columns at #{size}")
     end
   end
@@ -347,15 +347,25 @@ class DisplayHelperTest < ActionView::TestCase
   test "display_credits_layout falls back to the smallest type in four columns, with the marquee as the net" do
     layout = display_credits_layout(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] })
 
-    assert_equal({ name_size: "text-base", columns: 4 }, layout)
+    assert_equal({ name_size: "text-base", columns: 4, fits: false }, layout)
     assert_not credits_fits?(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] },
                              "text-base", 4),
                "this is the marquee's case: the fit is allowed to fail, and the scroll takes over"
   end
 
   test "display_credits_layout works for an all-cast or all-crew show" do
-    assert_equal({ name_size: "text-5xl", columns: 2 }, display_credits_layout(CAST.first(5), []))
-    assert_equal({ name_size: "text-5xl", columns: 2 }, display_credits_layout([], CREW.first(5)))
+    assert_equal({ name_size: "text-5xl", columns: 2, fits: true }, display_credits_layout(CAST.first(5), []))
+    assert_equal({ name_size: "text-5xl", columns: 2, fits: true }, display_credits_layout([], CREW.first(5)))
+  end
+
+  # The tail-slack div the template renders for the scroll's final hold is
+  # conditional on `fits`: inside a track that fits, its 3.5rem makes the track
+  # taller than the window and the marquee crawls though nothing is left to
+  # show. The template only renders it when the helper says the fit failed.
+  test "display_credits_layout reports whether the marquee is needed" do
+    assert display_credits_layout(CAST, CREW)[:fits], "the measured fit must report fits"
+    assert_not display_credits_layout(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] })[:fits],
+               "the marquee's fallback case must report does-not-fit"
   end
 
   # The chrome is pinned twice: here (the helper's window arithmetic) and in the

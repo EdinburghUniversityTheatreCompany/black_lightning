@@ -62,10 +62,17 @@
       <%= render "display/panels/credits_section", title: "Company", members: crew_members,
                  name_size: name_size, spaced: cast_members.any? %>
     </div>
-    <%# One stride of slack at the track's tail: the scroll's final hold should
-        show the last (possibly wrapped) line in full, not flush with the fold.
-        Top padding would shift the start hold too, so it goes at the bottom. %>
-    <div class="h-14" aria-hidden="true"></div>
+    <%# One stride of slack at the track's tail, only when the layout doesn't
+        fit: the scroll's final hold should show the last (possibly wrapped)
+        line in full, not flush with the fold. Top padding would shift the start
+        hold too, so it goes at the bottom. When the layout does fit, the slack
+        must be absent: the track is then exactly the window tall (min-height:
+        100%) and the marquee's translateY clamps to no movement — with the
+        slack, the track would be 3.5rem taller than the window and crawl even
+        though everything fits. layout[:fits] comes from the helper. %>
+    <% unless layout[:fits] %>
+      <div class="h-14" aria-hidden="true"></div>
+    <% end %>
     </div>
   </div>
 

@@ -145,6 +145,13 @@ module DisplayHelper
   # case alone, and CSS columns cannot scroll cleanly (every column moves at
   # once, so the fold cuts the first column mid-list), which is why the net is
   # the last resort and not the design.
+  #
+  # `fits:` tells the markup whether the chosen layout fits the window. When it
+  # does, the track is at most the window tall and the marquee's translateY
+  # clamps to zero — but only if the tail-slack div is absent too, so the
+  # template renders that one only when `fits` is false. A slack inside a track
+  # that fits would make it taller than the window by exactly its own height and
+  # start a scroll that has nothing to show.
   def display_credits_layout(cast_members, crew_members)
     sections = [ cast_members, crew_members ].count(&:any?)
     headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
@@ -156,11 +163,13 @@ module DisplayHelper
 
         # CSS multicol balances the flow across the columns, so the track's height
         # is roughly the content's total divided by the column count.
-        return { name_size: size, columns: columns } if headings + lines * stride <= CREDITS_WINDOW_HEIGHT * columns
+        if headings + lines * stride <= CREDITS_WINDOW_HEIGHT * columns
+          return { name_size: size, columns: columns, fits: true }
+        end
       end
     end
 
-    { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4 }
+    { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4, fits: false }
   end
 
   # Titles step down by length rather than truncate: naming the show is the page's
