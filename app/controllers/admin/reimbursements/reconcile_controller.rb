@@ -260,8 +260,7 @@ module Admin
         [ matched_debits, matched_credits, unmatched ]
       end
 
-      # Debit entries to the claims they settle, first, so a credit can tell which pasted debits no
-      # claim took.
+      # Run first, so a credit knows which pasted debits no claim took.
       def match_debits(entries)
         remaining = matchable_expenses
         entries.each_with_object({}.compare_by_identity) do |entry, matches|
@@ -377,9 +376,8 @@ module Admin
         expenses.select { |expense| in_cost_centre?(expense.budget&.cost_centre_id, cost_centre) }
       end
 
-      # Whether a pasted credit may reverse a debit, stored or in this paste, by the hand-pairing gate
-      # on the rows as they will be stored. Every such credit waits for the ledger's pairs, except
-      # against a debit finance unticked as its pair.
+      # By the hand-pairing gate on the rows as they will be stored; a debit finance unticked as this
+      # credit's pair does not count.
       def reversal?(entry, reversals, declined_pairs)
         partners = reversals.fetch(entry.row.credit.to_d, []).reject do |source, _row|
           source && declined_pairs.include?([ source.object_id, entry.object_id ])

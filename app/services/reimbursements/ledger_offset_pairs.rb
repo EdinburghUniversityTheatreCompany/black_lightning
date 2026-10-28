@@ -41,7 +41,7 @@ module Reimbursements
       end
     end
 
-    # A debit's pairs together, so a reader sees its rival credits side by side.
+    # Rival credits for one debit sit side by side.
     def grouped(pairs) = pairs.group_by(&:debit).values.flatten
   end
 end
