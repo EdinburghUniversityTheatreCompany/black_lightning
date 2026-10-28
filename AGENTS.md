@@ -1070,6 +1070,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     many share the code; finance places it with Split across budgets (one share moves it whole).
     Never go back to first match: budgets share codes. The preview, the offsetting-pair note,
     apply and the ledger's Link credits all read `CreditBudgetMatcher`; never match around it.
+    A credit that may reverse an unplaced debit is held back before this match is tried (see
+    the offsetting bullets below).
   - **Reconcile links credits only at import**, so a budget made later never picks up rows already
     there. The ledger's Link credits (`ActualsController#link_credits`, `CreditLinks`) re-runs the
     rule over needs-attention credits and **holds back any credit with an unplaced row of the

@@ -127,8 +127,8 @@ module Admin
         detected = detect_pairs(new_entries)
         pairs = detected.select { |pair| ticked.include?(pair.key) }
         # Finance said these legs are not each other's reversal, so that debit cannot hold back that credit.
-        declined_pairs = (detected - pairs).to_set do |pair|
-          [ new_entries[pair.debit_index].object_id, new_entries[pair.credit_index].object_id ]
+        declined_pairs = (detected - pairs).each_with_object({}.compare_by_identity) do |pair, declined|
+          (declined[new_entries[pair.credit_index]] ||= Set.new.compare_by_identity) << new_entries[pair.debit_index]
         end
         matched_debits, matched_credits, unmatched =
           build_matches(entries_outside(new_entries, pairs), declined_pairs: declined_pairs)
@@ -229,7 +229,7 @@ module Admin
       # Matches debits to Submitted/Paid expenses (each claimed at most once) and credits to income
       # budgets. Returns [matched_debits, matched_credits, unmatched]; a match is [entry, expense|budget].
       # Both are scoped to the row's cost centre: a termtime debit must not mark a Fringe claim Paid.
-      def build_matches(entries, declined_pairs: Set.new)
+      def build_matches(entries, declined_pairs: {})
         debit_matches = match_debits(entries)
         reversals = nil
         @awaiting_reversal = Set.new.compare_by_identity
@@ -379,10 +379,10 @@ module Admin
       # By the hand-pairing gate on the rows as they will be stored; a debit finance unticked as this
       # credit's pair does not count.
       def reversal?(entry, reversals, declined_pairs)
-        partners = reversals.fetch(entry.row.credit.to_d, []).reject do |source, _row|
-          source && declined_pairs.include?([ source.object_id, entry.object_id ])
-        end
-        as_stored(entry).offset_candidates(partners.map(&:last)).any?
+        pasted = as_stored(entry)
+        declined = declined_pairs.fetch(entry, Set.new)
+        partners = reversals.fetch(-pasted.signed_amount, []).reject { |source, _row| declined.include?(source) }
+        pasted.offset_candidates(partners.map(&:last)).any?
       end
 
       # Debit amount => [[pasted entry or nil, row]]: unplaced dated stored debits, and this paste's

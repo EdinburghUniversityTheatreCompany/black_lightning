@@ -240,6 +240,17 @@ module Admin
 
     # Too little evidence for the detector to pair them, but the debit may still be the credit's
     # partner, so the credit is not linked as income.
+    # A third decimal is rounded away when stored; the hold-back judges the stored amount.
+    test "a credit with a third decimal is judged at its stored amount" do
+      stored_estimate
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row(credit: '500.004')}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_equal 1, assigns(:awaiting_reversal).size
+    end
+
     test "a pasted debit no claim takes holds back a credit of its amount in the same paste" do
       sign_in @user
       refund = debit_row(nominal: "250000", date: "20/09/2026", period: "06", narrative: "Refund",
@@ -829,6 +840,10 @@ module Admin
                                             budget_type: "Income")
       other = reversal_row(ref: "SI0099", date: "15/06/2026", period: "03", narrative: "Hire takings")
       sign_in @user
+
+      post :preview, params: { pasted_text: "#{offsetting_paste}\n#{other}" }
+
+      assert_equal "Venue hire accrual", assigns(:offsetting_pairs).sole.credit_row.narrative
 
       post :apply, params: { pasted_text: "#{offsetting_paste}\n#{other}", offset_pair_keys: [ "" ] }
 
