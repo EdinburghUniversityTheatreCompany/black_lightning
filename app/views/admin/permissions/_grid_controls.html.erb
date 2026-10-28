@@ -1,8 +1,12 @@
-<div class="px-4 py-3 border-t border-gray-200 flex items-center gap-3">
-  <%= submit_tag("Update", class: btn_classes(:secondary)) %>
-  <span class="text-sm text-gray-500 hidden" data-admin--permissions-grid-target="changeCount">
-    <span data-admin--permissions-grid-target="changeCountText"></span>
-  </span>
+<%# The grid scrolls with the page both ways, so the bar sticks to the screen's
+    bottom and its contents to the left: Update stays in view wherever you are. %>
+<div class="sticky bottom-0 z-30 px-4 py-3 border-t border-gray-200 bg-white">
+  <div class="sticky left-4 flex w-fit items-center gap-3">
+    <%= submit_tag("Update", class: btn_classes(:secondary)) %>
+    <span class="text-sm text-gray-500 hidden" data-admin--permissions-grid-target="changeCount">
+      <span data-admin--permissions-grid-target="changeCountText"></span>
+    </span>
+  </div>
 </div>
 
 <%= render Admin::ModalComponent.new(id: "permission-changes", title: "Confirm Permission Changes",

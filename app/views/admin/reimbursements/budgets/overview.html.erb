@@ -35,61 +35,57 @@
 
 <%# The summary's anchor (CardComponent takes no id). %>
 <div id="budgets-by-code">
-<%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
-  <div class="table-scroll">
-    <table class="table table-hover table-sticky-head tabular-nums">
-      <%= render "overview_head" %>
-      <% @rollups.each do |rollup| %>
-        <tbody>
-          <tr class="bg-gray-50">
-            <th scope="rowgroup" colspan="11" class="text-left font-semibold py-2">
-              Nominal code <%= rollup.code %><%
-                label = nominal_code_labels[rollup.code.to_s.downcase] %><% if label.present? %>
-                <span class="font-normal text-gray-600">· <%= label %></span>
-              <% end %>
-            </th>
-          </tr>
-          <%= render partial: "overview_budget_row", collection: rollup.rows, as: :budget %>
-          <%# One subtotal per type: spend and income never add up. %>
-          <% rollup.by_type.each do |subtotal| %>
-            <%= render "rollup_row", rollup: subtotal,
-                  label: "Subtotal #{rollup.code} (#{subtotal.budget_type})" %>
-          <% end %>
-        </tbody>
-      <% end %>
-      <tfoot>
-        <% @grand_total.by_type.each do |total| %>
-          <%= render "rollup_row", rollup: total,
-                label: "Grand total (#{total.budget_type} budgets)",
-                row_class: "border-t-2 border-gray-400 font-semibold" %>
+<%= render CardComponent.new(title: "Budgets by nominal code", flush: true, html_class: "min-w-fit") do %>
+  <table class="table table-hover table-sticky-head tabular-nums">
+    <%= render "overview_head" %>
+    <% @rollups.each do |rollup| %>
+      <tbody>
+        <tr class="bg-gray-50">
+          <th scope="rowgroup" colspan="11" class="text-left font-semibold py-2">
+            Nominal code <%= rollup.code %><%
+              label = nominal_code_labels[rollup.code.to_s.downcase] %><% if label.present? %>
+              <span class="font-normal text-gray-600">· <%= label %></span>
+            <% end %>
+          </th>
+        </tr>
+        <%= render partial: "overview_budget_row", collection: rollup.rows, as: :budget %>
+        <%# One subtotal per type: spend and income never add up. %>
+        <% rollup.by_type.each do |subtotal| %>
+          <%= render "rollup_row", rollup: subtotal,
+                label: "Subtotal #{rollup.code} (#{subtotal.budget_type})" %>
         <% end %>
-      </tfoot>
-    </table>
-  </div>
+      </tbody>
+    <% end %>
+    <tfoot>
+      <% @grand_total.by_type.each do |total| %>
+        <%= render "rollup_row", rollup: total,
+              label: "Grand total (#{total.budget_type} budgets)",
+              row_class: "border-t-2 border-gray-400 font-semibold" %>
+      <% end %>
+    </tfoot>
+  </table>
 <% end %>
 </div>
 
-<%= render CardComponent.new(title: "Budgets by area", html_class: "mt-4", flush: true) do %>
+<%= render CardComponent.new(title: "Budgets by area", html_class: "mt-4 min-w-fit", flush: true) do %>
   <%# No grand total: it would restate the card above's. %>
   <% if @area_rollups.empty? && @unassigned_rollup.nil? %>
     <p class="px-4 py-4 text-center text-gray-600">No budgets to group.</p>
   <% else %>
-    <div class="table-scroll">
-      <table class="table table-hover table-sticky-head tabular-nums">
-        <%= render "overview_head" %>
-        <% @area_rollups.each do |rollup| %>
-          <%= render "area_group", rollup: rollup, label: rollup.name %>
-        <% end %>
-        <% if @unassigned_rollup %>
-          <%= render "area_group", rollup: @unassigned_rollup, label: "Not in an area" %>
-        <% end %>
-      </table>
-    </div>
+    <table class="table table-hover table-sticky-head tabular-nums">
+      <%= render "overview_head" %>
+      <% @area_rollups.each do |rollup| %>
+        <%= render "area_group", rollup: rollup, label: rollup.name %>
+      <% end %>
+      <% if @unassigned_rollup %>
+        <%= render "area_group", rollup: @unassigned_rollup, label: "Not in an area" %>
+      <% end %>
+    </table>
   <% end %>
 <% end %>
 
 <div id="unattributed-actuals">
-<%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>
+<%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4 min-w-fit") do %>
   <%
     # The ledger, not Reconcile, which has no per-row linking. It carries the
     # cost centre the tables above are scoped to, merged after compact_blank,
@@ -115,56 +111,54 @@
       Every EUSA actual is attributed to a budget.
     </p>
   <% else %>
-    <div class="table-scroll">
-      <table class="w-full text-sm table-sticky-head tabular-nums">
-        <thead>
-          <tr class="text-left text-gray-500 border-b border-gray-200">
-            <th scope="col" class="py-2 pr-3">Date</th>
-            <th scope="col" class="py-2 pr-3">Narrative</th>
-            <th scope="col" class="py-2 pr-3">Ref</th>
-            <th scope="col" class="py-2 pr-3">Type</th>
-            <th scope="col" class="py-2 text-right">Amount</th>
+    <table class="w-full text-sm table-sticky-head tabular-nums">
+      <thead>
+        <tr class="text-left text-gray-500 border-b border-gray-200">
+          <th scope="col" class="py-2 pr-3">Date</th>
+          <th scope="col" class="py-2 pr-3">Narrative</th>
+          <th scope="col" class="py-2 pr-3">Ref</th>
+          <th scope="col" class="py-2 pr-3">Type</th>
+          <th scope="col" class="py-2 text-right">Amount</th>
+        </tr>
+      </thead>
+      <% @unattributed_by_code.each do |code, actuals| %>
+        <tbody>
+          <tr class="bg-gray-50">
+            <th scope="rowgroup" colspan="5" class="text-left font-semibold py-2">
+              Nominal code <%= code %>
+              <span class="font-normal text-gray-600">
+                (net <%= reimbursements_money(::Reimbursements::EusaActual.net(actuals)) %>)
+              </span>
+            </th>
           </tr>
-        </thead>
-        <% @unattributed_by_code.each do |code, actuals| %>
-          <tbody>
-            <tr class="bg-gray-50">
-              <th scope="rowgroup" colspan="5" class="text-left font-semibold py-2">
-                Nominal code <%= code %>
-                <span class="font-normal text-gray-600">
-                  (net <%= reimbursements_money(::Reimbursements::EusaActual.net(actuals)) %>)
-                </span>
-              </th>
+          <% actuals.each do |actual| %>
+            <% debit = actual.debit&.positive? %>
+            <tr class="border-b border-gray-100">
+              <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(actual.date) %></td>
+              <%# Each row links to itself on the ledger: its ref (or
+                  narrative) plus its period. %>
+              <td class="py-2 pr-3">
+                <%= link_to actual.narrative.presence || "(no narrative)",
+                            ledger_path.call(period: actual.period,
+                                             search: actual.ref.presence || actual.narrative),
+                            class: "text-primary underline" %>
+              </td>
+              <td class="py-2 pr-3"><%= actual.ref.presence || "-" %></td>
+              <td class="py-2 pr-3"><%= debit ? "Debit" : (actual.credit&.positive? ? "Credit" : "-") %></td>
+              <td class="py-2 text-right"><%= reimbursements_money(debit ? actual.debit : actual.credit) %></td>
             </tr>
-            <% actuals.each do |actual| %>
-              <% debit = actual.debit&.positive? %>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(actual.date) %></td>
-                <%# Each row links to itself on the ledger: its ref (or
-                    narrative) plus its period. %>
-                <td class="py-2 pr-3">
-                  <%= link_to actual.narrative.presence || "(no narrative)",
-                              ledger_path.call(period: actual.period,
-                                               search: actual.ref.presence || actual.narrative),
-                              class: "text-primary underline" %>
-                </td>
-                <td class="py-2 pr-3"><%= actual.ref.presence || "-" %></td>
-                <td class="py-2 pr-3"><%= debit ? "Debit" : (actual.credit&.positive? ? "Credit" : "-") %></td>
-                <td class="py-2 text-right"><%= reimbursements_money(debit ? actual.debit : actual.credit) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        <% end %>
-        <tfoot>
-          <tr class="border-t-2 border-gray-400 font-semibold">
-            <td colspan="4" class="py-2 text-right">Total unattributed (debits less credits)</td>
-            <td class="py-2 text-right">
-              <%= reimbursements_money(@unattributed_total) %>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+          <% end %>
+        </tbody>
+      <% end %>
+      <tfoot>
+        <tr class="border-t-2 border-gray-400 font-semibold">
+          <td colspan="4" class="py-2 text-right">Total unattributed (debits less credits)</td>
+          <td class="py-2 text-right">
+            <%= reimbursements_money(@unattributed_total) %>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
   <% end %>
 <% end %>
 </div>

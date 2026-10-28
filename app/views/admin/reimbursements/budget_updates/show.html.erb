@@ -20,60 +20,58 @@
   </dl>
 <% end %>
 
-<%= render CardComponent.new(title: "#{pluralize(@rows.size, 'budget')} revised", html_class: "mt-4") do %>
+<%= render CardComponent.new(title: "#{pluralize(@rows.size, 'budget')} revised", html_class: "mt-4 min-w-fit") do %>
   <% if @rows.empty? %>
     <p class="mb-0 text-gray-600">
       This update logged no forecasts. Removing it changes no figure.
     </p>
   <% else %>
-    <div class="table-scroll">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Budget</th>
-            <th scope="col" class="px-3 py-2 text-right">Was</th>
-            <th scope="col" class="px-3 py-2 text-right">Set to</th>
-            <th scope="col" class="px-3 py-2 text-right">Plan now</th>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-300 text-left text-gray-600">
+          <th scope="col" class="px-3 py-2">Budget</th>
+          <th scope="col" class="px-3 py-2 text-right">Was</th>
+          <th scope="col" class="px-3 py-2 text-right">Set to</th>
+          <th scope="col" class="px-3 py-2 text-right">Plan now</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @rows.each do |row| %>
+          <tr class="border-b border-gray-200">
+            <td class="px-3 py-2">
+              <%= row[:label] %>
+              <% if row[:superseded] %>
+                <%# Removing a superseded revision moves no figure; say so, or the undo looks broken. %>
+                <div class="text-xs text-gray-500">
+                  A later revision has superseded this one, so removing it changes nothing here.
+                </div>
+              <% end %>
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums">
+              <% if row[:replaced] %>
+                <%= reimbursements_money(row[:replaced]) %>
+              <% elsif row[:initial] %>
+                <%# A first forecast replaced the committee's initial figure, which is what removal falls back to. %>
+                <%= reimbursements_money(row[:initial]) %>
+                <span class="text-xs text-gray-500">(initial)</span>
+              <% else %>
+                <span class="text-gray-500">no figure set</span>
+              <% end %>
+            </td>
+            <td class="px-3 py-2 text-right font-medium tabular-nums">
+              <%= reimbursements_money(row[:amount]) %>
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums">
+              <% if row[:current] %>
+                <%= reimbursements_money(row[:current]) %>
+              <% else %>
+                <span class="text-gray-500">-</span>
+              <% end %>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <% @rows.each do |row| %>
-            <tr class="border-b border-gray-200">
-              <td class="px-3 py-2">
-                <%= row[:label] %>
-                <% if row[:superseded] %>
-                  <%# Removing a superseded revision moves no figure; say so, or the undo looks broken. %>
-                  <div class="text-xs text-gray-500">
-                    A later revision has superseded this one, so removing it changes nothing here.
-                  </div>
-                <% end %>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums">
-                <% if row[:replaced] %>
-                  <%= reimbursements_money(row[:replaced]) %>
-                <% elsif row[:initial] %>
-                  <%# A first forecast replaced the committee's initial figure, which is what removal falls back to. %>
-                  <%= reimbursements_money(row[:initial]) %>
-                  <span class="text-xs text-gray-500">(initial)</span>
-                <% else %>
-                  <span class="text-gray-500">no figure set</span>
-                <% end %>
-              </td>
-              <td class="px-3 py-2 text-right font-medium tabular-nums">
-                <%= reimbursements_money(row[:amount]) %>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums">
-                <% if row[:current] %>
-                  <%= reimbursements_money(row[:current]) %>
-                <% else %>
-                  <span class="text-gray-500">-</span>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   <% end %>
 <% end %>
 

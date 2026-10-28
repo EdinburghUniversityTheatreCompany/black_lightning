@@ -88,7 +88,7 @@
   <% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "Your shows and budgets", html_class: "mt-4") do %>
+<%= render CardComponent.new(title: "Your shows and budgets", html_class: "mt-4 min-w-fit") do %>
   <% if @rows.empty? %>
     <p class="text-gray-600">
       <%# The Budgets page is finance-gated, so naming it to anyone else, as text or link, points at a 403. %>
@@ -103,55 +103,53 @@
       <% end %>
     </p>
   <% else %>
-    <div class="table-scroll">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Show or budget</th>
-            <th scope="col" class="px-3 py-2 text-right">Budget</th>
-            <th scope="col" class="px-3 py-2 text-right">Spent</th>
-            <th scope="col" class="px-3 py-2 text-right">Waiting</th>
-            <th scope="col" class="px-3 py-2 text-right">Left</th>
-            <th scope="col" class="px-3 py-2"><span class="sr-only">Open</span></th>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-300 text-left text-gray-600">
+          <th scope="col" class="px-3 py-2">Show or budget</th>
+          <th scope="col" class="px-3 py-2 text-right">Budget</th>
+          <th scope="col" class="px-3 py-2 text-right">Spent</th>
+          <th scope="col" class="px-3 py-2 text-right">Waiting</th>
+          <th scope="col" class="px-3 py-2 text-right">Left</th>
+          <th scope="col" class="px-3 py-2"><span class="sr-only">Open</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @rows.each do |row| %>
+          <% figures = row[:summary] %>
+          <tr class="border-b border-gray-200">
+            <td class="px-3 py-2">
+              <%= link_to row[:name], row[:path], class: "font-semibold" %>
+              <% if row[:waiting_count].positive? %>
+                <span class="ml-1 rounded-full border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-warning">
+                  <%= row[:waiting_count] %> waiting
+                </span>
+              <% end %>
+              <%# Two production areas are both called "Tech", so every row says which pot and year. %>
+              <div class="text-xs text-gray-500">
+                <%= [ row[:scope], row[:detail] ].reject(&:blank?).join(" · ") %>
+              </div>
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums">
+              <% if figures.no_budget_set? %>
+                <span class="text-gray-500">not set</span>
+              <% else %>
+                <%= reimbursements_money(figures.budget_amount) %>
+                <% if figures.from_lines? %>
+                  <div class="text-xs font-normal text-gray-500">no total agreed; what its budgets add up to</div>
+                <% end %>
+              <% end %>
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.spent) %></td>
+            <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.waiting) %></td>
+            <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_spend_left(figures) %></td>
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              <%= link_to "Open", row[:path], class: btn_classes(:secondary, :sm) %>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <% @rows.each do |row| %>
-            <% figures = row[:summary] %>
-            <tr class="border-b border-gray-200">
-              <td class="px-3 py-2">
-                <%= link_to row[:name], row[:path], class: "font-semibold" %>
-                <% if row[:waiting_count].positive? %>
-                  <span class="ml-1 rounded-full border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-warning">
-                    <%= row[:waiting_count] %> waiting
-                  </span>
-                <% end %>
-                <%# Two production areas are both called "Tech", so every row says which pot and year. %>
-                <div class="text-xs text-gray-500">
-                  <%= [ row[:scope], row[:detail] ].reject(&:blank?).join(" · ") %>
-                </div>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums">
-                <% if figures.no_budget_set? %>
-                  <span class="text-gray-500">not set</span>
-                <% else %>
-                  <%= reimbursements_money(figures.budget_amount) %>
-                  <% if figures.from_lines? %>
-                    <div class="text-xs font-normal text-gray-500">no total agreed; what its budgets add up to</div>
-                  <% end %>
-                <% end %>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.spent) %></td>
-              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.waiting) %></td>
-              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_spend_left(figures) %></td>
-              <td class="px-3 py-2 text-right whitespace-nowrap">
-                <%= link_to "Open", row[:path], class: btn_classes(:secondary, :sm) %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   <% end %>
 <% end %>
 

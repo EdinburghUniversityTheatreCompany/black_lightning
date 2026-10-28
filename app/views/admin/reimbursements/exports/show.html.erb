@@ -6,7 +6,7 @@
   accountant, or next year's committee. The cover sheet records what the file covers.
 </p>
 
-<%= render CardComponent.new(title: "What you'll get") do |card| %>
+<%= render CardComponent.new(title: "What you'll get", html_class: "min-w-fit") do |card| %>
   <% card.with_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
       <%# The scope travels with the download, so the file matches the page. %>
@@ -20,31 +20,29 @@
     </div>
   <% end %>
 
-  <div class="table-scroll">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-gray-300 text-left text-gray-600">
-          <th scope="col" class="px-3 py-2">Sheet</th>
-          <th scope="col" class="px-3 py-2 text-right">Rows</th>
-          <th scope="col" class="px-3 py-2">What it holds</th>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-300 text-left text-gray-600">
+        <th scope="col" class="px-3 py-2">Sheet</th>
+        <th scope="col" class="px-3 py-2 text-right">Rows</th>
+        <th scope="col" class="px-3 py-2">What it holds</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @counts.each do |exporter_class, count| %>
+        <tr class="border-b border-gray-200">
+          <td class="px-3 py-2 font-medium"><%= exporter_class::SHEET_NAME %></td>
+          <td class="px-3 py-2 text-right tabular-nums">
+            <%# An empty sheet is stated here rather than discovered in Excel. %>
+            <%= count.zero? ? content_tag(:span, "none", class: "text-gray-500") : count %>
+          </td>
+          <td class="px-3 py-2 text-gray-600">
+            <%= t("reimbursements.export_sheets.#{exporter_class::SLUG}") %>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        <% @counts.each do |exporter_class, count| %>
-          <tr class="border-b border-gray-200">
-            <td class="px-3 py-2 font-medium"><%= exporter_class::SHEET_NAME %></td>
-            <td class="px-3 py-2 text-right tabular-nums">
-              <%# An empty sheet is stated here rather than discovered in Excel. %>
-              <%= count.zero? ? content_tag(:span, "none", class: "text-gray-500") : count %>
-            </td>
-            <td class="px-3 py-2 text-gray-600">
-              <%= t("reimbursements.export_sheets.#{exporter_class::SLUG}") %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+      <% end %>
+    </tbody>
+  </table>
 
   <p class="mt-3 mb-0 text-sm text-gray-600">
     The cost centre scopes every sheet <strong>except People</strong>: a payee has no cost

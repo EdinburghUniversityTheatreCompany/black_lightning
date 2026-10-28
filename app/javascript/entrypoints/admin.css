@@ -51,9 +51,9 @@ select.simple-select2 {
     box-shadow: inset 0 -1px 0 var(--color-gray-200);
   }
 
-  /* Pins the last (action) column to the scroll box's right edge, so a wide
-     table's Edit button is never off screen. Opaque; the header's corner cell
-     needs both offsets and a z-index above its own row. */
+  /* Pins the last (action) column to <main>'s right edge, so a table wider than
+     the page never has its Edit button off screen. Opaque; the header's corner
+     cell needs both offsets and a z-index above its own row. */
   .table-pinned-actions>tbody>tr>td:last-child {
     @apply sticky right-0 z-10 bg-white;
 
@@ -64,16 +64,6 @@ select.simple-select2 {
     @apply right-0 z-30;
 
     box-shadow: inset 1px 0 0 var(--color-gray-200), inset 0 -1px 0 var(--color-gray-200);
-  }
-
-  /* A wide table's own scroll box. overflow-x: auto makes this, not <main>, the
-     scrollport the sticky header resolves against, so the height is capped or
-     the header never sticks. */
-  .table-scroll {
-    @apply overflow-auto;
-
-    /* The floor is for 400% zoom (WCAG 1.4.10), where 100vh - 12rem is about one row. */
-    max-height: max(20rem, calc(100vh - 12rem));
   }
 }
 

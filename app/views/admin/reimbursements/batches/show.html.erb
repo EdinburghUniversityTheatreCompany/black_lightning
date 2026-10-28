@@ -43,46 +43,44 @@
   <% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)}", html_class: "mt-4") do %>
+<%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)}", html_class: "mt-4 min-w-fit") do %>
   <% if @expenses.empty? %>
     <p class="py-2 text-gray-600">No expenses linked to this batch.</p>
   <% else %>
     <%# jscpd:ignore-start: the same claims as Build Batch's table (batches/new), with this page's own columns on purpose (status here; bank details and receipts there). %>
-    <div class="table-scroll">
-      <table class="w-full text-sm table-sticky-head">
-        <thead class="text-left text-gray-500 border-b border-gray-200">
-          <tr>
-            <th scope="col" class="py-1 pr-3">#</th>
-            <th scope="col" class="py-1 pr-3">Payee</th>
-            <th scope="col" class="py-1 pr-3 text-right">Amount</th>
-            <th scope="col" class="py-1 pr-3">Budget</th>
-            <th scope="col" class="py-1 pr-3">Nominal</th>
-            <th scope="col" class="py-1 pr-3">Status</th>
-            <th scope="col" class="py-1 pr-3">Description</th>
+    <table class="w-full text-sm table-sticky-head">
+      <thead class="text-left text-gray-500 border-b border-gray-200">
+        <tr>
+          <th scope="col" class="py-1 pr-3">#</th>
+          <th scope="col" class="py-1 pr-3">Payee</th>
+          <th scope="col" class="py-1 pr-3 text-right">Amount</th>
+          <th scope="col" class="py-1 pr-3">Budget</th>
+          <th scope="col" class="py-1 pr-3">Nominal</th>
+          <th scope="col" class="py-1 pr-3">Status</th>
+          <th scope="col" class="py-1 pr-3">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @expenses.each do |expense| %>
+          <tr class="border-b border-gray-100 align-top">
+            <td class="py-1 pr-3">
+              <%= link_to expense.auto_number,
+                          edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                          class: "text-primary underline" %>
+            </td>
+            <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
+            <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
+            <td class="py-1 pr-3"><%= expense.budget&.display_name %></td>
+            <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
+            <td class="py-1 pr-3">
+              <%= render BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
+                            .with_content(expense.status) %>
+            </td>
+            <td class="py-1 pr-3"><%= expense.description %></td>
           </tr>
-        </thead>
-        <tbody>
-          <% @expenses.each do |expense| %>
-            <tr class="border-b border-gray-100 align-top">
-              <td class="py-1 pr-3">
-                <%= link_to expense.auto_number,
-                            edit_admin_reimbursements_expense_edit_path(expense.record_id),
-                            class: "text-primary underline" %>
-              </td>
-              <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
-              <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
-              <td class="py-1 pr-3"><%= expense.budget&.display_name %></td>
-              <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
-              <td class="py-1 pr-3">
-                <%= render BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
-                              .with_content(expense.status) %>
-              </td>
-              <td class="py-1 pr-3"><%= expense.description %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
     <%# jscpd:ignore-end %>
   <% end %>
 <% end %>

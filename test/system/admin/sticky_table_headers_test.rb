@@ -1,10 +1,11 @@
 require "application_system_test_case"
 
 module Admin
-  # Sticky headers on admin index tables (.table-sticky-head). `position: sticky` resolves against
-  # the nearest non-`visible` overflow ancestor, and an `overflow-x-auto` wrapper is that on both
-  # axes, so with no height the header silently stops sticking. Only measuring the box catches it.
-  # The rows are cloned first so the table is always taller than its scrollport.
+  # Sticky headers on admin tables. `position: sticky` resolves against the nearest non-`visible`
+  # overflow ancestor, and an `overflow-x-auto` wrapper is that on both axes, so with no height the
+  # header silently stops sticking. Admin tables therefore sit straight in <main>, the page's
+  # scroll container. Only measuring catches it. The rows are cloned first so the table is always
+  # taller than the screen.
   class StickyTableHeadersTest < ApplicationSystemTestCase
     include ReimbursementsTestHelpers
 
@@ -53,15 +54,42 @@ module Admin
       })()
     JS
 
-    # How far the Edit column's right edge sits past <main>'s visible right edge (> 0 is off screen).
+    # How far the rows' last cells (Edit) reach past <main>'s visible right edge, scrolled fully
+    # left and fully right (> 0 is off screen).
     EDIT_OVERHANG = <<~JS.freeze
       (() => {
         const main = document.querySelector("main");
         const table = document.querySelector(arguments[0]);
-        const edit = table.querySelector("tbody tr:last-child td:last-child");
-        const visibleRight = main.getBoundingClientRect().left + main.clientWidth;
-        return { tableWidth: table.scrollWidth, mainWidth: main.clientWidth,
-                 overhang: edit.getBoundingClientRect().right - visibleRight };
+        const overhang = () => {
+          const visibleRight = main.getBoundingClientRect().left + main.clientWidth;
+          return Math.max(...[...table.querySelectorAll("tbody td:last-child")]
+            .map((td) => td.getBoundingClientRect().right - visibleRight));
+        };
+        main.scrollLeft = 0;
+        const atLeft = overhang();
+        main.scrollLeft = main.scrollWidth;
+        return { tableWidth: table.scrollWidth, mainWidth: main.clientWidth, atLeft, atRight: overhang() };
+      })()
+    JS
+
+    # Where the permission grid's Update button sits against <main>'s visible box, scrolled fully
+    # left and fully right, at whatever vertical position the page is at.
+    UPDATE_BUTTON = <<~JS.freeze
+      (() => {
+        const main = document.querySelector("main");
+        const button = document.querySelector("form input[type=submit][value=Update]");
+        const port = main.getBoundingClientRect();
+        const rect = (left) => {
+          main.scrollLeft = left;
+          const r = button.getBoundingClientRect();
+          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+        };
+        return {
+          screen: { left: port.left, right: port.left + main.clientWidth, top: port.top, bottom: port.top + main.clientHeight },
+          sideways: main.scrollWidth - main.clientWidth,
+          formBottom: button.closest("form").getBoundingClientRect().bottom,
+          atLeft: rect(0), atRight: rect(main.scrollWidth),
+        };
       })()
     JS
 
@@ -83,6 +111,13 @@ module Admin
                       "#{context}: header should stay pinned to the top of its scrollport"
     end
 
+    def assert_scrolls_with_page(table_selector, context)
+      result = measure(table_selector, "main")
+      assert_empty evaluate_script(INNER_SCROLLERS, table_selector),
+                   "#{context}: the table scrolls vertically in a box of its own, inside the scrolling page"
+      assert_header_pinned result, context
+    end
+
     # The shared partial behind ~35 admin indexes (and the reimbursements
     # expenses/budgets/actuals lists). These sit straight in <main>, which the
     # admin layout makes the page's scroll container.
@@ -94,9 +129,7 @@ module Admin
       assert_header_pinned measure("table.table-sticky-head", "main"), "shared index table"
     end
 
-    # A year's budgets run long, so they get no scroll box of their own: the whole table
-    # shows and the page scrolls. Too wide a table scrolls <main> sideways, with Edit pinned
-    # to its right edge.
+    # Too wide a table scrolls <main> sideways, with Edit pinned to its right edge.
     test "budgets index scrolls with the page, headers pinned to <main> and Edit on screen" do
       grant_finance_permission(users(:member))
       area = create_reimbursements_area(name: "Medea")
@@ -106,31 +139,50 @@ module Admin
       visit admin_reimbursements_budgets_url
 
       assert_selector "table.table-sticky-head thead th"
-      result = measure("table.table-sticky-head", "main")
-      assert_empty evaluate_script(INNER_SCROLLERS, "table.table-sticky-head"),
-                   "the table scrolls vertically in its own box, inside the scrolling page"
-      assert_header_pinned result, "budgets index"
+      assert_scrolls_with_page "table.table-sticky-head", "budgets index"
 
-      page.driver.browser.manage.window.resize_to(1100, 900)
+      resize_window_to(1100, 900)
       width = evaluate_script(EDIT_OVERHANG, "table.table-sticky-head")
       assert_operator width["tableWidth"], :>, width["mainWidth"], "precondition: the table is wider than the page"
-      assert_operator width["overhang"], :<=, 1, "the Edit column is off screen: #{width}"
+      assert_operator width["atLeft"], :<=, 1, "an Edit button is off screen before scrolling sideways: #{width}"
+      assert_operator width["atRight"], :<=, 1, "an Edit button is off screen after scrolling sideways: #{width}"
     ensure
-      page.driver.browser.manage.window.resize_to(1400, 1400)
+      restore_window_size
     end
 
-    # The hand-written finance tables keep their own horizontal scrollbar, so
-    # .table-scroll — not <main> — is the scrollport, and it only works because
-    # that class caps its height.
-    test "finance table in a horizontal scroll box keeps its headers pinned to the box" do
+    test "budgets overview tables scroll with the page, headers pinned to <main>" do
       grant_finance_permission(users(:member))
       create_reimbursements_budget(name: "Props", nominal_code: "4000")
       login_as users(:member)
       visit overview_admin_reimbursements_budgets_url
 
-      assert_selector ".table-scroll table.table-sticky-head thead th"
-      assert_header_pinned measure(".table-scroll table.table-sticky-head", ".table-scroll"),
-                           "finance table in .table-scroll"
+      assert_selector "table.table-sticky-head thead th"
+      assert_scrolls_with_page "table.table-sticky-head", "budgets overview"
+    end
+
+    # The grid scrolls with the page both ways, so its Update bar sticks to the screen's bottom
+    # and the button to its left edge.
+    test "permission grid scrolls with the page and keeps Update on screen" do
+      login_as users(:admin)
+      resize_window_to(1100, 900)
+      visit admin_permissions_url
+
+      assert_selector "form table thead th"
+      assert_scrolls_with_page "form table", "permission grid"
+
+      button = evaluate_script(UPDATE_BUTTON)
+      screen = button["screen"]
+      assert_operator button["sideways"], :>, 0, "precondition: the grid is wider than the page"
+      assert_operator button["formBottom"], :>, screen["bottom"], "precondition: the grid runs below the screen"
+      %w[atLeft atRight].each do |at|
+        rect = button[at]
+        assert_operator rect["left"], :>=, screen["left"] - 1, "Update is off the left of the screen (#{at}): #{button}"
+        assert_operator rect["right"], :<=, screen["right"] + 1, "Update is off the right of the screen (#{at}): #{button}"
+        assert_operator rect["bottom"], :<=, screen["bottom"] + 1, "Update is below the screen (#{at}): #{button}"
+        assert_operator rect["top"], :>=, screen["top"] - 1, "Update is above the screen (#{at}): #{button}"
+      end
+    ensure
+      restore_window_size
     end
   end
 end

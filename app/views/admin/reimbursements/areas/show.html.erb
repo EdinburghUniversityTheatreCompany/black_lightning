@@ -53,37 +53,35 @@
              area: @area, current_person: current_person) %>
 
 <% if @changes.any? %>
-  <%= render CardComponent.new(title: "Changes to the budget", html_class: "mt-4") do %>
-    <div class="table-scroll">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Date</th>
-            <th scope="col" class="px-3 py-2">What changed</th>
-            <th scope="col" class="px-3 py-2 text-right">From</th>
-            <th scope="col" class="px-3 py-2 text-right">To</th>
-            <th scope="col" class="px-3 py-2">Why</th>
+  <%= render CardComponent.new(title: "Changes to the budget", html_class: "mt-4 min-w-fit") do %>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-300 text-left text-gray-600">
+          <th scope="col" class="px-3 py-2">Date</th>
+          <th scope="col" class="px-3 py-2">What changed</th>
+          <th scope="col" class="px-3 py-2 text-right">From</th>
+          <th scope="col" class="px-3 py-2 text-right">To</th>
+          <th scope="col" class="px-3 py-2">Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @changes.each do |change| %>
+          <tr class="border-b border-gray-200">
+            <td class="px-3 py-2 whitespace-nowrap"><%= reimbursements_date(change.date) %></td>
+            <td class="px-3 py-2">
+              <%= change.subject %><% if change.area_total? %> <span class="text-gray-500">(agreed total)</span><% end %>
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums">
+              <%= change.first? ? "-" : reimbursements_money(change.from) %>
+            </td>
+            <td class="px-3 py-2 text-right font-medium tabular-nums">
+              <%= reimbursements_money(change.to) %>
+            </td>
+            <td class="px-3 py-2 text-gray-600"><%= change.reason %></td>
           </tr>
-        </thead>
-        <tbody>
-          <% @changes.each do |change| %>
-            <tr class="border-b border-gray-200">
-              <td class="px-3 py-2 whitespace-nowrap"><%= reimbursements_date(change.date) %></td>
-              <td class="px-3 py-2">
-                <%= change.subject %><% if change.area_total? %> <span class="text-gray-500">(agreed total)</span><% end %>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums">
-                <%= change.first? ? "-" : reimbursements_money(change.from) %>
-              </td>
-              <td class="px-3 py-2 text-right font-medium tabular-nums">
-                <%= reimbursements_money(change.to) %>
-              </td>
-              <td class="px-3 py-2 text-gray-600"><%= change.reason %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   <% end %>
 <% end %>
 

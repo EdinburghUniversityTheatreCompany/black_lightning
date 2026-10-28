@@ -48,7 +48,7 @@
   </ul>
 <% end %>
 
-<%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
+<%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4 min-w-fit") do %>
   <p class="mb-3 text-sm text-gray-600">
     Every reminder and notification the portal sent, and to which address. It records the
     handover to Microsoft, not delivery: a bounce or a full mailbox after that is invisible here.
@@ -99,32 +99,30 @@
       <% end %>
     </p>
   <% else %>
-    <div class="table-scroll">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-300 text-left text-gray-600">
-            <th scope="col" class="px-3 py-2">Sent</th>
-            <th scope="col" class="px-3 py-2">To</th>
-            <th scope="col" class="px-3 py-2">What</th>
-            <th scope="col" class="px-3 py-2">Cost centre</th>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-300 text-left text-gray-600">
+          <th scope="col" class="px-3 py-2">Sent</th>
+          <th scope="col" class="px-3 py-2">To</th>
+          <th scope="col" class="px-3 py-2">What</th>
+          <th scope="col" class="px-3 py-2">Cost centre</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @sends.each do |log| %>
+          <tr class="border-b border-gray-200">
+            <td class="px-3 py-2 whitespace-nowrap"><%= log.sent_at.to_fs(:short) %></td>
+            <td class="px-3 py-2"><%= log.recipient %></td>
+            <td class="px-3 py-2">
+              <%= log.kind.humanize %>
+              <% if log.subject.present? %>
+                <div class="text-xs text-gray-500"><%= log.subject %></div>
+              <% end %>
+            </td>
+            <td class="px-3 py-2 text-gray-600"><%= log.cost_centre&.name %></td>
           </tr>
-        </thead>
-        <tbody>
-          <% @sends.each do |log| %>
-            <tr class="border-b border-gray-200">
-              <td class="px-3 py-2 whitespace-nowrap"><%= log.sent_at.to_fs(:short) %></td>
-              <td class="px-3 py-2"><%= log.recipient %></td>
-              <td class="px-3 py-2">
-                <%= log.kind.humanize %>
-                <% if log.subject.present? %>
-                  <div class="text-xs text-gray-500"><%= log.subject %></div>
-                <% end %>
-              </td>
-              <td class="px-3 py-2 text-gray-600"><%= log.cost_centre&.name %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   <% end %>
 <% end %>

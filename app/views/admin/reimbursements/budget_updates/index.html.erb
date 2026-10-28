@@ -11,46 +11,44 @@
         class: btn_classes(:primary, :sm) %>
 </p>
 
-<%= render CardComponent.new(title: "Budget updates", flush: true) do %>
+<%= render CardComponent.new(title: "Budget updates", flush: true, html_class: "min-w-fit") do %>
   <% if @budget_updates.empty? %>
     <p class="py-4 text-center text-gray-600">No budget updates logged yet.</p>
   <% else %>
-    <div class="table-scroll">
-      <table class="table table-hover table-sticky-head">
-        <thead>
+    <table class="table table-hover table-sticky-head">
+      <thead>
+        <tr>
+          <th scope="col">Effective date</th>
+          <th scope="col">Note</th>
+          <th scope="col">Revised</th>
+          <th scope="col">Logged by</th>
+          <th scope="col"><span class="sr-only">Open</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @budget_updates.each do |update| %>
           <tr>
-            <th scope="col">Effective date</th>
-            <th scope="col">Note</th>
-            <th scope="col">Revised</th>
-            <th scope="col">Logged by</th>
-            <th scope="col"><span class="sr-only">Open</span></th>
+            <td class="whitespace-nowrap"><%= reimbursements_date(update.effective_date) %></td>
+            <td><%= update.note.presence || "-" %></td>
+            <td>
+              <%# An update groups both levels, so an area forecast (budget_id nil) must be named and marked. %>
+              <% names = update.forecasts.filter_map do |forecast|
+                   if forecast.budget_id
+                     forecast.budget&.display_name
+                   else
+                     (area_name = forecast.area&.name) && "#{area_name} (area total)"
+                   end
+                 end %>
+              <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "budget") %>
+            </td>
+            <td class="whitespace-nowrap"><%= update.created_by&.full_name.presence || "-" %></td>
+            <td class="whitespace-nowrap text-right">
+              <%= link_to "Open", admin_reimbursements_budget_update_path(update.record_id),
+                          class: btn_classes(:secondary, :sm) %>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <% @budget_updates.each do |update| %>
-            <tr>
-              <td class="whitespace-nowrap"><%= reimbursements_date(update.effective_date) %></td>
-              <td><%= update.note.presence || "-" %></td>
-              <td>
-                <%# An update groups both levels, so an area forecast (budget_id nil) must be named and marked. %>
-                <% names = update.forecasts.filter_map do |forecast|
-                     if forecast.budget_id
-                       forecast.budget&.display_name
-                     else
-                       (area_name = forecast.area&.name) && "#{area_name} (area total)"
-                     end
-                   end %>
-                <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "budget") %>
-              </td>
-              <td class="whitespace-nowrap"><%= update.created_by&.full_name.presence || "-" %></td>
-              <td class="whitespace-nowrap text-right">
-                <%= link_to "Open", admin_reimbursements_budget_update_path(update.record_id),
-                            class: btn_classes(:secondary, :sm) %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   <% end %>
 <% end %>

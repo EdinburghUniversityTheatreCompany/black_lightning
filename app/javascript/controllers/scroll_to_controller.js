@@ -13,9 +13,7 @@ export default class extends Controller {
     const target = document.getElementById(`${this.prefixValue}${raw}`)
     if (!target) return
 
-    // The rows are tall; the element's scroll-margin clears the sticky header. Never put the
-    // target in a table's own scroll box (.table-scroll): scrollIntoView then also scrolls the
-    // page until the box's sticky headers leave the screen.
+    // The rows are tall; the element's scroll-margin clears the sticky header.
     target.scrollIntoView({ block: "start" })
   }
 }

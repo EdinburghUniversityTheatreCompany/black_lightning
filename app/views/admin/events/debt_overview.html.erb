@@ -9,70 +9,68 @@
   </div>
 <% end %>
 
-<%= render CardComponent.new(flush: true) do %>
+<%= render CardComponent.new(flush: true, html_class: "min-w-fit") do %>
   <% if @shows.empty? %>
     <div class="p-4 rounded border m-3 mb-0 bg-info/10 border-info/30 text-info">
       No shows found in the current academic year or future.
     </div>
   <% else %>
-    <div class="table-scroll">
-      <table class="table table-striped table-hover table-sticky-head mb-0">
-        <thead>
-          <tr>
-            <th>Show</th>
-            <th>Dates</th>
-            <th>Tags</th>
-            <th>Maintenance Debts</th>
-            <th>Staffing Debts</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @shows.each do |show| %>
-            <tr class="<%= debt_status_row_class(show) %>">
-              <td><%= get_link show, :show %></td>
-              <td><%= show.date_range(true, :short) %></td>
+    <table class="table table-striped table-hover table-sticky-head mb-0">
+      <thead>
+        <tr>
+          <th>Show</th>
+          <th>Dates</th>
+          <th>Tags</th>
+          <th>Maintenance Debts</th>
+          <th>Staffing Debts</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @shows.each do |show| %>
+          <tr class="<%= debt_status_row_class(show) %>">
+            <td><%= get_link show, :show %></td>
+            <td><%= show.date_range(true, :short) %></td>
+            <td>
+              <% if show.event_tags.any? %>
+                <% show.event_tags.each do |tag| %>
+                  <%= render(BadgeComponent.new(type: :secondary)) { tag.name } %>
+                <% end %>
+              <% else %>
+                <span class="text-gray-500">No tags</span>
+              <% end %>
+            </td>
+            <% %w[maintenance staffing].each do |kind| %>
+              <% amount = show.public_send("#{kind}_debt_amount") %>
+              <% due = show.public_send("#{kind}_debt_start") %>
               <td>
-                <% if show.event_tags.any? %>
-                  <% show.event_tags.each do |tag| %>
-                    <%= render(BadgeComponent.new(type: :secondary)) { tag.name } %>
+                <% if amount.present? %>
+                  <strong><%= amount %></strong>
+                  <% if due.present? %>
+                    (due <%= due.strftime("%d %b %y") %>)
                   <% end %>
                 <% else %>
-                  <span class="text-gray-500">No tags</span>
+                  <span class="text-gray-500">Not configured</span>
                 <% end %>
               </td>
-              <% %w[maintenance staffing].each do |kind| %>
-                <% amount = show.public_send("#{kind}_debt_amount") %>
-                <% due = show.public_send("#{kind}_debt_start") %>
-                <td>
-                  <% if amount.present? %>
-                    <strong><%= amount %></strong>
-                    <% if due.present? %>
-                      (due <%= due.strftime("%d %b %y") %>)
-                    <% end %>
-                  <% else %>
-                    <span class="text-gray-500">Not configured</span>
+            <% end %>
+            <td>
+              <%= link_to 'Configure', admin_show_path(show, anchor: 'debt_settings'), class: btn_classes(:primary, :sm) %>
+            </td>
+          </tr>
+          <% if show_debt_recommendation_details?(show) %>
+            <tr class="<%= debt_status_row_class(show) %>">
+              <td colspan="6" class="small">
+                <em>Tag recommendations:
+                  <% show.tag_debt_recommendations.each do |rec| %>
+                    <%= rec[:tag_name] %>: <%= rec[:maintenance] || 0 %> maintenance, <%= rec[:staffing] || 0 %> staffing &nbsp;
                   <% end %>
-                </td>
-              <% end %>
-              <td>
-                <%= link_to 'Configure', admin_show_path(show, anchor: 'debt_settings'), class: btn_classes(:primary, :sm) %>
+                </em>
               </td>
             </tr>
-            <% if show_debt_recommendation_details?(show) %>
-              <tr class="<%= debt_status_row_class(show) %>">
-                <td colspan="6" class="small">
-                  <em>Tag recommendations:
-                    <% show.tag_debt_recommendations.each do |rec| %>
-                      <%= rec[:tag_name] %>: <%= rec[:maintenance] || 0 %> maintenance, <%= rec[:staffing] || 0 %> staffing &nbsp;
-                    <% end %>
-                  </em>
-                </td>
-              </tr>
-            <% end %>
           <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   <% end %>
 <% end %>

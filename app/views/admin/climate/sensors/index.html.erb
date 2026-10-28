@@ -5,55 +5,53 @@
   The outdoor line is fetched hourly and needs nothing from you.
 </p>
 
-<%= render CardComponent.new(title: "Sensors", flush: true) do |card| %>
+<%= render CardComponent.new(title: "Sensors", flush: true, html_class: "min-w-fit") do |card| %>
   <% card.with_tools do %>
     <%= link_to "Import readings", new_admin_climate_import_path, class: btn_classes(:primary, :sm) %>
     <%= link_to "Add sensor", new_admin_climate_sensor_path, class: btn_classes(:secondary, :sm) %>
   <% end %>
 
-  <div class="table-scroll">
-    <table class="table table-hover">
-      <thead>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Location</th>
+        <th scope="col">Fed by</th>
+        <th scope="col">Active</th>
+        <th scope="col">In crypt</th>
+        <th scope="col" class="text-right">Readings</th>
+        <th scope="col">Latest reading</th>
+        <th scope="col">Last error</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @sensors.each do |sensor| %>
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Location</th>
-          <th scope="col">Fed by</th>
-          <th scope="col">Active</th>
-          <th scope="col">In crypt</th>
-          <th scope="col" class="text-right">Readings</th>
-          <th scope="col">Latest reading</th>
-          <th scope="col">Last error</th>
-          <th scope="col"></th>
+          <td><%= sensor.display_name %></td>
+          <td><%= sensor.location.presence || "—" %></td>
+          <td><%= sensor.open_meteo? ? "Open-Meteo (hourly)" : "CSV import" %></td>
+          <td><%= sensor.active? ? "Yes" : "No" %></td>
+          <td><%= sensor.in_crypt? ? "Yes" : "No" %></td>
+          <td class="text-right"><%= number_with_delimiter(sensor.readings.count) %></td>
+          <td>
+            <% if sensor.latest_reading %>
+              <%= time_ago_in_words(sensor.latest_reading.recorded_at) %> ago
+            <% else %>
+              None yet
+            <% end %>
+          </td>
+          <td class="text-sm text-gray-600"><%= sensor.last_error.presence || "—" %></td>
+          <td class="text-right whitespace-nowrap">
+            <%= link_to "Edit", edit_admin_climate_sensor_path(sensor), class: btn_classes(:secondary, :sm) %>
+            <% unless sensor.open_meteo? %>
+              <%= button_to "Delete", admin_climate_sensor_path(sensor), method: :delete,
+                            class: btn_classes(:danger, :sm), form: { class: "inline-block" },
+                            data: { turbo_confirm: "Delete #{sensor.display_name} and all #{sensor.readings.count} of its readings? This cannot be undone." } %>
+            <% end %>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        <% @sensors.each do |sensor| %>
-          <tr>
-            <td><%= sensor.display_name %></td>
-            <td><%= sensor.location.presence || "—" %></td>
-            <td><%= sensor.open_meteo? ? "Open-Meteo (hourly)" : "CSV import" %></td>
-            <td><%= sensor.active? ? "Yes" : "No" %></td>
-            <td><%= sensor.in_crypt? ? "Yes" : "No" %></td>
-            <td class="text-right"><%= number_with_delimiter(sensor.readings.count) %></td>
-            <td>
-              <% if sensor.latest_reading %>
-                <%= time_ago_in_words(sensor.latest_reading.recorded_at) %> ago
-              <% else %>
-                None yet
-              <% end %>
-            </td>
-            <td class="text-sm text-gray-600"><%= sensor.last_error.presence || "—" %></td>
-            <td class="text-right whitespace-nowrap">
-              <%= link_to "Edit", edit_admin_climate_sensor_path(sensor), class: btn_classes(:secondary, :sm) %>
-              <% unless sensor.open_meteo? %>
-                <%= button_to "Delete", admin_climate_sensor_path(sensor), method: :delete,
-                              class: btn_classes(:danger, :sm), form: { class: "inline-block" },
-                              data: { turbo_confirm: "Delete #{sensor.display_name} and all #{sensor.readings.count} of its readings? This cannot be undone." } %>
-              <% end %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+      <% end %>
+    </tbody>
+  </table>
 <% end %>
