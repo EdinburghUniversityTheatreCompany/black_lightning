@@ -218,7 +218,7 @@ module Admin
       post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_empty assigns(:matched_credits)
-      assert_select "td", text: /\AAn unplaced row of the opposite amount is already on the ledger/
+      assert_select "td", text: /\AA row of the opposite amount, on the ledger or in this paste/
 
       post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
@@ -821,6 +821,20 @@ module Admin
       post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: [ "" ] }
 
       assert_equal income.id, ::Reimbursements::EusaActual.where("credit > 0").sole.budget_id
+    end
+
+    # Unticking frees the credit from that one debit only; another credit it may reverse still waits.
+    test "an unticked pair's debit still holds back another credit of its amount" do
+      income = create_reimbursements_budget(name: "Venue hire", nominal_code: ACCRUAL_NOMINAL,
+                                            budget_type: "Income")
+      other = reversal_row(ref: "SI0099", date: "15/06/2026", period: "03", narrative: "Hire takings")
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{offsetting_paste}\n#{other}", offset_pair_keys: [ "" ] }
+
+      credits = ::Reimbursements::EusaActual.where("credit > 0").index_by(&:narrative)
+      assert_equal income.id, credits["Venue hire accrual"].budget_id
+      assert_nil credits["Hire takings"].budget_id
     end
 
     test "a same-amount row that is not part of a pair still reaches the matcher" do

@@ -126,10 +126,12 @@ module Admin
         ticked = ticked_keys(:offset_pair_keys)
         detected = detect_pairs(new_entries)
         pairs = detected.select { |pair| ticked.include?(pair.key) }
-        # Finance said these legs are not each other's reversal, so neither holds the other back.
-        declined = (detected - pairs).flat_map { |pair| [ new_entries[pair.debit_index], new_entries[pair.credit_index] ] }
+        # Finance said these legs are not each other's reversal, so that debit cannot hold back that credit.
+        declined_pairs = (detected - pairs).to_set do |pair|
+          [ new_entries[pair.debit_index].object_id, new_entries[pair.credit_index].object_id ]
+        end
         matched_debits, matched_credits, unmatched =
-          build_matches(entries_outside(new_entries, pairs), declined: declined)
+          build_matches(entries_outside(new_entries, pairs), declined_pairs: declined_pairs)
         # A possible match settles only when ticked; the rest import unmatched, as before.
         probable, unmatched = build_probable_matches(unmatched, matched_debits)
         groups, unmatched = build_group_matches(unmatched, matched_debits, probable)
@@ -227,7 +229,7 @@ module Admin
       # Matches debits to Submitted/Paid expenses (each claimed at most once) and credits to income
       # budgets. Returns [matched_debits, matched_credits, unmatched]; a match is [entry, expense|budget].
       # Both are scoped to the row's cost centre: a termtime debit must not mark a Fringe claim Paid.
-      def build_matches(entries, declined: [])
+      def build_matches(entries, declined_pairs: Set.new)
         debit_matches = match_debits(entries)
         reversals = nil
         @awaiting_reversal = Set.new.compare_by_identity
@@ -241,8 +243,8 @@ module Admin
           if row.debit.positive?
             (expense = debit_matches[entry]) ? matched_debits << [ entry, expense ] : unmatched << entry
           elsif row.credit.positive?
-            reversals ||= reversal_pool(entries, debit_matches, declined)
-            if reversal?(entry, reversals)
+            reversals ||= reversal_pool(entries, debit_matches)
+            if reversal?(entry, reversals, declined_pairs)
               @awaiting_reversal << row
               unmatched << entry
             elsif (budget = credit_matcher.budget_for(row, entry.cost_centre))
@@ -376,20 +378,25 @@ module Admin
       end
 
       # Whether a pasted credit may reverse a debit, stored or in this paste, by the hand-pairing gate
-      # on the rows as they will be stored. Every such credit waits for the ledger's pairs.
-      def reversal?(entry, reversals) = as_stored(entry).offset_candidates(reversals).any?
-
-      # Unplaced dated stored debits, and this paste's debits no claim took and finance did not
-      # decline as a pair. Undated rows are left out, as the ledger's pairs leave them out.
-      def reversal_pool(entries, debit_matches, declined)
-        stored = store.eusa_actuals.select { |actual| actual.pairable? && actual.date && actual.signed_amount.positive? }
-        pasted = entries.filter_map do |entry|
-          next unless entry.row.debit.positive? && entry.row.date && !debit_matches.key?(entry)
-          next if declined.any? { |leg| leg.equal?(entry) }
-
-          as_stored(entry)
+      # on the rows as they will be stored. Every such credit waits for the ledger's pairs, except
+      # against a debit finance unticked as its pair.
+      def reversal?(entry, reversals, declined_pairs)
+        partners = reversals.fetch(entry.row.credit.to_d, []).reject do |source, _row|
+          source && declined_pairs.include?([ source.object_id, entry.object_id ])
         end
-        stored + pasted
+        as_stored(entry).offset_candidates(partners.map(&:last)).any?
+      end
+
+      # Debit amount => [[pasted entry or nil, row]]: unplaced dated stored debits, and this paste's
+      # debits no claim took. Undated rows are left out, as the ledger's pairs leave them out.
+      def reversal_pool(entries, debit_matches)
+        stored = store.eusa_actuals.filter_map do |actual|
+          [ nil, actual ] if actual.pairable? && actual.date && actual.signed_amount.positive?
+        end
+        pasted = entries.filter_map do |entry|
+          [ entry, as_stored(entry) ] if entry.row.debit.positive? && entry.row.date && !debit_matches.key?(entry)
+        end
+        (stored + pasted).group_by { |_source, row| row.signed_amount.to_d }
       end
 
       def as_stored(entry)
