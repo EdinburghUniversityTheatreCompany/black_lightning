@@ -1,4 +1,8 @@
 module DisplayHelper
+  # Explicit: display_content_warnings reads render_plain, and a helper rendered on its own
+  # must not raise mid-render on the box office screen.
+  include MdHelper
+
   def display_date_range(event)
     date_span(event.start_date, event.end_date)
   end
@@ -109,8 +113,10 @@ module DisplayHelper
   # board prints one line of text: each paragraph, bullet or line break becomes a " · "
   # (the markdown renders breaks as typed), cut at a word to fit.
   def display_content_warnings(markdown, length: 180)
-    truncate(render_plain(markdown).lines.map(&:squish).compact_blank.join(" · "),
-             length: length, separator: " ", omission: "…")
+    items = render_plain(markdown).lines.map(&:squish).compact_blank
+    # A "Content warnings" heading would repeat the panel's own label.
+    items.shift if items.first&.match?(/\Acontent warnings?:?\z/i)
+    truncate(items.join(" · "), length: length, separator: " ", omission: "…")
   end
 
   # The credits are one list (cast, then company) flowing down CSS columns, and

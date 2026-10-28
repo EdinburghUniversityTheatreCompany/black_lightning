@@ -4,7 +4,6 @@ class DisplayHelperTest < ActionView::TestCase
   include DisplayHelper
   include TimeHelper
   include PretixHelper
-  include MdHelper
 
   def run_of_five(from: Date.new(2026, 10, 11))
     event = FactoryBot.create(:show, start_date: from, end_date: from + 4)
@@ -434,6 +433,16 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "The age rating for ‘Beautiful Thing’ is 16+ · Language: severe · Strobe lighting",
                  display_content_warnings(markdown)
     assert_equal "The age rating for…", display_content_warnings(markdown, length: 22)
+  end
+
+  test "display_content_warnings is blank when the markdown shows no text" do
+    assert_equal "", display_content_warnings("<!-- todo -->")
+    assert_equal "", display_content_warnings(nil)
+  end
+
+  # The panel prints its own "Content warnings:" label.
+  test "display_content_warnings drops a heading that only repeats the label" do
+    assert_equal "Strobe · Haze", display_content_warnings("### Content warnings\n\n- Strobe\n- Haze")
   end
 
   test "display_qr_code labels itself for what the caller is asking people to scan" do

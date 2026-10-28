@@ -105,8 +105,17 @@ class Display::PagesControllerTest < ActionController::TestCase
     get :next_event, params: { slot: "1" }
 
     assert_response :success
-    assert_select "p", text: /Content warnings: The age rating is 16\+ · Language: severe · Strobe lighting/
-    assert_no_match(/\*\*|\* Language/, response.body)
+    assert_select "p.text-amber-300", text: "Content warnings: The age rating is 16+ · Language: severe · Strobe lighting"
+  end
+
+  test "next_event prints no content warnings label when the warnings show no text" do
+    FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1,
+                             content_warnings: "<!-- todo -->")
+
+    get :next_event, params: { slot: "1" }
+
+    assert_response :success
+    assert_no_match "Content warnings", response.body
   end
 
   test "next_event slot 1 does not render tonight mode for an event not running today" do
