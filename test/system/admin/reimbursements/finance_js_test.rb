@@ -78,10 +78,6 @@ module Admin
         end
       end
 
-      def resize_window_to(width, height)
-        page.driver.browser.manage.window.resize_to(width, height)
-      end
-
       test "needs-attention popover opens on click and closes on Escape or an outside click" do
         expense = seed_expense(status: "Pending", receipt: false)
 
@@ -224,7 +220,7 @@ module Admin
         assert_in_delta details.x, stacked.x, 24, "stacked, so both start at the same edge"
         assert_operator stacked.y, :>, details.y + details.height, "with the pane below the details"
       ensure
-        resize_window_to(1400, 1400)
+        restore_window_size
       end
 
       # The last row of the receipts block, found through its file field because the

@@ -4,7 +4,9 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # Undoes the inherited parallelize: browser startup dominates, so 8 workers measured no faster.
   parallelize(workers: 1)
 
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |driver_options|
+  SCREEN_SIZE = [ 1400, 1400 ].freeze
+
+  driven_by :selenium, using: :headless_chrome, screen_size: SCREEN_SIZE do |driver_options|
     driver_options.add_argument("--no-sandbox")
     driver_options.add_argument("--disable-dev-shm-usage")
     driver_options.add_argument("--disable-gpu")
@@ -36,6 +38,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   JS
 
   def theme_colour(variable) = evaluate_script(THEME_COLOUR, variable)
+
+  def resize_window_to(width, height) = page.driver.browser.manage.window.resize_to(width, height)
+
+  # Call it in an ensure: every later system test in the run shares this browser.
+  def restore_window_size = resize_window_to(*SCREEN_SIZE)
 
   def style_of(element, property) = evaluate_script("getComputedStyle(arguments[0])[arguments[1]]", element, property)
 
