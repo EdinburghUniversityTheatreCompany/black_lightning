@@ -93,6 +93,26 @@ module Admin
       })()
     JS
 
+    # Read off computed styles, so it needs no data tall enough to scroll: every height-capped
+    # box in <main> holding a table, and every sticky-header table inside a box that scrolls
+    # (where the header can never stick).
+    SCROLL_TRAPS = <<~JS.freeze
+      (() => {
+        const main = document.querySelector("main");
+        const scrolls = (el) => { const s = getComputedStyle(el); return /auto|scroll|hidden/.test(s.overflowX + s.overflowY) };
+        const capped = [...main.querySelectorAll("*")].filter((el) => el.querySelector("table") &&
+          /auto|scroll/.test(getComputedStyle(el).overflowY) && getComputedStyle(el).maxHeight !== "none");
+        const trapped = [...main.querySelectorAll("table")].filter((table) => {
+          const th = table.querySelector("thead th");
+          if (!th || getComputedStyle(th).position !== "sticky") return false;
+          for (let el = table.parentElement; el !== main; el = el.parentElement) if (scrolls(el)) return true;
+          return false;
+        });
+        return { tables: main.querySelectorAll("table").length,
+                 capped: capped.map((el) => el.className), trapped: trapped.map((el) => el.className) };
+      })()
+    JS
+
     def measure(table_selector, port_selector)
       execute_script(GROW_ROWS, table_selector)
       evaluate_script(MEASURE, table_selector, port_selector)
@@ -158,6 +178,37 @@ module Admin
 
       assert_selector "table.table-sticky-head thead th"
       assert_scrolls_with_page "table.table-sticky-head", "budgets overview"
+    end
+
+    # Every page that once held its tables in a box of its own, seeded so the tables render.
+    test "no admin table scrolls in a box of its own" do
+      area = create_reimbursements_area(name: "Medea")
+      budget = create_reimbursements_budget(name: "Props", area: area)
+      batch = create_reimbursements_batch(name: "May")
+      create_reimbursements_expense(budget: budget, batch: batch)
+      update = ::Reimbursements::BudgetUpdate.create!(effective_date: Date.current)
+      update.forecasts.create!(budget: budget, amount: BigDecimal("450"), date: Date.current, reason: "More flyers")
+      create_reimbursements_eusa_actual(debit: BigDecimal("20")) # attributed to no budget
+      grant_finance_permission(users(:admin))
+      login_as users(:admin)
+
+      # Path => the tables it must render, or the page proves nothing.
+      {
+        admin_reimbursements_budgets_path => 1, overview_admin_reimbursements_budgets_path => 3,
+        admin_reimbursements_budget_updates_path => 1, admin_reimbursements_budget_update_path(update.record_id) => 1,
+        admin_reimbursements_batch_path(batch.record_id) => 1, admin_reimbursements_area_path(area.record_id) => 2,
+        admin_reimbursements_export_path => 1, admin_reimbursements_status_path => 0,
+        admin_reimbursements_my_budgets_path => 0, admin_climate_sensors_path => 0,
+        debt_overview_admin_events_path => 0, admin_permissions_path => 1,
+        permissions_admin_role_path(roles(:committee)) => 1
+      }.each do |path, tables|
+        visit path
+        assert_selector "main"
+        found = evaluate_script(SCROLL_TRAPS)
+        assert_operator found["tables"], :>=, tables, "#{path}: precondition, its tables render"
+        assert_empty found["capped"], "#{path}: a table scrolls vertically in a box of its own"
+        assert_empty found["trapped"], "#{path}: a sticky header sits in a box that scrolls, so it never sticks"
+      end
     end
 
     # The grid scrolls with the page both ways, so its Update bar sticks to the screen's bottom
