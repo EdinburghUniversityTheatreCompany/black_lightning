@@ -301,7 +301,11 @@ module Reimbursements
       candidates.first if candidates.one?
     end
 
+    # A blank code is no evidence: both columns default to "", and the one code-less income budget
+    # would take every code-less credit.
     def credit_budget_candidates(row, budgets)
+      return [] if row.nominal_code.blank?
+
       budgets.select { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
     end
 

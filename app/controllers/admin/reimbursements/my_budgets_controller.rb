@@ -85,6 +85,7 @@ module Admin
         area_ids = all_owned.filter_map { |budget| budget.area_id&.to_s }.to_set
         areas = store.areas.select { |area| area_ids.include?(area.record_id) }
         loose = all_owned.select { |budget| budget.area_id.nil? && (budget.active || waiting_on?(budget)) }
+        store.preload_paid_by_eusa(areas.flat_map(&:budgets) + loose)
 
         rows = areas.map { |area| area_row(area) } + loose.map { |budget| loose_row(budget) }
         rows.sort_by { |row| [ row[:waiting_count].positive? ? 0 : 1, row[:name].to_s.downcase ] }

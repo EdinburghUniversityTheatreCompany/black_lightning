@@ -487,6 +487,14 @@ module Reimbursements
       assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ cogito, hamlet ])
     end
 
+    # Both columns default to "", so a blank code would file every code-less credit on the one
+    # code-less income budget.
+    test "a credit with no nominal code matches no budget, not a budget with none either" do
+      codeless = Budget.new(name: "Archives income", nominal_code: "")
+      assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: ""), [ codeless ])
+      assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: "  "), [ codeless ])
+    end
+
     # --- in_credit_years ---------------------------------------------------
 
     test "a credit's year keeps that year's lines and lines with no year" do

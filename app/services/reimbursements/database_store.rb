@@ -129,7 +129,10 @@ module Reimbursements
     # Preloads what the area edit page's figures read (Area#committed_amount, #allocated per
     # budget line).
     def find_area(record_id)
-      Area.includes(:owners, :forecasts, budgets: AREA_BUDGET_PRELOADS).find_by(id: record_id)
+      # Every figure the area page reads, Paid by EUSA and Received included.
+      Area.includes(:owners, :forecasts,
+                    budgets: [ :forecasts, :actual_allocations, :eusa_actuals,
+                               { expenses: %i[eusa_actuals claim_share] } ]).find_by(id: record_id)
     end
 
     def find_batch(record_id)
@@ -218,16 +221,22 @@ module Reimbursements
       active_budgets.reject { |b| b.cost_centre&.hidden_from_submitters? }
     end
 
-    # What an area's figures read per budget: Area#committed_amount, #allocated and
-    # #projected_amount, and the owner pages' Paid by EUSA (Budget#eusa_actual_amount).
-    AREA_BUDGET_PRELOADS = [ :forecasts, :actual_allocations, :eusa_actuals,
-                             { expenses: %i[eusa_actuals claim_share] } ].freeze
-
-    # Every area, every year: an id->record lookup, unscoped for #budgets' reason. Preloads the
-    # area's own forecasts and AREA_BUDGET_PRELOADS (an N+1 on every areas index or grouped
-    # budgets index otherwise).
+    # Every area, every year: an id->record lookup, unscoped for #budgets' reason. Preloads each
+    # budget's expenses, forecasts and allocations plus the area's own forecasts, because
+    # Area#committed_amount, #allocated and #projected_amount read them per budget per area
+    # (an N+1 on every areas index or grouped budgets index otherwise).
     def areas
-      @areas ||= Area.includes(:owners, :forecasts, budgets: AREA_BUDGET_PRELOADS).to_a
+      @areas ||= Area.includes(:owners, :forecasts,
+                               budgets: %i[expenses forecasts actual_allocations]).to_a
+    end
+
+    # My Budgets' Paid by EUSA (Budget#eusa_actual_amount) reads each claim's ledger rows. Loaded
+    # for the owner's budgets only: store.areas' other callers never read them.
+    def preload_paid_by_eusa(budgets)
+      ActiveRecord::Associations::Preloader.new(
+        records: budgets, associations: { expenses: %i[eusa_actuals claim_share] }
+      ).call
+      budgets
     end
 
     # The areas the budget screens list.
@@ -832,11 +841,14 @@ module Reimbursements
     end
 
     # The ledger's "Link credits": the plan was read before the click, so the row is re-checked
-    # under a lock, or a credit split or linked since would also count on a second budget.
+    # under a lock. A credit split or linked since would count on two budgets; a reversal
+    # imported since makes it a possible accrual (CreditLinks' hold-back); a budget deleted or
+    # retyped since is no income budget to link to.
     def link_credit_to_budget!(actual_id, budget_id)
       linked = EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)
-        next false unless actual.apportionable?
+        next false unless actual.apportionable? && Budget.exists?(id: budget_id, budget_type: "Income")
+        next false if actual.offset_candidates(EusaActual.where(nominal_code: actual.nominal_code).to_a).any?
 
         actual.update!(budget_id: budget_id)
         true

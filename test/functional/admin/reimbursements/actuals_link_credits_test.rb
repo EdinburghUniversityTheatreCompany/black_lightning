@@ -87,6 +87,56 @@ module Admin
         assert_not ::Reimbursements.build_store.link_credit_to_budget!(@fee.id, @membership.id)
         assert_equal other.id, @fee.reload.budget_id
       end
+
+      test "a reversal imported since the page was read still holds the credit back" do
+        create_reimbursements_eusa_actual(nominal_code: "359000", debit: BigDecimal("640"),
+                                          narrative: "Arrived after the plan")
+
+        assert_not ::Reimbursements.build_store.link_credit_to_budget!(@fee.id, @membership.id)
+        assert_nil @fee.reload.budget_id
+      end
+
+      test "a budget no longer an income budget is not linked to" do
+        @membership.update!(budget_type: "Expense")
+
+        assert_not ::Reimbursements.build_store.link_credit_to_budget!(@fee.id, @membership.id)
+        assert_nil @fee.reload.budget_id
+      end
+
+      # The card is built from the rows on screen, so the click must link exactly those.
+      test "with a period chosen, only that period's credits are offered and linked" do
+        @fee.update!(period: "03")
+        later = create_reimbursements_eusa_actual(nominal_code: "359000", credit: BigDecimal("215.50"),
+                                                  period: "06", narrative: "SUMS - NON-STUDENT")
+
+        get :index, params: { period: "03" }
+
+        assert_select "button", text: "Link 1 credit to its income budget"
+
+        post :link_credits, params: { period: "03" }
+
+        assert_redirected_to admin_reimbursements_actuals_path(period: "03")
+        assert_equal @membership.id, @fee.reload.budget_id
+        assert_nil later.reload.budget_id
+      end
+
+      # The date column is nullable, and a year cannot be judged without one.
+      test "an undated credit is left for a person and the ledger still opens" do
+        create_reimbursements_tax_years
+        @fee.update!(date: nil)
+
+        get :index
+
+        assert_response :success
+        assert_select "button", text: /Link \d+ credit/, count: 0
+      end
+
+      test "the full ledger and its CSV skip the plan" do
+        get :index, params: { state: ActualsController::STATE_ALL }
+
+        assert_response :success
+        assert_nil assigns(:credit_links)
+      end
     end
   end
 end

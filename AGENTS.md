@@ -549,7 +549,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     which `Area#projected_amount` reads, and `DatabaseStore::AREA_BUDGET_PRELOADS`, which the
     owner pages' Paid by EUSA reads), never `budget.area`, whose unloaded `budgets` N+1s.
   - **A negative `unallocated` prints as words, never bare**: "Budgets add up to £X more than the
-    agreed total" (`reimbursements_area_unallocated`). "-£1,320.00 not yet allocated" was read as
+    agreed total" (`reimbursements_area_unallocated`; a card's heading is
+    `ReimbursementsHelper::OVER_ALLOCATED_LABEL`). "-£1,320.00 not yet allocated" was read as
     money still to hand out (Pitch Panto kept its imported whole-show budget beside its
     departments).
   - **The grouped index's area subtotal covers the whole area**; its rows are scoped to year and

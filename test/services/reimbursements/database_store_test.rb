@@ -480,7 +480,7 @@ module Reimbursements
       end
     end
 
-    test "areas and find_area preload each budget's EUSA rows, which the owner pages read" do
+    test "find_area preloads each budget's EUSA rows, which the area page reads" do
       area = Area.create!(name: "Pitch Panto", initial_budget: 1320)
       set = Budget.create!(name: "Set", nominal_code: "431580", area: area)
       claim = Expense.create!(budget: set, status: Status::PAID, amount_excl_vat: 95.2)
@@ -488,12 +488,32 @@ module Reimbursements
       tickets = Budget.create!(name: "Panto", nominal_code: "331130", budget_type: "Income", area: area)
       EusaActual.create!(budget: tickets, nominal_code: "331130", credit: 500)
 
-      [ DatabaseStore.new.areas.find { |loaded| loaded.id == area.id },
-        DatabaseStore.new.find_area(area.id) ].each do |loaded|
-        assert_queries_count(0) do
-          assert_equal [ BigDecimal("114.24"), BigDecimal("500") ],
-                       loaded.budgets.sort_by(&:id).map(&:eusa_actual_amount)
-        end
+      loaded = DatabaseStore.new.find_area(area.id)
+
+      assert_queries_count(0) do
+        assert_equal [ BigDecimal("114.24"), BigDecimal("500") ],
+                     loaded.budgets.sort_by(&:id).map(&:eusa_actual_amount)
+      end
+    end
+
+    # My Budgets reads Paid by EUSA off store.areas and store.budgets, which leave the ledger
+    # unloaded for their other callers.
+    test "preload_paid_by_eusa makes an expense budget's EUSA figure query-free" do
+      area = Area.create!(name: "Pitch Panto", initial_budget: 1320)
+      set = Budget.create!(name: "Set", nominal_code: "431580", area: area)
+      loose = Budget.create!(name: "Contingency", nominal_code: "431580")
+      [ set, loose ].each do |budget|
+        claim = Expense.create!(budget: budget, status: Status::PAID, amount_excl_vat: 95.2)
+        EusaActual.create!(expense: claim, nominal_code: "431580", debit: 114.24)
+      end
+      store = DatabaseStore.new
+      budgets = store.areas.find { |loaded| loaded.id == area.id }.budgets +
+                store.budgets.select { |budget| budget.id == loose.id }
+
+      store.preload_paid_by_eusa(budgets)
+
+      assert_queries_count(0) do
+        assert_equal [ BigDecimal("114.24") ] * 2, budgets.map(&:eusa_actual_amount)
       end
     end
 

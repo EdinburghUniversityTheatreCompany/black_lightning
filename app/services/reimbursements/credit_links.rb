@@ -16,7 +16,8 @@ module Reimbursements
     def initialize(actuals:, ledger:, matcher:)
       @links = []
       @held_back = []
-      actuals.select(&:apportionable?).each do |actual|
+      # An undated row has no year to judge, so a person places it.
+      actuals.select { |actual| actual.apportionable? && actual.date }.each do |actual|
         centre = matcher.cost_centre_of(actual)
         budget = centre && matcher.budget_for(actual, centre)
         next unless budget

@@ -1,4 +1,4 @@
-<%# locals: (plan:) %>
+<%# locals: (plan:, url:) %>
 <%= render CardComponent.new(title: "Credits ready to link", html_class: "mb-3") do %>
   <% if plan.links.any? %>
     <p class="mb-2 text-sm text-gray-600">
@@ -13,7 +13,7 @@
       <% end %>
     </ul>
     <%= button_to "Link #{link_credits_label(plan.links.size)}",
-                  link_credits_admin_reimbursements_actuals_path(scope_params),
+                  url,
                   class: btn_classes(:primary, :sm) %>
   <% end %>
   <% if plan.held_back.any? %>

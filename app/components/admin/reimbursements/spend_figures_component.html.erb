@@ -50,7 +50,7 @@
     <% if show_unallocated? %>
       <div>
         <dt class="text-sm text-gray-500">
-          <%= over_allocated? ? "Budgets over the agreed total" : "Not yet given to a budget" %>
+          <%= over_allocated? ? ReimbursementsHelper::OVER_ALLOCATED_LABEL : "Not yet given to a budget" %>
         </dt>
         <dd class="text-2xl font-semibold tabular-nums <%= "text-danger" if over_allocated? %>">
           <%= reimbursements_money(summary.unallocated.abs) %>

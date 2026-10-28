@@ -41,19 +41,16 @@ module Admin
         actuals = store.eusa_actuals_for_cost_centre
         # Taken before the period filter, or picking one month leaves it the only month to pick.
         @periods = actuals.map(&:period).reject(&:blank?).uniq.sort
-        @period = params[:period].to_s.strip
-        @search = params[:search].to_s.strip
         resolve_state
-
-        actuals = actuals.select { |a| a.period == @period } if @period.present?
-        actuals = actuals.select { |a| a.matches_search?(@search) } if @search.present?
+        actuals = filtered_actuals(actuals)
 
         # After period and search, before the state filter, so the view switch describes the rows
         # being looked at rather than the whole ledger.
         @matching_count = actuals.size
         @needs_attention_count = actuals.count(&:needs_attention?)
         @offset_count = actuals.count(&:offset?)
-        @credit_links = credit_links(actuals)
+        # The card shows on the needs-attention page only, and matching costs a pass over the ledger.
+        @credit_links = credit_links(actuals) if @state == STATE_NEEDS_ATTENTION && request.format.html?
 
         actuals = apply_state(actuals)
         sorted = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
@@ -67,10 +64,9 @@ module Admin
       # Recomputed rather than read from the page, so a budget added since then is used and a
       # reversal imported since then holds its credit back.
       def link_credits
-        plan = credit_links(store.eusa_actuals_for_cost_centre)
+        plan = credit_links(filtered_actuals(store.eusa_actuals_for_cost_centre))
         linked = plan.links.count { |link| store.link_credit_to_budget!(link.actual.record_id, link.budget.record_id) }
-        redirect_to admin_reimbursements_actuals_path(scope_params),
-                    notice: link_credits_notice(linked, plan.held_back.size)
+        redirect_to actuals_path_with_filters, notice: link_credits_notice(linked, plan.held_back.size)
       end
 
       def new_expense
@@ -292,6 +288,15 @@ module Admin
       end
 
       private
+
+      # The period and search on screen, so Link credits links the rows its card was built from.
+      def filtered_actuals(actuals)
+        @period = params[:period].to_s.strip
+        @search = params[:search].to_s.strip
+        actuals = actuals.select { |a| a.period == @period } if @period.present?
+        actuals = actuals.select { |a| a.matches_search?(@search) } if @search.present?
+        actuals
+      end
 
       def credit_links(actuals)
         ::Reimbursements::CreditLinks.new(actuals: actuals, ledger: store.eusa_actuals,
