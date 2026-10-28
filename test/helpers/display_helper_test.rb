@@ -5,34 +5,6 @@ class DisplayHelperTest < ActionView::TestCase
   include TimeHelper
   include PretixHelper
 
-  # The fits are written out independently of the helper, so the sweeps compare
-  # the layout it chose against an independent reading.
-  def side_height(cast, crew, stride)
-    qr = cast <= crew
-    [ cast * stride + (qr ? DisplayHelper::CREDITS_QR_HEIGHT : 0),
-      crew * stride + (qr ? 0 : DisplayHelper::CREDITS_QR_HEIGHT) ].max
-  end
-
-  def flow_height(cast, crew, stride)
-    sections = [ cast, crew ].count(&:positive?)
-    headings = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
-               (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
-    ((headings + (cast + crew) * stride) / 2.0).ceil
-  end
-
-  def fits?(mode, cast, crew, size)
-    stride = DisplayHelper::CREDITS_ROW_STRIDES.fetch(size)
-    if mode == :flowed
-      flow_height(cast, crew, stride) <= DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT
-    else
-      side_height(cast, crew, stride) <= DisplayHelper::CREDITS_LIST_HEIGHT
-    end
-  end
-
-  def largest_fit(mode, cast, crew)
-    DisplayHelper::CREDITS_ROW_STRIDES.keys.find { |size| fits?(mode, cast, crew, size) }
-  end
-
   def run_of_five(from: Date.new(2026, 10, 11))
     event = FactoryBot.create(:show, start_date: from, end_date: from + 4)
 
@@ -248,90 +220,191 @@ class DisplayHelperTest < ActionView::TestCase
     assert_not_equal medium, long, "a very long title should step down again"
   end
 
-  # Cast beside Company unless flowing buys bigger names; the QR goes under the
-  # shorter list, normally the cast (bottom left).
-  test "display_credits_layout keeps a balanced show side by side, the QR under the cast" do
-    [ [ 1, 2 ], [ 8, 12 ], [ 10, 10 ], [ 12, 12 ], [ 18, 18 ] ].each do |cast, crew|
-      layout = display_credits_layout(cast, crew)
+  # One list, biggest type first, then the fewest columns that fit one screen.
+  # Entries are name/detail pairs, because the fit counts LINES (a long role
+  # wraps), not people. The names are real-world lengths: synthetic "Person 1"
+  # data hides exactly the wrapping this layout exists to catch.
+  CAST = [
+    [ "Eleanor Ashworth", "Actor" ], [ "Tom O'Sullivan", "Actor" ], [ "Priya Natarajan", "Actor" ],
+    [ "Callum Reid", "Actor" ], [ "Maeve Fitzpatrick", "Actor" ], [ "Daniel Okonkwo", "Actor" ],
+    [ "Sofia Marchetti", "Actor" ], [ "Robin Whitfield", "Actor" ], [ "Grace Lindqvist", "Actor" ],
+    [ "Aaron Doyle", "Actor" ], [ "Nina Petrova", "Actor" ], [ "Josh Beckett", "Actor" ]
+  ].freeze
+  CREW = [
+    [ "Rory Blackwood", "Director" ], [ "Hannah Meehan", "Producer" ], [ "Sam O'Rourke", "Stage Manager" ],
+    [ "Leah Connolly", "Deputy Stage Manager" ], [ "Peter Nakamura", "Lighting Designer" ],
+    [ "Aisha Kerr", "Sound Designer" ], [ "Michael Farrell", "Set Construction" ], [ "Erin Walsh", "Set Construction" ],
+    [ "David Mulcahy", "Set Construction" ], [ "Claire Breen", "Costume Designer" ],
+    [ "Sean Gallagher", "Assistant Technical Stage Manager" ],
+    [ "Kate Donnelly", "Assistant Technical Stage Manager" ], [ "Liam O'Carroll", "Master Carpenter" ],
+    [ "Fiona Slattery", "Props Manager" ], [ "Mark Herron", "Make-up Artist" ], [ "Jodie Palmer", "Hair and Wigs" ],
+    [ "Owen Fitzgerald", "Front of House" ], [ "Niamh Kinsella", "Front of House" ], [ "Paul Doherty", "Publicity" ],
+    [ "Aoife Brennan", "Publicity" ], [ "Ryan Tierney", "Photography" ], [ "Ella Sweeney", "Videography" ],
+    [ "Jack Corcoran", "Musical Director" ], [ "Megan Byrne", "Rehearsal Pianist" ],
+    [ "Conor Leahy", "Fight Choreography" ], [ "Zoe Kavanagh", "Choreography" ],
+    [ "Harry Dunne", "Wardrobe Assistant" ], [ "Lucy Hegarty", "Prompt" ], [ "Ben Corrigan", "Technical Operator" ],
+    [ "Sarah Foley", "Technical Operator" ]
+  ].freeze
 
-      assert_equal :side_by_side, layout[:mode], "#{cast} cast / #{crew} crew is balanced enough to stay in two lists"
-      assert layout[:qr_in_cast_column], "#{cast} cast / #{crew} crew should carry the QR left"
-    end
-    assert_equal "text-5xl", display_credits_layout(8, 12)[:name_size]
+  # The two sizes measured on the real page: 42 people (these cast and crew lists) fill
+  # three columns at text-2xl, and 70 people only fit four columns at text-base. A change
+  # to CREDITS_CHAR_EM or the strides that perturbs them is a bug.
+  MEASURED_FITS = {
+    [ 42, 3 ] => "text-2xl",
+    [ 70, 4 ] => "text-base"
+  }.freeze
+
+  test "display_credits_layout picks the biggest type first, then the fewest columns" do
+    layout = display_credits_layout(CAST, CREW)
+
+    # 42 entries with the long technical roles in them: text-3xl overruns the
+    # window in every column count, text-2xl needs three columns, not two.
+    assert_equal "text-2xl", layout[:name_size]
+    assert_equal 3, layout[:columns]
+    assert credits_fit?(CAST, CREW, layout[:name_size], layout[:columns]), "the chosen fit must fit"
+    assert_not credits_fit?(CAST, CREW, "text-2xl", 2), "two columns of text-2xl must not fit, or a column was wasted"
+    assert_not credits_fit?(CAST, CREW, "text-3xl", 4), "bigger type must be tried and rejected first"
   end
 
-  # Side by side sizes off the longer list, so a lopsided show wastes a column.
-  test "display_credits_layout flows a lopsided show, and the names get bigger for it" do
-    { [ 3, 18 ] => "text-4xl", [ 18, 2 ] => "text-5xl", [ 16, 3 ] => "text-5xl",
-      [ 5, 14 ] => "text-5xl", [ 0, 15 ] => "text-5xl" }.each do |(cast, crew), expected|
-      layout = display_credits_layout(cast, crew)
+  # The two sizes measured on the real page. If the model drifts, it drifts here
+  # first, and the screen scrolls when nobody is watching it.
+  test "display_credits_layout reproduces the sizes measured in Chrome" do
+    MEASURED_FITS.each do |(count, columns), size|
+      company = (CAST + CREW)
+      company += Array.new(count - company.length) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] } if count > company.length
+      cast, crew = count > 42 ? [ [], company ] : [ CAST, CREW ]
+      assert_equal count, cast.length + crew.length
 
-      assert_equal :flowed, layout[:mode], "#{cast} cast / #{crew} crew wastes a column side by side"
-      assert_equal expected, layout[:name_size], "#{cast} cast / #{crew} crew"
-      # The QR is a footer under both columns, so its height comes off the flow.
-      assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, layout[:flow_height]
-    end
-  end
-
-  # Whichever layout it picks must be the one that prints the names bigger.
-  test "display_credits_layout never picks the layout with the smaller type" do
-    sizes = DisplayHelper::CREDITS_ROW_STRIDES.keys
-
-    (0..20).each do |cast|
-      (0..20).each do |crew|
-        chosen = display_credits_layout(cast, crew)
-        other = largest_fit(chosen[:mode] == :flowed ? :side_by_side : :flowed, cast, crew)
-
-        next if other.nil?
-
-        assert_operator sizes.index(chosen[:name_size]), :<=, sizes.index(other),
-                        "#{cast} cast / #{crew} crew took #{chosen[:mode]} at #{chosen[:name_size]}, " \
-                        "when the other layout would have printed #{other}"
-      end
-    end
-  end
-
-  # Whichever column carries the QR must fit its names AND the code: an 18-name
-  # cast fits text-2xl alone and does not once the QR is under it.
-  test "display_credits_layout never picks a size the QR does not fit at" do
-    (0..18).each do |cast|
-      (0..18).each do |crew|
-        layout = display_credits_layout(cast, crew)
-
-        assert fits?(layout[:mode], cast, crew, layout[:name_size]),
-               "#{cast} cast / #{crew} crew #{layout[:mode]} at #{layout[:name_size]} leaves no room for the QR"
-        assert_equal(cast <= crew, layout[:qr_in_cast_column]) if layout[:mode] == :side_by_side
-      end
-    end
-  end
-
-  # A wrapping name or an oversized company defeats the row arithmetic. The cap is
-  # the guarantee: the column under the QR never gets the QR's height, so the list
-  # loses its tail, not the code.
-  test "display_credits_layout always reserves the QR's height from the list it sits under" do
-    [ [ 4, 9 ], [ 18, 18 ], [ 40, 40 ] ].each do |cast, crew|
-      layout = display_credits_layout(cast, crew)
-
-      assert_equal :side_by_side, layout[:mode], "#{cast}/#{crew} was expected to stay in two lists"
-
-      carrying, other = layout.values_at(:cast_list_height, :crew_list_height)
-      carrying, other = other, carrying unless layout[:qr_in_cast_column]
-
-      assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, carrying,
-                   "#{cast}/#{crew}: the column under the QR must give up its height"
-      assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT, other,
-                   "#{cast}/#{crew}: the other column keeps its full height"
+      assert_equal({ name_size: size, columns: columns, fits: true }, display_credits_layout(cast, crew),
+                   "#{count} people were measured fitting #{columns} columns at #{size}")
     end
   end
 
-  # Past the scale it shrinks fully rather than clipping from a size that never
-  # fitted, and anchors to the top only once the names stop fitting.
-  test "display_credits_layout shrinks a company beyond the screen to the smallest size and anchors it to the top" do
-    layout = display_credits_layout(30, 30)
+  test "display_credits_layout shrinks the type only when no column count fits" do
+    layout = display_credits_layout(CAST, CREW.take(18))
 
-    assert_equal DisplayHelper::CREDITS_ROW_STRIDES.keys.last, layout[:name_size]
-    assert_equal "content-start", layout[:block_position]
-    assert_equal "content-center", display_credits_layout(4, 6)[:block_position]
+    # Fewer roles, so the type goes up: text-5xl still does not fit anywhere.
+    assert_equal "text-4xl", layout[:name_size]
+    assert credits_fit?(CAST, CREW.take(18), "text-4xl", layout[:columns]), "the chosen fit must fit"
+    assert_not credits_fit?(CAST, CREW.take(18), "text-4xl", 2), "two columns of text-4xl must not fit"
+    2.upto(4) do |columns|
+      assert_not credits_fit?(CAST, CREW.take(18), "text-5xl", columns),
+                 "text-5xl in #{columns} columns must not fit, or the size-first rule was skipped"
+    end
+  end
+
+  test "display_credits_layout counts lines, not people" do
+    # "Assistant Technical Stage Manager" is 34 characters: it wraps at the
+    # bigger sizes, and the layout must charge for every wrapped line or it
+    # promises a fit that scrolls.
+    long_crew = Array.new(8) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] }
+    short_crew = Array.new(8) { [ "Aisha Kerr", "Sound Designer" ] }
+    long_layout = display_credits_layout(CAST.take(6), long_crew)
+    short_layout = display_credits_layout(CAST.take(6), short_crew)
+
+    assert_equal({ name_size: "text-5xl", columns: 2, fits: true }, short_layout)
+    # Same head-count: at text-5xl the long roles wrap in 8 of 14 entries, past the
+    # quarter allowed, so they cost a size step rather than disappear.
+    assert_equal({ name_size: "text-4xl", columns: 2, fits: true }, long_layout)
+    assert credits_fit?(CAST.take(6), long_crew, long_layout[:name_size], long_layout[:columns])
+  end
+
+  # A long real name and a long real role, the pair that breaks a character
+  # count: the name alone fills a line, so the role cannot share it.
+  test "credits_lines charges for where the words actually break" do
+    per_line = 12 # 3 columns of text-base is about this many characters
+
+    assert_equal 1, credits_entry_lines("Jo Prompt", per_line)
+    # "Christopher" is 11 of the 12, so "MacAllister" starts a second line and
+    # "Assistant" a third: three words, one line each, not a length divided.
+    assert_equal 3, credits_entry_lines("Christopher MacAllister Assistant", per_line)
+    assert_equal 4, credits_entry_lines("Christopher MacAllister Assistant Technical", per_line)
+    # A word wider than the column stays on its own line rather than vanishing.
+    assert_equal 2, credits_entry_lines("Unfeasiblylongsurname Actor", per_line)
+  end
+
+  # Measured in Chrome at 1920x1080: averaging this company over two columns of text-4xl
+  # left 3px to spare, but an entry cannot split across columns, and the first column ran
+  # to 656px of the 651px window, so the panel crawled.
+  SPILL_CAST = [
+    [ "Eleanor Ashworth", "Lady Macbeth" ], [ "Tom Whitfield", "Macbeth" ], [ "Priya MacAllister", "Banquo" ],
+    [ "Callum Breen", "First Witch" ]
+  ].freeze
+  SPILL_CREW = [
+    [ "Maeve Doherty", "Director" ], [ "Daniel Kavanagh", "Producer" ], [ "Sofia Ng", "Stage Manager" ],
+    [ "Robin Marchetti", "Deputy Stage Manager" ], [ "Grace Meehan", "Lighting Designer" ],
+    [ "Aaron Mulcahy", "Sound Designer" ], [ "Nina Kinsella", "Set Construction" ], [ "Josh Leahy", "Costume Designer" ],
+    [ "Rory Li", "Assistant Technical Stage Manager" ], [ "Hannah Okonkwo", "Master Carpenter" ],
+    [ "Sam Blackwood", "Props Manager" ], [ "Leah Walsh", "Make-up Artist" ], [ "Peter Palmer", "Hair and Wigs" ],
+    [ "Aisha Byrne", "Front of House" ], [ "Michael Fotheringham-Smythe", "Publicity" ],
+    [ "Erin Fitzpatrick", "Photography" ], [ "David Beckett", "Videography" ], [ "Claire Farrell", "Musical Director" ],
+    [ "Sean Herron", "Rehearsal Pianist" ], [ "Kate Corcoran", "Fight Choreography" ]
+  ].freeze
+
+  test "display_credits_layout fills columns with whole entries, not an average" do
+    layout = display_credits_layout(SPILL_CAST, SPILL_CREW)
+
+    assert_not_equal [ "text-4xl", 2 ], layout.values_at(:name_size, :columns),
+                     "the layout the browser measured spilling past the window"
+    # Measured: three columns of 464, 456 and 464px, and the panel holds still.
+    assert_equal({ name_size: "text-4xl", columns: 3, fits: true }, layout)
+  end
+
+  # Measured in Chrome: at text-5xl in four columns 19 of these 20 broke across lines,
+  # mid-role and mid-name ("Fotheringham-" / "Smythe"); at text-4xl in two none did.
+  RAGGED_CAST = [
+    [ "Eleanor Ashworth", "Lady Macbeth" ], [ "Tom Whitfield", "Macbeth" ], [ "Priya MacAllister", "Banquo" ],
+    [ "Callum Breen", "First Witch" ], [ "Maeve Doherty", "Second Witch" ], [ "Daniel Kavanagh", "Third Witch" ]
+  ].freeze
+  RAGGED_CREW = [
+    [ "Sofia Ng", "Director" ], [ "Robin Marchetti", "Producer" ], [ "Grace Meehan", "Stage Manager" ],
+    [ "Aaron Mulcahy", "Deputy Stage Manager" ], [ "Nina Kinsella", "Lighting Designer" ],
+    [ "Josh Leahy", "Sound Designer" ], [ "Rory Li", "Set Construction" ], [ "Hannah Okonkwo", "Costume Designer" ],
+    [ "Sam Blackwood", "Assistant Technical Stage Manager" ], [ "Leah Walsh", "Master Carpenter" ],
+    [ "Peter Palmer", "Props Manager" ], [ "Aisha Byrne", "Make-up Artist" ],
+    [ "Michael Fotheringham-Smythe", "Hair and Wigs" ], [ "Erin Fitzpatrick", "Front of House" ]
+  ].freeze
+
+  test "display_credits_layout skips a layout where more than a quarter of the entries wrap" do
+    assert_equal({ name_size: "text-4xl", columns: 2, fits: true }, display_credits_layout(RAGGED_CAST, RAGGED_CREW))
+  end
+
+  # The budget is a preference, never a reason to scroll.
+  test "display_credits_layout wraps rather than scroll when every layout that fits wraps" do
+    role = "Assistant to the Assistant Technical Stage Manager and Deputy Lighting Programmer for the Second Week"
+    crew = Array.new(10) { |i| [ "Bartholomew Fotheringham-Smythe #{i}", role ] }
+
+    assert display_credits_layout([], crew)[:fits]
+  end
+
+  test "display_credits_layout falls back to the smallest type in four columns, with the marquee as the net" do
+    layout = display_credits_layout(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] })
+
+    assert_equal({ name_size: "text-base", columns: 4, fits: false }, layout)
+    assert_not credits_fit?(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] },
+                             "text-base", 4),
+               "this is the marquee's case: the fit is allowed to fail, and the scroll takes over"
+  end
+
+  test "display_credits_layout works for an all-cast or all-crew show" do
+    assert_equal({ name_size: "text-5xl", columns: 2, fits: true }, display_credits_layout(CAST.first(5), []))
+    assert_equal({ name_size: "text-5xl", columns: 2, fits: true }, display_credits_layout([], CREW.first(5)))
+  end
+
+  # The tail-slack div the template renders for the scroll's final hold is
+  # conditional on `fits`: inside a track that fits, its 3.5rem makes the track
+  # taller than the window and the marquee crawls though nothing is left to
+  # show. The template only renders it when the helper says the fit failed.
+  test "display_credits_layout reports whether the marquee is needed" do
+    assert display_credits_layout(CAST, CREW)[:fits], "the measured fit must report fits"
+    assert_not display_credits_layout(CAST, Array.new(90) { [ "Sean Gallagher", "Assistant Technical Stage Manager" ] })[:fits],
+               "the marquee's fallback case must report does-not-fit"
+  end
+
+  # The chrome is pinned twice: here (the helper's window arithmetic) and in the
+  # pages controller test (the rendered markup). Both must hold the same value.
+  test "credits window arithmetic matches the pinned chrome" do
+    assert_equal (1080 - DisplayHelper::CREDITS_CHROME_REM * 16).floor, DisplayHelper::CREDITS_WINDOW_HEIGHT
   end
 
   # SVG rendered as a blank square on Anthias; a raster image has no such failure mode.
@@ -358,5 +431,47 @@ class DisplayHelperTest < ActionView::TestCase
     assert_match(/alt="Scan to book"/, display_qr_code("https://example.com"))
     assert_match(/alt="Scan to read the news"/,
                  display_qr_code("https://example.com", label: "Scan to read the news"))
+  end
+
+  def event_with_palette(palette)
+    FactoryBot.create(:event, attach_image: true).tap do |event|
+      event.image.blob.update!(metadata: event.image.blob.metadata.merge("palette_v2" => palette))
+    end
+  end
+
+  def relative_luminance(rgb)
+    linear = rgb.map { |c| (c /= 255.0) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055)**2.4 }
+    [ 0.2126, 0.7152, 0.0722 ].zip(linear).sum { |weight, c| weight * c }
+  end
+
+  def contrast(luminance, other)
+    lighter, darker = [ luminance, other ].sort.reverse
+    (lighter + 0.05) / (darker + 0.05)
+  end
+
+  test "display_ambient_gradient paints nothing until there is a palette to paint" do
+    assert_nil display_ambient_gradient(FactoryBot.create(:event, attach_image: false))
+    assert_nil display_ambient_gradient(event_with_palette(false)), "an undecodable poster"
+    assert_nil display_ambient_gradient(event_with_palette([])), "a colourless poster"
+  end
+
+  # Computed in Chrome: the roles are neutral-400, oklch(0.708 0 0), and an achromatic
+  # oklch colour's luminance is L cubed. The red label is --color-display-accent.
+  test "display_ambient_gradient keeps the roles at 4.5:1 and the red label at 3:1 whatever the poster" do
+    role = 0.708**3
+    label = relative_luminance([ 253, 43, 45 ])
+    { "white with a red title" => [ [ 224, 224, 224 ], [ 153, 23, 23 ], [ 224, 224, 224 ] ],
+      "purple, brown and teal" => [ [ 90, 51, 128 ], [ 153, 101, 61 ], [ 51, 128, 128 ] ],
+      "one bright yellow" => [ [ 255, 255, 0 ] ],
+      "all white" => [ [ 255, 255, 255 ] ] * 3 }.each do |poster, palette|
+      stops = display_ambient_gradient(event_with_palette(palette)).scan(/rgb\((\d+), (\d+), (\d+)\)/)
+
+      assert_equal 3, stops.size, "#{poster}: three opaque stops"
+      stops.map { |stop| stop.map(&:to_i) }.each do |stop|
+        background = relative_luminance(stop)
+        assert_operator contrast(role, background), :>=, 4.5, "#{poster}: roles over #{stop}"
+        assert_operator contrast(label, background), :>=, 3.0, "#{poster}: label over #{stop}"
+      end
+    end
   end
 end

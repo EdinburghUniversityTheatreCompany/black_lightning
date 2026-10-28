@@ -410,4 +410,48 @@ class EventTest < ActionView::TestCase
 
     assert_equal Date.current + 3, event.next_occurrence(Date.current + 2)
   end
+
+  # The palette is extracted when artwork lands, off the request path, and only for real
+  # uploads. after_commit fires inside these transactional tests, so they go through the
+  # real create and replace paths.
+  test "uploading artwork queues the palette extraction" do
+    assert_enqueued_with(job: Display::PaletteExtractionJob) do
+      FactoryBot.create(:event, attach_image: true)
+    end
+  end
+
+  test "replacing the artwork queues it again" do
+    event = FactoryBot.create(:event, attach_image: false)
+    png = Vips::Image.black(8, 8, bands: 3).cast(:uchar).write_to_buffer(".png")
+
+    assert_enqueued_with(job: Display::PaletteExtractionJob) do
+      event.update!(image: { io: StringIO.new(png), filename: "new-poster.png", content_type: "image/png" })
+    end
+  end
+
+  test "an event without artwork queues nothing" do
+    assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
+      FactoryBot.create(:event, attach_image: false)
+    end
+  end
+
+  # The default art fetch_image attaches is not the show's, so its colours must never be painted.
+  test "the fetch_image placeholder queues nothing" do
+    event = FactoryBot.create(:event, attach_image: false)
+
+    assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
+      event.fetch_image
+    end
+    assert_not event.uploaded_image?
+  end
+
+  test "a blob already carrying a palette verdict is not queued again" do
+    event = FactoryBot.create(:event, attach_image: true)
+    blob = event.image.blob
+    blob.update!(metadata: blob.metadata.merge("palette_v2" => false))
+
+    assert_no_enqueued_jobs only: Display::PaletteExtractionJob do
+      event.update!(name: "#{event.name} (revival)")
+    end
+  end
 end

@@ -1,29 +1,34 @@
 <%# locals: (event:, cast:, crew:, tonight:) %>
 <%
-  # Which layout this show gets and how big the names may be; the arithmetic is in DisplayHelper.
-  layout = display_credits_layout(cast.size, crew.size)
-  name_size = layout[:name_size]
+  # Which layout this show gets and how big the names may be; the arithmetic is
+  # in DisplayHelper. The members are passed whole: the layout counts LINES, not
+  # people, and a line estimate needs the entries' lengths.
   # Flattened to name/detail pairs so one partial renders either list.
   cast_members = cast.map { |member| [ member.user_name, member.cast_display_name ] }
   crew_members = crew.map { |member| [ member.user_name, member.position ] }
+  layout = display_credits_layout(cast_members, crew_members)
+  name_size = layout[:name_size]
   # Say what is behind the code: display_programme_url falls back to the event's
   # own page, and "Scan for the digital programme" over a listing is worse than no QR.
   qr_label = event.digital_programme_url.present? ? "Scan for the digital programme" : "Scan for more about this show"
 %>
-<%# Captured because it goes under one column, the other, or both. %>
+<%# Pinned below the marquee, outside the scrolling track: the QR never moves.
+    Its block (h-32 + pt-4 = 9rem) is part of the panel chrome, so the marquee's
+    --display-marquee-chrome below includes it. %>
 <% qr_block = capture do %>
-  <%# mt-auto: a short list drops the QR to the foot of its column rather than
-      leaving it floating under three names. %>
-  <div class="mt-auto flex items-center gap-6 pt-8">
+  <div class="flex shrink-0 items-center gap-6 pt-4">
     <%= display_qr_code(display_programme_url(event), css_class: "h-32 w-32", label: qr_label) %>
     <p class="text-3xl leading-snug text-neutral-300"><%= qr_label %></p>
   </div>
 <% end %>
-<div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
-  <div class="mb-10 flex items-start justify-between gap-10">
+<%# bg-neutral-950 stays as the base colour; the artwork's key colours are painted
+    over it at low alpha as a background-image gradient (see DisplayHelper). Empty
+    style when there is no artwork or no palette: the panel just stays black. %>
+<div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12" style="<%= display_ambient_gradient(event) %>">
+  <div class="mb-10 flex shrink-0 items-start justify-between gap-10">
     <div class="min-w-0">
-      <%# mb-2, not the mb-3 the smaller label had: the header keeps its height, so
-          CREDITS_COLUMN_HEIGHT holds. %>
+      <%# mb-2, not the mb-3 the smaller label had: the header keeps its height,
+          so CREDITS_CHROME_REM holds. %>
       <%= display_label(tonight ? "Tonight's Credits" : "Next Show's Credits", css_class: "mb-2") %>
       <%# leading-descender pairs with truncate -- see display.css. %>
       <h1 class="truncate text-7xl font-bold leading-descender text-white"><%= event.name %></h1>
@@ -31,33 +36,44 @@
     <%= display_logo %>
   </div>
 
-  <% if layout[:mode] == :flowed %>
-    <%# Both lists as one sequence, down the first column and into the second, so a
-        short cast beside a long company stops wasting half the screen. The browser
-        balances the columns, which absorbs a name that wraps. %>
-    <div class="columns-2 gap-16 overflow-hidden" style="height: <%= layout[:flow_height] %>px">
+  <%# Same auto-scroll as the other panels. No inner caps: when the layout helper
+      can't fit a company at any size it used to clip inside these wrappers, which
+      the marquee could never scroll past. Now the track grows and the scroll
+      reaches everything. Chrome (26.8rem) is the space around the track: py-12 3
+      + label 3 (2.5 + mb-2 0.5) + title 6.3 (text-7xl
+      at leading-descender, 1.4 - not the 4.5 the font size alone suggests)
+      + mb-10 2.5 + QR block 9 + py-12 3. Pinned through CREDITS_CHROME_REM so the
+      helper's window arithmetic and the markup cannot drift; the controller test
+      pins the rendered value. %>
+  <%# flex-none: flex would shrink this box when the chrome constant undercounts
+      the real chrome, shortening the visible window below the height the
+      animation measures its travel against - a mid-line clip at the fold. %>
+  <div class="display-marquee flex-none" style="--display-marquee-chrome: <%= DisplayHelper::CREDITS_CHROME_REM %>rem">
+    <div class="display-marquee__track">
+    <%# One list: the cast first, then the company, flowing down CSS columns
+        (CREDITS_COLUMN_CLASSES). The helper picks the biggest type first, then the fewest
+        columns that fit one screen; the marquee below is only a safety net for a
+        company past what even 4 columns at text-base hold, because CSS columns
+        cannot scroll cleanly (every column moves at once, so the fold cuts the
+        first column mid-list). No fixed height: CSS multicol balances on its own. %>
+    <div class="<%= DisplayHelper::CREDITS_COLUMN_CLASSES.fetch(layout[:columns]) %> gap-x-16">
       <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
       <%= render "display/panels/credits_section", title: "Company", members: crew_members,
                  name_size: name_size, spaced: cast_members.any? %>
     </div>
-    <%= qr_block %>
-  <% else %>
-    <div class="grid flex-1 grid-cols-2 gap-16 overflow-hidden <%= layout[:block_position] %>">
-      <div class="flex flex-col">
-        <%# Capped in pixels: the figure comes from DisplayHelper's measured constants,
-            and Tailwind never generates a class built at runtime. %>
-        <div class="overflow-hidden" style="max-height: <%= layout[:cast_list_height] %>px">
-          <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
-        </div>
-        <%= qr_block if layout[:qr_in_cast_column] %>
-      </div>
-
-      <div class="flex flex-col">
-        <div class="overflow-hidden" style="max-height: <%= layout[:crew_list_height] %>px">
-          <%= render "display/panels/credits_section", title: "Company", members: crew_members, name_size: name_size %>
-        </div>
-        <%= qr_block unless layout[:qr_in_cast_column] %>
-      </div>
+    <%# One stride of slack at the track's tail, only when the layout doesn't
+        fit: the scroll's final hold should show the last (possibly wrapped)
+        line in full, not flush with the fold. Top padding would shift the start
+        hold too, so it goes at the bottom. When the layout does fit, the slack
+        must be absent: the track is then exactly the window tall (min-height:
+        100%) and the marquee's translateY clamps to no movement — with the
+        slack, the track would be 3.5rem taller than the window and crawl even
+        though everything fits. layout[:fits] comes from the helper. %>
+    <% unless layout[:fits] %>
+      <div class="h-14" aria-hidden="true"></div>
+    <% end %>
     </div>
-  <% end %>
+  </div>
+
+  <%= qr_block %>
 </div>

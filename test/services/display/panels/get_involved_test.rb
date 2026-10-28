@@ -3,11 +3,13 @@ require "test_helper"
 class Display::Panels::GetInvolvedTest < ActiveSupport::TestCase
   fixtures :opportunities, :opportunity_roles
 
-  test "lists only active opportunities, capped at five" do
-    panel = Display::Panels::GetInvolved.new
+  test "lists only active opportunities, capped at the limit" do
+    limit = Display::Panels::GetInvolved::LIMIT
+    (limit + 1).times { FactoryBot.create(:opportunity, approved: true, expiry_date: 1.month.from_now) }
 
-    assert panel.available?
-    assert_equal 5, panel.locals[:opportunities].size
-    assert panel.locals[:opportunities].all?(&:active?), "every listed opportunity should be active"
+    listed = Display::Panels::GetInvolved.new.locals[:opportunities]
+
+    assert_equal limit, listed.size
+    assert listed.all?(&:active?), "every listed opportunity should be active"
   end
 end

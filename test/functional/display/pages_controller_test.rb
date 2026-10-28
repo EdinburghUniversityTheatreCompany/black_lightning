@@ -156,7 +156,7 @@ class Display::PagesControllerTest < ActionController::TestCase
                  "the archive slide did not work through its matches: #{rendered.inspect}"
   end
 
-  test "news renders the latest headline and clips an over-long list rather than displacing the QR code" do
+  test "news renders the latest headline in a scrolling marquee that holds the QR in place" do
     News.delete_all
     3.times do |i|
       FactoryBot.create(:news, show_public: true, publish_date: (i + 1).days.ago,
@@ -167,12 +167,13 @@ class Display::PagesControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_match "Headline 0", response.body
-    # What stops a wrong budget pushing the QR code off screen.
-    assert_select "ul" do |lists|
-      classes = lists.first["class"].to_s.split
-      assert_includes classes, "overflow-hidden"
-      assert_includes classes, "min-h-0", "without min-h-0 a flex child refuses to shrink and overflows anyway"
-    end
+    # The scroll is a safety net (News::Panel budgets the list to fit without
+    # it), so the marquee markup must be there, with the chrome it measures its
+    # travel against pinned.
+    assert_select ".display-marquee"
+    assert_match /--display-marquee-chrome:\s*25rem/, response.body
+    # What keeps a budget overrun from displacing the pinned QR code.
+    assert_select "ul.display-marquee__track"
   end
 
   test "credits renders a cast member and a crew member under their headings" do
@@ -188,6 +189,30 @@ class Display::PagesControllerTest < ActionController::TestCase
     # Faker names contain apostrophes, which reach the body escaped.
     assert_match ERB::Util.html_escape(actor.user_name), response.body
     assert_match ERB::Util.html_escape(crew_member.user_name), response.body
+    # One flowed list in CSS columns, not two panels side by side: the layout
+    # helper's column count reaches the markup that has to honour it.
+    assert_select ".columns-2, .columns-3, .columns-4", count: 1
+    # The helper sizes the columns against a viewport the page must actually
+    # give them, so the constant and the rendered chrome are pinned to each
+    # other, and both to the measured 26.8rem: changing either without
+    # re-measuring in Chrome has to fail here.
+    assert_equal 26.8, DisplayHelper::CREDITS_CHROME_REM
+    assert_match /--display-marquee-chrome:\s*#{DisplayHelper::CREDITS_CHROME_REM}rem/, response.body
+  end
+
+  test "credits still renders, with no gradient, when the artwork could not be decoded" do
+    show = FactoryBot.create(:show, is_public: true, start_date: Date.current,
+                            end_date: Date.current + 1, attach_image: true)
+    FactoryBot.create(:team_member, teamwork: show, position: "Actor (Abigail)")
+    # The tombstone the job leaves on an undecodable upload.
+    show.image.blob.update!(metadata: { "palette_v2" => false })
+
+    get :credits
+
+    assert_response :success
+    assert_match "Cast", response.body
+    assert_no_match(/linear-gradient/, response.body,
+                    "a tombstoned palette must leave the panel on its base colour")
   end
 
   test "get_involved renders an active opportunity's display title" do

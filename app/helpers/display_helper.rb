@@ -105,99 +105,69 @@ module DisplayHelper
     sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
-  # The credits fit a 1080p screen by stepping the type down. Measured at 1920x1080:
-  # the page header leaves CREDITS_COLUMN_HEIGHT, a name costs its line height plus
-  # an 8px gap (CREDITS_ROW_STRIDES), the QR is a flat 160px. Pixels, not rows: the
-  # QR is a different fraction of a row at each size (under three at text-5xl, nearly
-  # five at text-xl), and a fixed count pushed it off the screen for an 18-name cast.
-  CREDITS_COLUMN_HEIGHT = 795
+  # The credits are one list (cast, then company) flowing down CSS columns, and
+  # they fit a 1080p screen by stepping the type down first, then widening the
+  # flow. Measured in Chrome at 1920x1080:
+  #   - the panel chrome pinned in _credits.html.erb (CREDITS_CHROME_REM) leaves
+  #     CREDITS_WINDOW_HEIGHT for the list;
+  #   - CREDITS_ROW_STRIDES is a name's line height plus the 8px list gap;
+  #   - CREDITS_FONT_PX is the rendered font size at each step, and
+  #     CREDITS_CHAR_EM the mean advance of one character of mixed-case Source
+  #     Sans 3 (a semibold name, then a lighter role) as a fraction of it —
+  #     re-measure alongside the strides whenever either changes.
+  # Pixels, not people: roles run long ("Assistant Technical Stage Manager"),
+  # and a person-count promise wraps into a scroll the moment names wrap.
+  CREDITS_CHROME_REM = 26.8
+  CREDITS_WINDOW_HEIGHT = (1080 - CREDITS_CHROME_REM * 16).floor # 651
+  CREDITS_CONTENT_WIDTH = 1920 - 2 * 64                          # px-16 both sides
+  CREDITS_COLUMN_GAP = 64                                        # gap-16
   CREDITS_HEADING_HEIGHT = 56
-  CREDITS_LIST_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_HEADING_HEIGHT
-  CREDITS_QR_HEIGHT = 160
-  CREDITS_FLOW_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_QR_HEIGHT
-  # Air above a heading that follows another section (flowed layout only). Modest on
-  # purpose: it competes with name size, and at 40px an 18-cast, 2-crew show missed
-  # text-5xl by one pixel.
+  # Air above a heading that follows another section (the company's mt-8). Modest
+  # on purpose: it competes with name size.
   CREDITS_SECTION_GAP = 32
+  CREDITS_ROW_GAP = 8 # space-y-2 between entries
+  # Spelled out so Tailwind's scanner sees them: a class built at render time
+  # ("columns-#{n}") is one it never generates.
+  CREDITS_COLUMN_CLASSES = { 2 => "columns-2", 3 => "columns-3", 4 => "columns-4" }.freeze
   CREDITS_ROW_STRIDES = {
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
   }.freeze
+  CREDITS_FONT_PX = {
+    "text-5xl" => 48, "text-4xl" => 36, "text-3xl" => 30, "text-2xl" => 24,
+    "text-xl" => 20, "text-base" => 16
+  }.freeze
+  # Source Sans 3's lowercase and space advance measure 0.45em, but the model is
+  # only ever safe in one direction: too small a figure promises a fit that
+  # wraps into the scroll. 0.48 was the smallest figure at which 300 random
+  # companies all fit at the size chosen; 0.45 broke 19 of them.
+  CREDITS_CHAR_EM = 0.48
 
-  # Side by side (Cast against Company) is the clearer read but sizes off the longer
-  # list, so 3 cast against 18 crew wastes a column. Flowed runs both lists down the
-  # first column and into the second. Whichever allows bigger names wins, a tie going
-  # to side by side: flow only wins where a column was going to waste.
-  def display_credits_layout(cast_count, crew_count)
-    side = credits_first_fit { |stride| side_by_side_height(cast_count, crew_count, stride) <= CREDITS_LIST_HEIGHT }
-    flowed = credits_first_fit { |stride| flowed_height(cast_count, crew_count, stride) <= CREDITS_FLOW_HEIGHT }
-
-    # A tie, or neither layout fitting, goes to side by side.
-    if flowed && (side.nil? || flowed < side)
-      flowed_layout(flowed)
-    else
-      side_by_side_layout(cast_count, crew_count, side)
+  # The biggest type first, then the fewest columns (2 to 4) that fit one screen,
+  # skipping any layout where more than a quarter of the entries wrap (unless all
+  # do). Only when nothing fits at any size does the layout give up and take the
+  # smallest text in the most columns: the marquee is the safety net for that
+  # case alone, and CSS columns cannot scroll cleanly (every column moves at
+  # once, so the fold cuts the first column mid-list), which is why the net is
+  # the last resort and not the design.
+  #
+  # `fits:` tells the markup whether the chosen layout fits the window. When it
+  # does, the track is at most the window tall and the marquee's translateY
+  # clamps to zero — but only if the tail-slack div is absent too, so the
+  # template renders that one only when `fits` is false. A slack inside a track
+  # that fits would make it taller than the window by exactly its own height and
+  # start a scroll that has nothing to show.
+  def display_credits_layout(cast_members, crew_members)
+    fitting = CREDITS_ROW_STRIDES.keys.product([ 2, 3, 4 ]).select do |size, columns|
+      credits_fit?(cast_members, crew_members, size, columns)
     end
+    # Prefer the biggest layout that keeps most entries on one line; wrap rather than scroll.
+    size, columns = fitting.find { |size, columns| credits_few_wraps?(cast_members + crew_members, size, columns) } ||
+                    fitting.first
+    return { name_size: size, columns: columns, fits: true } if size
+
+    { name_size: CREDITS_ROW_STRIDES.keys.last, columns: 4, fits: false }
   end
-
-  private
-
-  def credits_first_fit
-    CREDITS_ROW_STRIDES.values.index { |stride| yield(stride) }
-  end
-
-  def side_by_side_height(cast_count, crew_count, stride)
-    qr_in_cast_column = cast_count <= crew_count
-
-    [ cast_count * stride + (qr_in_cast_column ? CREDITS_QR_HEIGHT : 0),
-      crew_count * stride + (qr_in_cast_column ? 0 : CREDITS_QR_HEIGHT) ].max
-  end
-
-  # What one of the two flowed columns holds: both lists and headings, halved.
-  # An empty list prints no heading.
-  def flowed_height(cast_count, crew_count, stride)
-    sections = [ cast_count, crew_count ].count(&:positive?)
-    headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
-
-    ((headings + (cast_count + crew_count) * stride) / 2.0).ceil
-  end
-
-  # nil = nothing fitted (a company past what the screen holds): shrink fully and let the caps clip.
-  def credits_size_at(index)
-    (index && CREDITS_ROW_STRIDES.keys[index]) || CREDITS_ROW_STRIDES.keys.last
-  end
-
-  def flowed_layout(flowed)
-    { mode: :flowed,
-      name_size: credits_size_at(flowed),
-      # The QR is a footer under both columns: the flow balances, so its height
-      # comes off the flow before it runs.
-      flow_height: CREDITS_FLOW_HEIGHT }
-  end
-
-  def side_by_side_layout(cast_count, crew_count, side)
-    # The QR goes under the shorter list (nearly always the cast, bottom left), so it takes spare room.
-    qr_in_cast_column = cast_count <= crew_count
-    name_size = credits_size_at(side)
-    tallest = side_by_side_height(cast_count, crew_count, CREDITS_ROW_STRIDES.fetch(name_size))
-
-    { mode: :side_by_side,
-      name_size: name_size,
-      qr_in_cast_column: qr_in_cast_column,
-      # A hard cap per list, so a name that wraps (the arithmetic assumes one line
-      # per person) clips its own list and never the QR beneath it.
-      cast_list_height: credits_column_list_height(qr_in_cast_column),
-      crew_list_height: credits_column_list_height(!qr_in_cast_column),
-      # Centre the columns unless the names need all the space: then start at the
-      # top so a long list loses its tail, not its heading.
-      block_position: tallest > CREDITS_LIST_HEIGHT ? "content-start" : "content-center" }
-  end
-
-  def credits_column_list_height(carries_qr)
-    carries_qr ? CREDITS_FLOW_HEIGHT : CREDITS_COLUMN_HEIGHT
-  end
-
-  public
 
   # Titles step down by length rather than truncate: naming the show is the page's
   # job. The text block is anchored to the bottom, so a taller title grows up into
@@ -224,5 +194,116 @@ module DisplayHelper
     rails_representation_url(event.fetch_image.variant(large_display_variant).processed, only_path: true)
   rescue ActiveStorage::FileNotFoundError
     nil
+  end
+
+  # The wash is mixed over the panel's neutral-950 and each stop then darkened, in
+  # linear light, to at most WASH_MAX_LUMINANCE: there the roles (neutral-400) keep
+  # 4.5:1 and the red label 3:1, whatever the poster. Pale bands come out dark grey.
+  WASH_BASE = [ 10, 10, 10 ].freeze
+  WASH_ALPHAS = [ 0.7, 0.5, 0.7 ].freeze
+  WASH_MAX_LUMINANCE = 0.04
+
+  # A gradient from the event artwork's key colours, for the credits panel's
+  # background. nil (plain black) when no artwork, no palette, or anything at all
+  # went wrong: the unattended screen must never 500 over a background wash.
+  def display_ambient_gradient(event)
+    colours = Display::Palette.for(event)
+    return nil if colours.blank?
+
+    stops = WASH_ALPHAS.zip(%w[0% 50% 100%]).each_with_index.map do |(alpha, at), i|
+      "rgb(#{wash_stop(colours[i] || colours.last, alpha).join(', ')}) #{at}"
+    end
+    "background-image: linear-gradient(160deg, #{stops.join(', ')})"
+  rescue StandardError => e
+    Rails.logger.warn("display_ambient_gradient failed: #{e.class}")
+    nil
+  end
+
+  private
+
+  def credits_column_width(columns)
+    (CREDITS_CONTENT_WIDTH - (columns - 1) * CREDITS_COLUMN_GAP) / columns
+  end
+
+  def credits_chars_per_line(columns, size)
+    (credits_column_width(columns) / (CREDITS_CHAR_EM * CREDITS_FONT_PX.fetch(size))).floor
+  end
+
+  # At most a quarter of the entries may wrap. Past that a size down reads better: 20
+  # people at text-5xl in four columns broke 19 entries mid-role and mid-name, where
+  # text-4xl in two kept every one on its line.
+  def credits_few_wraps?(members, size, columns)
+    chars_per_line = credits_chars_per_line(columns, size)
+    wrapped = members.count { |name, detail| credits_entry_lines("#{name} #{detail}", chars_per_line) > 1 }
+    wrapped * 4 <= members.size
+  end
+
+  # A fill, not an average: the browser cannot split an entry across columns, so
+  # whole entries are poured down window-tall columns, each heading kept with its
+  # first name (break-after-avoid) and a margin dropped at the top of a column.
+  # Total over columns let 4 cast and 20 company at text-4xl pass with 3px to spare
+  # while the first column ran 5px past the window. Each entry is "Name Role" on
+  # one or more lines, estimated the way Display::Panels::News budgets headlines.
+  def credits_fit?(cast_members, crew_members, size, columns)
+    line = CREDITS_ROW_STRIDES.fetch(size) - CREDITS_ROW_GAP
+    chars_per_line = credits_chars_per_line(columns, size)
+    used = 1
+    y = 0
+    [ cast_members, crew_members ].reject(&:empty?).each_with_index do |members, section|
+      members.each_with_index do |(name, detail), i|
+        height = credits_entry_lines("#{name} #{detail}", chars_per_line) * line
+        margin = CREDITS_ROW_GAP
+        if i.zero?
+          height += CREDITS_HEADING_HEIGHT
+          margin = section.zero? ? 0 : CREDITS_SECTION_GAP
+        end
+
+        if y.positive? && y + margin + height > CREDITS_WINDOW_HEIGHT
+          used += 1
+          y = height
+        else
+          y += (y.positive? ? margin : 0) + height
+        end
+      end
+    end
+    used <= columns
+  end
+
+  def wash_stop(rgb, alpha)
+    linear = rgb.zip(WASH_BASE).map { |c, base| wash_linear(c * alpha + base * (1 - alpha)) }
+    luminance = [ 0.2126, 0.7152, 0.0722 ].zip(linear).sum { |weight, c| weight * c }
+    scale = [ WASH_MAX_LUMINANCE / luminance, 1 ].min
+    # floor, not round: rounding up could land a channel back over the cap.
+    linear.map { |c| (wash_encode(c * scale) * 255).floor }
+  end
+
+  def wash_linear(channel)
+    c = channel / 255.0
+    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055)**2.4
+  end
+
+  def wash_encode(linear)
+    linear <= 0.0031308 ? linear * 12.92 : 1.055 * linear**(1 / 2.4) - 0.055
+  end
+
+  # Greedy wrap, one word at a time: a word that does not fit starts a new line.
+  # Dividing the characters by the line width is cheaper but blind to where the
+  # breaks fall, and where they fall is what decides the height — once "Assistant
+  # Technical Stage Manager" wraps, the rest of that line is dead space, and a
+  # long name can leave a line mostly empty.
+  def credits_entry_lines(text, chars_per_line)
+    lines = 1
+    used = 0
+    text.to_s.split.each do |word|
+      if used.zero?
+        used = word.length
+      elsif used + 1 + word.length <= chars_per_line
+        used += 1 + word.length
+      else
+        lines += 1
+        used = word.length
+      end
+    end
+    lines
   end
 end

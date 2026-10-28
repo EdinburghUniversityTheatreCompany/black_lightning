@@ -4,16 +4,23 @@
 
   <%= display_label("Latest News", css_class: "mb-10") %>
 
-  <%# Safety net under News's budget: a wrong count clips the last headline instead
-      of pushing the QR code off the bottom. %>
-  <ul class="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden">
-    <% articles.each do |article| %>
-      <li>
-        <h2 class="text-5xl font-bold leading-tight text-white"><%= article.title %></h2>
-        <p class="mt-3 text-3xl text-neutral-500"><%= article.publish_date&.strftime("%-d %B %Y") %></p>
-      </li>
-    <% end %>
-  </ul>
+  <%# Same auto-scroll as What's On: the kiosk has no pointer, so overflow would
+      be unreachable. Chrome (25rem) is the space around the track: py-16 4 + the
+      "Latest News" label 2.5 + mb-10 2.5 + mt-8 2 + footer 10 (the QR code, h-40)
+      + py-16 4. (The logo is absolutely positioned and costs no flow.)
+      The scroll is a safety net, like all the marquees: Display::Panels::News
+      budgets the list to fit without it, so a clipping bug shows as a still
+      frame before it shows as motion. See display.css. %>
+  <div class="display-marquee" style="--display-marquee-chrome: 25rem">
+    <ul class="display-marquee__track flex flex-col gap-8">
+      <% articles.each do |article| %>
+        <li>
+          <h2 class="text-5xl font-bold leading-tight text-white"><%= article.title %></h2>
+          <p class="mt-3 text-3xl text-neutral-500"><%= article.publish_date&.strftime("%-d %B %Y") %></p>
+        </li>
+      <% end %>
+    </ul>
+  </div>
 
   <div class="mt-8 flex items-center gap-8">
     <%= display_qr_code(news_index_url, css_class: "h-40 w-40", label: "Scan to read the latest news") %>
