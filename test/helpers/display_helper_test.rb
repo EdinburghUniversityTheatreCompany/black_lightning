@@ -441,8 +441,16 @@ class DisplayHelperTest < ActionView::TestCase
   end
 
   # The panel prints its own "Content warnings:" label.
-  test "display_content_warnings drops a heading that only repeats the label" do
+  test "display_content_warnings drops a heading or prefix that repeats the label" do
     assert_equal "Strobe · Haze", display_content_warnings("### Content warnings\n\n- Strobe\n- Haze")
+    assert_equal "Age 16+ · Strobe", display_content_warnings("**Age 16+**\n\n**Content warnings:**\n\n* Strobe")
+    assert_equal "strobe, haze", display_content_warnings("Content warnings: strobe, haze")
+    assert_equal "Content warning applies to the second act",
+                 display_content_warnings("Content warning applies to the second act")
+  end
+
+  test "display_content_warnings never ends on a dangling separator" do
+    assert_equal "Haze…", display_content_warnings("Haze\n\nStrobe lighting", length: 10)
   end
 
   test "display_qr_code labels itself for what the caller is asking people to scan" do

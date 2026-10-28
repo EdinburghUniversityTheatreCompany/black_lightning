@@ -109,14 +109,16 @@ module DisplayHelper
     sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
+  CONTENT_WARNINGS_LABEL = /\A(?:content|trigger) warnings?(?::\s*|\z)/i
+
   # Content warnings are markdown, usually a bold age line over a bulleted list. The
   # board prints one line of text: each paragraph, bullet or line break becomes a " · "
   # (the markdown renders breaks as typed), cut at a word to fit.
   def display_content_warnings(markdown, length: 180)
-    items = render_plain(markdown).lines.map(&:squish).compact_blank
-    # A "Content warnings" heading would repeat the panel's own label.
-    items.shift if items.first&.match?(/\Acontent warnings?:?\z/i)
-    truncate(items.join(" · "), length: length, separator: " ", omission: "…")
+    # The panel prints its own label, so a line or prefix saying "Content warnings" goes.
+    items = render_plain(markdown).lines.map { |line| line.squish.sub(CONTENT_WARNINGS_LABEL, "") }.compact_blank
+    # String#truncate, not the view helper: the view escapes the result once.
+    items.join(" · ").truncate(length, separator: " ", omission: "…").sub(/ ·…\z/, "…")
   end
 
   # The credits are one list (cast, then company) flowing down CSS columns, and
