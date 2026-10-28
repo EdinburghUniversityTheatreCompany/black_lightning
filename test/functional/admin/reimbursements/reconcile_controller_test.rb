@@ -238,6 +238,20 @@ module Admin
       assert_equal 2, assigns(:awaiting_reversal).size
     end
 
+    # Too little evidence for the detector to pair them, but the debit may still be the credit's
+    # partner, so the credit is not linked as income.
+    test "a pasted debit no claim takes holds back a credit of its amount in the same paste" do
+      sign_in @user
+      refund = debit_row(nominal: "250000", date: "20/09/2026", period: "06", narrative: "Refund",
+                         debit: "500.00")
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}\n#{refund}" }
+
+      assert_empty assigns(:offsetting_pairs)
+      assert_empty assigns(:matched_credits)
+      assert_equal 1, assigns(:awaiting_reversal).size
+    end
+
     test "a placed stored row, or one on another code, does not hold a credit back" do
       stored_estimate(nominal_code: "250001")
       stored_estimate(budget: @income)
@@ -796,6 +810,17 @@ module Admin
       assert ::Reimbursements::EusaActual.none?(&:offset?)
       assert_equal [ 0, 1, 1 ], assigns.values_at("offsets_linked", "expenses_paid", "unmatched_saved")
       assert_equal ::Reimbursements::Status::PAID, lookalike.reload.status
+    end
+
+    # Unticking says the two legs are not each other's reversal, so the credit is linked as income.
+    test "an unticked pair's credit is not held back by its own debit" do
+      income = create_reimbursements_budget(name: "Venue hire", nominal_code: ACCRUAL_NOMINAL,
+                                            budget_type: "Income")
+      sign_in @user
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: [ "" ] }
+
+      assert_equal income.id, ::Reimbursements::EusaActual.where("credit > 0").sole.budget_id
     end
 
     test "a same-amount row that is not part of a pair still reaches the matcher" do

@@ -124,8 +124,12 @@ module Admin
 
         # An unticked pair's legs go back into ordinary matching.
         ticked = ticked_keys(:offset_pair_keys)
-        pairs = detect_pairs(new_entries).select { |pair| ticked.include?(pair.key) }
-        matched_debits, matched_credits, unmatched = build_matches(entries_outside(new_entries, pairs))
+        detected = detect_pairs(new_entries)
+        pairs = detected.select { |pair| ticked.include?(pair.key) }
+        # Finance said these legs are not each other's reversal, so neither holds the other back.
+        declined = (detected - pairs).flat_map { |pair| [ new_entries[pair.debit_index], new_entries[pair.credit_index] ] }
+        matched_debits, matched_credits, unmatched =
+          build_matches(entries_outside(new_entries, pairs), declined: declined)
         # A possible match settles only when ticked; the rest import unmatched, as before.
         probable, unmatched = build_probable_matches(unmatched, matched_debits)
         groups, unmatched = build_group_matches(unmatched, matched_debits, probable)
@@ -223,31 +227,22 @@ module Admin
       # Matches debits to Submitted/Paid expenses (each claimed at most once) and credits to income
       # budgets. Returns [matched_debits, matched_credits, unmatched]; a match is [entry, expense|budget].
       # Both are scoped to the row's cost centre: a termtime debit must not mark a Fringe claim Paid.
-      def build_matches(entries)
-        remaining = matchable_expenses
+      def build_matches(entries, declined: [])
+        debit_matches = match_debits(entries)
+        reversals = nil
+        @awaiting_reversal = Set.new.compare_by_identity
 
         matched_debits = []
         matched_credits = []
         unmatched = []
-        @awaiting_reversal = Set.new.compare_by_identity
-        reversals = nil
 
         entries.each do |entry|
           row = entry.row
           if row.debit.positive?
-            expense = ::Reimbursements::Reconciliation.match_debit_to_expense(
-              row, expenses_in(entry.cost_centre, remaining)
-            )
-            if expense
-              matched_debits << [ entry, expense ]
-              remaining.delete(expense)
-            else
-              unmatched << entry
-            end
+            (expense = debit_matches[entry]) ? matched_debits << [ entry, expense ] : unmatched << entry
           elsif row.credit.positive?
-            # Undated rows are left out, as the ledger's pairs leave them out.
-            reversals ||= store.eusa_actuals.select { |actual| actual.pairable? && actual.date && actual.signed_amount.positive? }
-            if reversal_for(entry, reversals)
+            reversals ||= reversal_pool(entries, debit_matches, declined)
+            if reversal?(entry, reversals)
               @awaiting_reversal << row
               unmatched << entry
             elsif (budget = credit_matcher.budget_for(row, entry.cost_centre))
@@ -261,6 +256,23 @@ module Admin
         end
 
         [ matched_debits, matched_credits, unmatched ]
+      end
+
+      # Debit entries to the claims they settle, first, so a credit can tell which pasted debits no
+      # claim took.
+      def match_debits(entries)
+        remaining = matchable_expenses
+        entries.each_with_object({}.compare_by_identity) do |entry, matches|
+          next unless entry.row.debit.positive?
+
+          expense = ::Reimbursements::Reconciliation.match_debit_to_expense(
+            entry.row, expenses_in(entry.cost_centre, remaining)
+          )
+          next unless expense
+
+          matches[entry] = expense
+          remaining.delete(expense)
+        end
       end
 
       # Unmatched debits whose narrative names one claim at another amount, for a person to tick
@@ -363,15 +375,29 @@ module Admin
         expenses.select { |expense| in_cost_centre?(expense.budget&.cost_centre_id, cost_centre) }
       end
 
-      # The unplaced stored debit a pasted credit may reverse, by the hand-pairing gate on the row as
-      # it will be stored. Every such credit waits for the ledger's pairs, however many share a debit.
-      def reversal_for(entry, reversals)
-        pasted = ::Reimbursements::EusaActual.new(
-          nominal_code: entry.row.nominal_code, credit: entry.row.credit,
-          cost_centre_id: entry.cost_centre&.id,
+      # Whether a pasted credit may reverse a debit, stored or in this paste, by the hand-pairing gate
+      # on the rows as they will be stored. Every such credit waits for the ledger's pairs.
+      def reversal?(entry, reversals) = as_stored(entry).offset_candidates(reversals).any?
+
+      # Unplaced dated stored debits, and this paste's debits no claim took and finance did not
+      # decline as a pair. Undated rows are left out, as the ledger's pairs leave them out.
+      def reversal_pool(entries, debit_matches, declined)
+        stored = store.eusa_actuals.select { |actual| actual.pairable? && actual.date && actual.signed_amount.positive? }
+        pasted = entries.filter_map do |entry|
+          next unless entry.row.debit.positive? && entry.row.date && !debit_matches.key?(entry)
+          next if declined.any? { |leg| leg.equal?(entry) }
+
+          as_stored(entry)
+        end
+        stored + pasted
+      end
+
+      def as_stored(entry)
+        ::Reimbursements::EusaActual.new(
+          nominal_code: entry.row.nominal_code, debit: entry.row.debit, credit: entry.row.credit,
+          date: entry.row.date, cost_centre_id: entry.cost_centre&.id,
           financial_year_id: store.financial_year_for(entry.row.date)&.id
         )
-        pasted.offset_candidates(reversals).first
       end
 
       def in_cost_centre?(record_cost_centre_id, cost_centre)

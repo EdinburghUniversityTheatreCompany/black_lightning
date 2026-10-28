@@ -85,6 +85,20 @@ module Admin
         assert_match "2 credits held back", flash[:notice]
       end
 
+      # Marking the estimate's real pair frees the other credit it was holding back.
+      test "once the estimate is paired, its other possible partner links" do
+        estimate = create_reimbursements_eusa_actual(nominal_code: "359000", debit: BigDecimal("640"),
+                                                     ref: "JNL1", period: "01", date: Date.current - 90)
+        reversal = create_reimbursements_eusa_actual(nominal_code: "359000", credit: BigDecimal("640"),
+                                                     ref: "JNL1", period: "01", date: Date.current - 90)
+
+        post :pair_offsets, params: { pairs: [ "#{estimate.id}:#{reversal.id}" ] }
+        post :link_credits
+
+        assert_equal @membership.id, @fee.reload.budget_id
+        assert_nil reversal.reload.budget_id
+      end
+
       test "only the cost centre on screen is linked" do
         termtime = create_second_reimbursements_cost_centre
         @membership.update!(cost_centre: termtime)

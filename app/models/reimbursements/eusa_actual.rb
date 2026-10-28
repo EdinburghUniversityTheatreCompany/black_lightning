@@ -165,10 +165,11 @@ module Reimbursements
     # row costs a glance where a false positive hides real spend). The cost centre is checked here,
     # not by scoping the picker, because #confirm_offset re-checks through this method and the
     # "Mark as offsetting" link carries no centre. Two rows with no centre pair, as rows predating
-    # cost centres count as belonging everywhere.
+    # cost centres count as belonging everywhere. Unsaved rows (Reconcile's pasted ones) have no id,
+    # so self is excluded by identity.
     def offset_candidates(rows)
       rows.select do |row|
-        row.id != id && row.pairable? &&
+        !row.equal?(self) && !(id && row.id == id) && row.pairable? &&
           row.signed_amount == -signed_amount &&
           row.nominal_code.to_s == nominal_code.to_s &&
           row.financial_year_id == financial_year_id &&

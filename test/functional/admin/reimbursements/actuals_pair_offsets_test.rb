@@ -90,7 +90,8 @@ module Admin
         post :pair_offsets, params: { pairs: [ pair_key, "not-a-pair", { "x" => "1" } ] }
 
         assert_not @reversal.reload.offset?
-        assert_equal "No pairs marked. 1 pair could no longer be paired and was left alone.",
+        assert_equal "No pairs marked. 1 pair left alone: a row in it was already in another marked " \
+                     "pair, or changed since the page loaded.",
                      flash[:notice]
       end
 

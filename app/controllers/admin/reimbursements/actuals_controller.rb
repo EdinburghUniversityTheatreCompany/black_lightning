@@ -324,8 +324,8 @@ module Admin
           end
         return notice if refused.zero?
 
-        "#{notice} #{helpers.pluralize(refused, 'pair')} could no longer be paired and " \
-          "#{refused == 1 ? 'was' : 'were'} left alone."
+        "#{notice} #{helpers.pluralize(refused, 'pair')} left alone: a row in #{refused == 1 ? 'it' : 'each'} " \
+          "was already in another marked pair, or changed since the page loaded."
       end
 
       def credit_links(actuals)

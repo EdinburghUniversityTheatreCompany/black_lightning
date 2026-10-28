@@ -1104,11 +1104,15 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     re-checks through the same method. Unlike the detector, two centre-less rows may pair (rows
     predating cost centres count as belonging everywhere).
   - **The detector sees one paste, so the ledger proposes pairs across pastes**
-    (`LedgerOffsetPairs`: the detector's gates and scoring over unplaced stored rows, each pair a
-    ticked checkbox, re-checked through `#offset_candidates` on submit). **Reconcile holds back a
-    pasted credit that an unplaced stored row of the opposite amount may reverse**
-    (`ReconcileController#awaiting_reversal?`, same code, centre, year and amount), so it waits for
-    that pairing rather than being linked as income.
+    (`LedgerOffsetPairs`): every pair of unplaced dated rows passing `#offset_candidates`, grouped
+    by debit; a row's strongest pair starts ticked if it scores `OFFSET_MIN_SCORE`. Submit re-checks
+    under a lock (`DatabaseStore#pair_offsetting_rows!`).
+  - **Every credit with a possible partner is held back, never just one per debit**: Link credits
+    skips a credit in any listed pair, and Reconcile (`#reversal?`) holds back a pasted credit any
+    unplaced stored debit, or this paste's unclaimed debit, may reverse. One stray cost row so holds
+    back every income row of its amount until someone pairs or places it: deliberate, as income
+    placed late beats income counted that never arrived. A pair finance unticked at import does
+    not hold its own credit back.
   - **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`):
     it would invent spend. An unlinked debit converts (`ExpenseForm.from_actual`,
     `ActualsController#new_expense/#create_expense`) straight to Paid with the row's

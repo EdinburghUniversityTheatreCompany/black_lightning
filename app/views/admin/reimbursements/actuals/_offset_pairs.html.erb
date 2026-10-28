@@ -3,9 +3,8 @@
   <%= render CardComponent.new(title: "Rows that may cancel each other out", html_class: "mb-3") do %>
     <p class="mb-2 text-sm text-gray-600">
       Each pair is one amount booked both ways, like an estimate and its later reversal. A marked
-      pair counts as neither spend nor income. Ticked pairs share a reference, or a period and
-      description; look at an unticked one before ticking it. A row listed twice can be marked in
-      one pair only.
+      pair counts as neither spend nor income. A row can be in one marked pair only, so where it is
+      listed more than once only its best match is ticked. Look at an unticked pair before ticking it.
     </p>
     <ul class="mb-3 space-y-2 text-sm">
       <% pairs.each do |pair| %>
