@@ -30,6 +30,12 @@ class MdHelperTest < ActionView::TestCase
     assert_includes result, "Bedlam Admin"
   end
 
+  # render_markdown applies {: .class} attribute lists; plain text must drop them, not print them.
+  test "render_plain drops kramdown attribute lists" do
+    assert_equal "Flashing lights", render_plain("Flashing lights {: .text-red-600}").strip
+    assert_equal "Strobe", render_plain("Strobe\n{: .warning}").strip
+  end
+
   test "render_plain decodes HTML entities" do
     assert_includes render_plain("Tom & Jerry"), "Tom & Jerry"
     assert_not_includes render_plain("Tom & Jerry"), "&amp;"

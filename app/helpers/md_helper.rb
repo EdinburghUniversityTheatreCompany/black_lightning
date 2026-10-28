@@ -57,7 +57,8 @@ module MdHelper
   def render_plain(md)
     return "" if md.nil?
 
-    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(commonmark(md)))
+    # apply_ial removes {: .class} lists, which render_markdown hides and plain text would print.
+    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(apply_ial(commonmark(md))))
   end
 
   def truncate_markdown(content, length = 100)
