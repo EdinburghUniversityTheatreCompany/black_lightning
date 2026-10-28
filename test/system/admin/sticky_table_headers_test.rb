@@ -40,20 +40,6 @@ module Admin
       })()
     JS
 
-    # Every box between the table and <main> that scrolls vertically: a scrollbar inside the
-    # scrolling page.
-    INNER_SCROLLERS = <<~JS.freeze
-      (() => {
-        const found = [];
-        for (let el = document.querySelector(arguments[0]).parentElement; el.tagName !== "MAIN"; el = el.parentElement) {
-          if (/auto|scroll/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 1) {
-            found.push(el.className);
-          }
-        }
-        return found;
-      })()
-    JS
-
     # How far the rows' last cells (Edit) reach past <main>'s visible right edge, scrolled fully
     # left and fully right (> 0 is off screen).
     EDIT_OVERHANG = <<~JS.freeze
@@ -104,12 +90,15 @@ module Admin
         const trapped = [];
         for (const table of main.querySelectorAll("table")) {
           const th = table.querySelector("thead th");
-          const sticky = th && getComputedStyle(th).position === "sticky";
+          let sticky = th && getComputedStyle(th).position === "sticky";
           for (let el = table.parentElement; el !== main; el = el.parentElement) {
             const style = getComputedStyle(el);
             if (/auto|scroll/.test(style.overflowY) &&
                 (style.maxHeight !== "none" || el.scrollHeight > el.clientHeight + 1)) capped.add(el.className);
-            if (sticky && /auto|scroll|hidden/.test(style.overflowX + style.overflowY)) trapped.push(table.className);
+            if (sticky && /auto|scroll|hidden/.test(style.overflowX + style.overflowY)) {
+              trapped.push(table.className);
+              sticky = false; // once per table
+            }
           }
         }
         return { tables: main.querySelectorAll("table").length, capped: [...capped], trapped };
@@ -136,8 +125,8 @@ module Admin
 
     def assert_scrolls_with_page(table_selector, context)
       result = measure(table_selector, "main")
-      assert_empty evaluate_script(INNER_SCROLLERS, table_selector),
-                   "#{context}: the table scrolls vertically in a box of its own, inside the scrolling page"
+      assert_empty evaluate_script(SCROLL_TRAPS)["capped"],
+                   "#{context}: a table scrolls vertically in a box of its own, inside the scrolling page"
       assert_header_pinned result, context
     end
 
@@ -247,6 +236,8 @@ module Admin
       visit admin_permissions_url # a phone-width load starts with the sidebar shut
       assert_selector "form table"
       click_on "Toggle sidebar"
+      assert_selector "aside.sidebar:not(.sidebar-collapsed)"
+      # At this width the sticky corner cell fills the header row, so it is the header to sample.
       covering = evaluate_script(<<~JS)
         [document.querySelector("form input[type=submit][value=Update]"), document.querySelector("form thead th")]
           .map((el) => { const r = el.getBoundingClientRect();
