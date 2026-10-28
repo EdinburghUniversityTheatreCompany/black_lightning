@@ -320,12 +320,13 @@ module Admin
       end
 
       def pair_offsets_notice(paired, refused)
-        notice = if paired.zero?
-                   "No pairs marked."
-                 else
-                   "Marked #{helpers.pluralize(paired, 'pair')} as offsetting, so neither row counts as " \
-                     "spend or income. \"Not offsetting\" on the full ledger undoes a pair."
-                 end
+        notice =
+          if paired.zero?
+            "No pairs marked."
+          else
+            "Marked #{helpers.pluralize(paired, 'pair')} as offsetting, so neither row counts as spend " \
+              "or income. \"Not offsetting\" on the full ledger undoes a pair."
+          end
         return notice if refused.zero?
 
         "#{notice} #{helpers.pluralize(refused, 'pair')} could no longer be paired and " \
