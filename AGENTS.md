@@ -1371,6 +1371,9 @@ panel with content; panels live in `app/services/display/panels/`.
 - **The archive slide advances one place per render** (`Display::Rotation`, a cached cursor keyed
   by date), or Anthias shows one frame all day. A cache that cannot answer falls back to a random
   pick.
+- **A markdown field reaches the board as plain text, never raw**: `display_content_warnings`
+  turns each paragraph and bullet into " · " via `render_plain`. A raw field prints its asterisks
+  (Beautiful Thing's warnings did, from 2026-08-24 to 2026-10-28).
 - **The credits QR always resolves**: `Event#digital_programme_url` when set, else the event's own
   page; the caption names which.
 - **The credits are one list in CSS columns, and the fit is a fill, not an average**

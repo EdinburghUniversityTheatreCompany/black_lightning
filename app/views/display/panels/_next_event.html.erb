@@ -20,7 +20,7 @@
 
         <% if tonight && event.content_warnings.present? %>
           <p class="mt-8 max-w-5xl text-3xl leading-snug text-amber-300">
-            Content warnings: <%= truncate(event.content_warnings.to_s, length: 180) %>
+            Content warnings: <%= display_content_warnings(event.content_warnings) %>
           </p>
         <% end %>
       </div>

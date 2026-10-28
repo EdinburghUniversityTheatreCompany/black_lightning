@@ -4,6 +4,7 @@ class DisplayHelperTest < ActionView::TestCase
   include DisplayHelper
   include TimeHelper
   include PretixHelper
+  include MdHelper
 
   def run_of_five(from: Date.new(2026, 10, 11))
     event = FactoryBot.create(:show, start_date: from, end_date: from + 4)
@@ -425,6 +426,14 @@ class DisplayHelperTest < ActionView::TestCase
     assert Rails.cache.exist?(DisplayHelper.qr_cache_key(url)), "expected the encoded PNG to be cached"
     assert_equal first, display_qr_code(url), "a cache hit must produce identical markup"
     assert_not_equal first, display_qr_code("https://example.com/other"), "another url must not share the cached image"
+  end
+
+  test "display_content_warnings separates each paragraph and bullet, and cuts at a word" do
+    markdown = "**The age rating for '*Beautiful Thing*' is 16+**\n\n* Language: severe\n* Strobe lighting"
+
+    assert_equal "The age rating for ‘Beautiful Thing’ is 16+ · Language: severe · Strobe lighting",
+                 display_content_warnings(markdown)
+    assert_equal "The age rating for…", display_content_warnings(markdown, length: 22)
   end
 
   test "display_qr_code labels itself for what the caller is asking people to scan" do

@@ -96,6 +96,19 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match "Loud noises", response.body
   end
 
+  # Content warnings are markdown, typically a bold age line over a bulleted list (Beautiful
+  # Thing's printed its asterisks on the board).
+  test "next_event prints the content warnings as text, not markdown" do
+    FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1,
+                             content_warnings: "**The age rating is 16+**\n\n* Language: severe\n* Strobe lighting")
+
+    get :next_event, params: { slot: "1" }
+
+    assert_response :success
+    assert_select "p", text: /Content warnings: The age rating is 16\+ · Language: severe · Strobe lighting/
+    assert_no_match(/\*\*|\* Language/, response.body)
+  end
+
   test "next_event slot 1 does not render tonight mode for an event not running today" do
     event = FactoryBot.create(:show, is_public: true, start_date: Date.current + 3, end_date: Date.current + 4)
 

@@ -105,6 +105,14 @@ module DisplayHelper
     sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
+  # Content warnings are markdown, usually a bold age line over a bulleted list. The
+  # board prints one line of text: each paragraph, bullet or line break becomes a " · "
+  # (the markdown renders breaks as typed), cut at a word to fit.
+  def display_content_warnings(markdown, length: 180)
+    truncate(render_plain(markdown).lines.map(&:squish).compact_blank.join(" · "),
+             length: length, separator: " ", omission: "…")
+  end
+
   # The credits are one list (cast, then company) flowing down CSS columns, and
   # they fit a 1080p screen by stepping the type down first, then widening the
   # flow. Measured in Chrome at 1920x1080:
