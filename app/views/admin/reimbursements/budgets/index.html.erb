@@ -36,7 +36,8 @@
     <p class="py-4 text-center text-gray-600">No budgets found.</p>
   <% end %>
 <% else %>
-  <%= render CardComponent.new(title: @title, html_class: "min-w-fit") do %>
-    <%= render "grouped_table", budgets: @budgets, areas_by_id: @areas_by_id %>
-  <% end %>
+  <%= render "shared/pages/index_results",
+        resources: @budgets, resource_class: ::Reimbursements::Budget,
+        include_pagination: false,
+        content: render("grouped_table", budgets: @budgets, areas_by_id: @areas_by_id) %>
 <% end %>

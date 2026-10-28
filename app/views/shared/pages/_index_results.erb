@@ -1,6 +1,7 @@
 <%# locals: (resources:, resource_class:, field_sets: nil, headers: nil, include_edit_button: true, include_link_to_item: true, content: nil, include_pagination: true) %>
 <%# KEEP %>
-<%= render CardComponent.new(title: @title, flush: true) do |c| %>
+<%# min-w-fit: a table wider than the page widens the card, not runs out past its border. %>
+<%= render CardComponent.new(title: @title, flush: true, html_class: "min-w-fit") do |c| %>
   <% if include_pagination %>
     <% c.with_tools do %>
       <%= paginate resources, window: 2 %>
