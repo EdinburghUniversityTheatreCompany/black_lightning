@@ -1,7 +1,12 @@
 {
   "all": {
     "sourceCodeDir": "app/javascript",
-    "watchAdditionalPaths": []
+    "watchAdditionalPaths": [
+      "app/views/**/*",
+      "app/components/**/*",
+      "app/helpers/**/*",
+      "config/initializers/**/*"
+    ]
   },
   "development": {
     "autoBuild": true,
