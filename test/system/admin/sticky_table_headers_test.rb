@@ -93,23 +93,26 @@ module Admin
       })()
     JS
 
-    # Read off computed styles, so it needs no data tall enough to scroll: every height-capped
-    # box in <main> holding a table, and every sticky-header table inside a box that scrolls
-    # (where the header can never stick).
+    # Walks up from every table in <main>: a box holding one that is height-capped or scrolls
+    # vertically (a scrollbar inside the scrolling page), and a sticky-header table inside a box
+    # that clips or scrolls (where its header can never stick). The cap is read off computed
+    # styles, so it needs no data tall enough to scroll.
     SCROLL_TRAPS = <<~JS.freeze
       (() => {
         const main = document.querySelector("main");
-        const scrolls = (el) => { const s = getComputedStyle(el); return /auto|scroll|hidden/.test(s.overflowX + s.overflowY) };
-        const capped = [...main.querySelectorAll("*")].filter((el) => el.querySelector("table") &&
-          /auto|scroll/.test(getComputedStyle(el).overflowY) && getComputedStyle(el).maxHeight !== "none");
-        const trapped = [...main.querySelectorAll("table")].filter((table) => {
+        const capped = new Set();
+        const trapped = [];
+        for (const table of main.querySelectorAll("table")) {
           const th = table.querySelector("thead th");
-          if (!th || getComputedStyle(th).position !== "sticky") return false;
-          for (let el = table.parentElement; el !== main; el = el.parentElement) if (scrolls(el)) return true;
-          return false;
-        });
-        return { tables: main.querySelectorAll("table").length,
-                 capped: capped.map((el) => el.className), trapped: trapped.map((el) => el.className) };
+          const sticky = th && getComputedStyle(th).position === "sticky";
+          for (let el = table.parentElement; el !== main; el = el.parentElement) {
+            const style = getComputedStyle(el);
+            if (/auto|scroll/.test(style.overflowY) &&
+                (style.maxHeight !== "none" || el.scrollHeight > el.clientHeight + 1)) capped.add(el.className);
+            if (sticky && /auto|scroll|hidden/.test(style.overflowX + style.overflowY)) trapped.push(table.className);
+          }
+        }
+        return { tables: main.querySelectorAll("table").length, capped: [...capped], trapped };
       })()
     JS
 
@@ -189,6 +192,12 @@ module Admin
       update = ::Reimbursements::BudgetUpdate.create!(effective_date: Date.current)
       update.forecasts.create!(budget: budget, amount: BigDecimal("450"), date: Date.current, reason: "More flyers")
       create_reimbursements_eusa_actual(debit: BigDecimal("20")) # attributed to no budget
+      owner = create_reimbursements_person(name: "Peter Peanut", email: users(:admin).email)
+      create_reimbursements_budget(name: "Lights", owners: [ owner ])
+      ::Reimbursements::NotificationLog.create!(kind: "pending_reminder", recipient: "finance@example.com",
+                                                subject: "Claims waiting", sent_at: Time.current,
+                                                cost_centre: ::Reimbursements::CostCentre.first)
+      FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
       grant_finance_permission(users(:admin))
       login_as users(:admin)
 
@@ -197,9 +206,9 @@ module Admin
         admin_reimbursements_budgets_path => 1, overview_admin_reimbursements_budgets_path => 3,
         admin_reimbursements_budget_updates_path => 1, admin_reimbursements_budget_update_path(update.record_id) => 1,
         admin_reimbursements_batch_path(batch.record_id) => 1, admin_reimbursements_area_path(area.record_id) => 2,
-        admin_reimbursements_export_path => 1, admin_reimbursements_status_path => 0,
-        admin_reimbursements_my_budgets_path => 0, admin_climate_sensors_path => 0,
-        debt_overview_admin_events_path => 0, admin_permissions_path => 1,
+        admin_reimbursements_export_path => 1, admin_reimbursements_status_path => 1,
+        admin_reimbursements_my_budgets_path => 1, admin_climate_sensors_path => 1,
+        debt_overview_admin_events_path => 1, admin_permissions_path => 1,
         permissions_admin_role_path(roles(:committee)) => 1
       }.each do |path, tables|
         visit path
@@ -207,7 +216,7 @@ module Admin
         found = evaluate_script(SCROLL_TRAPS)
         assert_operator found["tables"], :>=, tables, "#{path}: precondition, its tables render"
         assert_empty found["capped"], "#{path}: a table scrolls vertically in a box of its own"
-        assert_empty found["trapped"], "#{path}: a sticky header sits in a box that scrolls, so it never sticks"
+        assert_empty found["trapped"], "#{path}: a sticky header sits in a box that clips or scrolls, so it never sticks"
       end
     end
 
@@ -232,6 +241,18 @@ module Admin
         assert_operator rect["bottom"], :<=, screen["bottom"] + 1, "Update is below the screen (#{at}): #{button}"
         assert_operator rect["top"], :>=, screen["top"] - 1, "Update is above the screen (#{at}): #{button}"
       end
+
+      # The open phone sidebar covers the whole screen, Update bar and sticky headers included.
+      resize_window_to(390, 800)
+      visit admin_permissions_url # a phone-width load starts with the sidebar shut
+      assert_selector "form table"
+      click_on "Toggle sidebar"
+      covering = evaluate_script(<<~JS)
+        [document.querySelector("form input[type=submit][value=Update]"), document.querySelector("form thead th")]
+          .map((el) => { const r = el.getBoundingClientRect();
+                         return !!document.elementFromPoint(r.left + 2, r.top + 2)?.closest("aside.sidebar") })
+      JS
+      assert_equal [ true, true ], covering, "the Update bar or a sticky header paints over the open phone sidebar"
     ensure
       restore_window_size
     end
