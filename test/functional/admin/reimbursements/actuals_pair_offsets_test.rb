@@ -3,9 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # "Pair offsetting rows": an estimate and its reversal pasted in different months, both left
-    # unplaced because Reconcile's detector sees one paste at a time. Proposed with the detector's
-    # gates and scoring, confirmed by a person.
+    # "Pair offsetting rows": an estimate and its reversal pasted in different months. Proposed
+    # through the hand-pairing gate, ticked by the detector's score, confirmed by a person.
     class ActualsPairOffsetsTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -18,8 +17,7 @@ module Admin
         @reversal = estimate_leg(debit: BigDecimal("12381.81"), period: "06", date: Date.new(2026, 10, 4))
       end
 
-      # Production's Bedlam Fringe pair, one journal reference on both legs. A row with no cost
-      # centre never pairs, as in Reconcile's detector.
+      # Production's Bedlam Fringe pair, one journal reference on both legs.
       def estimate_leg(**attrs)
         create_reimbursements_eusa_actual(nominal_code: "331130", ref: "JNL0442",
                                           narrative: "P5 F40 accrued ticket income",

@@ -229,8 +229,8 @@ module Admin
         matched_debits = []
         matched_credits = []
         unmatched = []
-        @awaiting_reversal = []
-        reversals = store.eusa_actuals.select { |actual| actual.pairable? && actual.signed_amount.positive? }
+        @awaiting_reversal = Set.new.compare_by_identity
+        reversals = nil
 
         entries.each do |entry|
           row = entry.row
@@ -245,6 +245,8 @@ module Admin
               unmatched << entry
             end
           elsif row.credit.positive?
+            # Undated rows are left out, as the ledger's pairs leave them out.
+            reversals ||= store.eusa_actuals.select { |actual| actual.pairable? && actual.date && actual.signed_amount.positive? }
             if (reversed = reversal_for(entry, reversals))
               reversals.delete(reversed)
               @awaiting_reversal << row
@@ -362,10 +364,8 @@ module Admin
         expenses.select { |expense| in_cost_centre?(expense.budget&.cost_centre_id, cost_centre) }
       end
 
-      # The unplaced stored debit a pasted credit may reverse (an estimate pasted in an earlier
-      # month), judged as the row will be stored: the hand-pairing gate (EusaActual#offset_candidates)
-      # on the year create_actual! will stamp. Such a credit waits for the ledger's pairs rather than
-      # being linked as income; each stored debit holds back one credit.
+      # The unplaced stored debit a pasted credit may reverse, by the hand-pairing gate on the row as
+      # it will be stored. Such a credit waits for the ledger's pairs; one debit holds back one credit.
       def reversal_for(entry, reversals)
         pasted = ::Reimbursements::EusaActual.new(
           nominal_code: entry.row.nominal_code, credit: entry.row.credit,

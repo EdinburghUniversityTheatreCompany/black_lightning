@@ -73,11 +73,10 @@ module Admin
                     notice: link_credits_notice(linked, plan.links.size - linked, plan.held_back.size)
       end
 
-      # Each ticked "debit_id:credit_id" is re-checked as Mark as offsetting re-checks one: the page is
-      # a stale read, and pairing a leg placed since would hide real money.
+      # Ticked "debit_id:credit_id" keys; the store re-checks each under a lock.
       def pair_offsets
         keys = Array(params[:pairs]).grep(/\A\d+:\d+\z/)
-        paired = keys.count { |key| pair_offset(*key.split(":")) }
+        paired = keys.count { |key| store.pair_offsetting_rows!(*key.split(":")) }
         redirect_to actuals_path_with_filters, notice: pair_offsets_notice(paired, keys.size - paired)
       end
 
@@ -309,8 +308,6 @@ module Admin
         actuals = actuals.select { |a| a.matches_search?(@search) } if @search.present?
         actuals
       end
-
-      def pair_offset(debit_id, credit_id) = store.pair_offsetting_rows!(debit_id, credit_id)
 
       # Over the whole centre's ledger: a pair's legs often sit in different periods.
       def offset_pairs

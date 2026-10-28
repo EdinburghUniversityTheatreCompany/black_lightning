@@ -1,10 +1,8 @@
 module Reimbursements
   ##
-  # Offsetting pairs among the ledger's unplaced rows, for a person to confirm. Reconcile's detector
-  # sees one paste at a time, so an accrual and its reversal pasted in different months both sit
-  # unplaced. Candidates pass the hand-pairing gate (EusaActual#offset_candidates), the one Mark as
-  # offsetting and the confirm re-check use; the detector's score decides which start ticked. Each
-  # row is in at most one pair, strongest first.
+  # Offsetting pairs among the ledger's unplaced rows, for a person to confirm: Reconcile's detector
+  # sees one paste, so legs pasted months apart both sit unplaced. Candidates pass the hand-pairing
+  # gate (EusaActual#offset_candidates); the detector's score decides which start ticked.
   #
   # shortcut: a pair someone unticked is proposed again on the next visit; store a "not a pair"
   # dismissal if finance ever marks one by accident.
