@@ -112,6 +112,8 @@ module Admin
         @matched_credits = matched_credits.map { |entry, budget| [ entry.row, budget ] }
         @unmatched_rows = unmatched.map(&:row)
         @shared_credit_codes = shared_credit_codes(unmatched)
+        @awaiting_reversal = unmatched.select { |entry| entry.row.credit.positive? && awaiting_reversal?(entry) }
+                                      .map(&:row)
         @offset_pair_consequences =
           offset_pair_consequences(@offsetting_pairs, new_entries, matched_debits)
       end
@@ -243,7 +245,7 @@ module Admin
               unmatched << entry
             end
           elsif row.credit.positive?
-            budget = credit_matcher.budget_for(row, entry.cost_centre)
+            budget = credit_matcher.budget_for(row, entry.cost_centre) unless awaiting_reversal?(entry)
             budget ? matched_credits << [ entry, budget ] : unmatched << entry
           else
             unmatched << entry
@@ -351,6 +353,27 @@ module Admin
       # An expense reaches its cost centre through its budget (Budget#cost_centre_id).
       def expenses_in(cost_centre, expenses)
         expenses.select { |expense| in_cost_centre?(expense.budget&.cost_centre_id, cost_centre) }
+      end
+
+      # A credit that an unplaced stored row of the opposite amount may reverse (an estimate pasted in
+      # an earlier month) is left for the ledger's offsetting pairs, not linked as income. Same gates
+      # as hand pairing (EusaActual#offset_candidates): code, centre, financial year, amount.
+      def awaiting_reversal?(entry)
+        year = store.financial_year_for(entry.row.date)
+        unplaced_debit_keys.include?(
+          reversal_key(entry.row.nominal_code, entry.cost_centre&.id, year&.id, entry.row.credit)
+        )
+      end
+
+      def unplaced_debit_keys
+        @unplaced_debit_keys ||= store.eusa_actuals.select { |row| row.pairable? && row.signed_amount.positive? }
+                                      .to_set do |row|
+          reversal_key(row.nominal_code, row.cost_centre_id, row.financial_year_id, row.signed_amount)
+        end
+      end
+
+      def reversal_key(code, cost_centre_id, financial_year_id, amount)
+        [ code.to_s.strip.downcase, cost_centre_id, financial_year_id, amount.to_d ]
       end
 
       def in_cost_centre?(record_cost_centre_id, cost_centre)

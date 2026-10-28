@@ -1,0 +1,28 @@
+<%# locals: (pairs:, url:) %>
+<%= form_with url: url, method: :post do %>
+  <%= render CardComponent.new(title: "Rows that may cancel each other out", html_class: "mb-3") do %>
+    <p class="mb-2 text-sm text-gray-600">
+      Each pair is one amount booked both ways, like an estimate and its later reversal. A marked
+      pair counts as neither spend nor income. Untick any pair that is real money.
+    </p>
+    <ul class="mb-3 space-y-2 text-sm">
+      <% pairs.each do |pair| %>
+        <li class="flex items-start gap-2">
+          <%= check_box_tag "pairs[]", pair.key, true, id: "pair_#{pair.key.tr(':', '_')}",
+                            class: checkbox_classes %>
+          <%= label_tag "pair_#{pair.key.tr(':', '_')}" do %>
+            <span class="font-medium tabular-nums"><%= reimbursements_money(pair.debit.debit) %></span>
+            on <span class="font-mono"><%= pair.debit.nominal_code %></span>
+            <% [ [ pair.credit, "in" ], [ pair.debit, "out" ] ].each do |row, direction| %>
+              <span class="block text-gray-600">
+                <%= direction %>: <%= reimbursements_date(row.date) %> · period <%= row.period.presence || "-" %>
+                · <%= row.narrative.presence || "-" %><%= " · ref #{row.ref}" if row.ref.present? %>
+              </span>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+    <%= submit_tag "Mark the ticked pairs as offsetting", class: btn_classes(:primary, :sm) %>
+  <% end %>
+<% end %>

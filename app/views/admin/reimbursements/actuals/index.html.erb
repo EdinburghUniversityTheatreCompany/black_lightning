@@ -89,6 +89,10 @@
   <%= render "link_credits", plan: @credit_links, url: link_credits_admin_reimbursements_actuals_path(filters) %>
 <% end %>
 
+<% if needs_attention && @offset_pairs.any? %>
+  <%= render "offset_pairs", pairs: @offset_pairs, url: pair_offsets_admin_reimbursements_actuals_path(filters) %>
+<% end %>
+
 <%# Hidden-offsets sentence: the only route to "Not offsetting" from the default view. %>
 <% if @offset_count.positive? && !@include_offsets %>
   <p class="mb-2 text-sm text-gray-600">

@@ -203,6 +203,38 @@ module Admin
       assert_equal 0, assigns(:credits_linked)
     end
 
+    # An estimate pasted last month sits unplaced; this month's credit reverses it. Linking the
+    # credit as income would count money that never arrived, so it waits for the ledger's pairing.
+    def stored_estimate(**attrs)
+      create_reimbursements_eusa_actual(nominal_code: "250000", debit: BigDecimal("500.00"),
+                                        date: Date.new(2026, 4, 20), period: "01",
+                                        cost_centre_id: fringe_cost_centre.id, **attrs)
+    end
+
+    test "a credit with an unplaced stored row of the opposite amount is held back, not linked" do
+      stored_estimate
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_empty assigns(:matched_credits)
+      assert_select "td", text: /\AAn unplaced row of the opposite amount is already on the ledger/
+
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_nil ::Reimbursements::EusaActual.where.not(credit: nil).sole.budget_id
+    end
+
+    test "a placed stored row, or one on another code, does not hold a credit back" do
+      stored_estimate(nominal_code: "250001")
+      stored_estimate(budget: @income)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
+
+      assert_equal 1, assigns(:matched_credits).size
+    end
+
     # Only lines in the row's own cost centre compete for it.
     test "a credit still matches its centre's one income line when another centre's line shares the code" do
       termtime = create_second_reimbursements_cost_centre

@@ -212,6 +212,8 @@ ChaosRails::Application.routes.draw do
       resources :actuals, only: %i[index] do
         # Put unplaced credits on the one income budget carrying their code, as Reconcile would have.
         post :link_credits, on: :collection
+        # Confirm the proposed accrual/reversal pairs Reconcile could not see (different pastes).
+        post :pair_offsets, on: :collection
         member do
           get :new_expense
           post :create_expense

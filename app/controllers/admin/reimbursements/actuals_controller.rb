@@ -50,7 +50,10 @@ module Admin
         @needs_attention_count = actuals.count(&:needs_attention?)
         @offset_count = actuals.count(&:offset?)
         # Needs-attention HTML only: matching costs a pass over the ledger.
-        @credit_links = credit_links(actuals) if @state == STATE_NEEDS_ATTENTION && request.format.html?
+        if @state == STATE_NEEDS_ATTENTION && request.format.html?
+          @credit_links = credit_links(actuals)
+          @offset_pairs = ::Reimbursements::LedgerOffsetPairs.new(store.eusa_actuals_for_cost_centre).pairs
+        end
 
         actuals = apply_state(actuals)
         sorted = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
@@ -67,6 +70,14 @@ module Admin
         linked = plan.links.count { |link| store.link_credit_to_budget!(link.actual.record_id, link.budget.record_id) }
         redirect_to actuals_path_with_filters,
                     notice: link_credits_notice(linked, plan.links.size - linked, plan.held_back.size)
+      end
+
+      # Each ticked "debit_id:credit_id" is re-checked as Mark as offsetting re-checks one: the page is
+      # a stale read, and pairing a leg placed since would hide real money.
+      def pair_offsets
+        keys = Array(params[:pairs]).grep(/\A\d+:\d+\z/)
+        paired = keys.count { |key| pair_offset(*key.split(":")) }
+        redirect_to actuals_path_with_filters, notice: pair_offsets_notice(paired, keys.size - paired)
       end
 
       def new_expense
@@ -296,6 +307,29 @@ module Admin
         actuals = actuals.select { |a| a.period == @period } if @period.present?
         actuals = actuals.select { |a| a.matches_search?(@search) } if @search.present?
         actuals
+      end
+
+      def pair_offset(debit_id, credit_id)
+        debit = store.find_actual(debit_id)
+        credit = store.find_actual(credit_id)
+        return false unless debit&.debit.to_d.positive? && debit.pairable? && credit &&
+                            debit.offset_candidates([ credit ]).any?
+
+        store.link_offsetting_pair!(debit.record_id, credit.record_id)
+        true
+      end
+
+      def pair_offsets_notice(paired, refused)
+        notice = if paired.zero?
+                   "No pairs marked."
+                 else
+                   "Marked #{helpers.pluralize(paired, 'pair')} as offsetting, so neither row counts as " \
+                     "spend or income. \"Not offsetting\" on the full ledger undoes a pair."
+                 end
+        return notice if refused.zero?
+
+        "#{notice} #{helpers.pluralize(refused, 'pair')} could no longer be paired and " \
+          "#{refused == 1 ? 'was' : 'were'} left alone."
       end
 
       def credit_links(actuals)

@@ -1103,6 +1103,12 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     the picker's source: the "Mark as offsetting" link carries no centre, so `#confirm_offset`
     re-checks through the same method. Unlike the detector, two centre-less rows may pair (rows
     predating cost centres count as belonging everywhere).
+  - **The detector sees one paste, so the ledger proposes pairs across pastes**
+    (`LedgerOffsetPairs`: the detector's gates and scoring over unplaced stored rows, each pair a
+    ticked checkbox, re-checked through `#offset_candidates` on submit). **Reconcile holds back a
+    pasted credit that an unplaced stored row of the opposite amount may reverse**
+    (`ReconcileController#awaiting_reversal?`, same code, centre, year and amount), so it waits for
+    that pairing rather than being linked as income.
   - **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`):
     it would invent spend. An unlinked debit converts (`ExpenseForm.from_actual`,
     `ActualsController#new_expense/#create_expense`) straight to Paid with the row's

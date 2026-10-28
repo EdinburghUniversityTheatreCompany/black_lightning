@@ -691,6 +691,13 @@ module Reimbursements
       EusaActual.includes(:expense, :budget, allocations: :budget, claim_shares: :expense).find_by(id: record_id)
     end
 
+    # The one year whose dates hold +date+; the active year when none does, several do, or there
+    # is no date. Public for Reconcile, which compares a pasted row with stored ones.
+    def financial_year_for(date)
+      covering = date ? FinancialYear.covering(date, all_financial_years) : []
+      covering.one? ? covering.first : all_financial_years.find(&:active?)
+    end
+
     # Stamped with the year the row's own date falls in: EUSA's March rows arrive after the
     # switch to the new year and still belong to the old one.
     def create_actual!(attrs)
@@ -1087,13 +1094,6 @@ module Reimbursements
       return records if year.nil?
 
       records.select { |record| record.financial_year_id.nil? || record.financial_year_id == year.id }
-    end
-
-    # The one year whose dates hold +date+; the active year when none does, several do, or there
-    # is no date.
-    def financial_year_for(date)
-      covering = date ? FinancialYear.covering(date, all_financial_years) : []
-      covering.one? ? covering.first : all_financial_years.find(&:active?)
     end
 
     # Loaded once per store, as reconcile apply stamps a whole paste one row at a time.
