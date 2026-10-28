@@ -448,6 +448,24 @@ paints at about y 84-92. The old `.table-scroll` box showed the same, so it pred
 removal (2026-10-28). Check in a headed browser first; if it is real, suspect sticky cells under
 `border-collapse: collapse`.
 
+### The budgets index's area headings scroll away sideways
+
+The area heading row sticks to the top but not the left: its figures (agreed total, Allocated,
+Remaining) start at the table's left edge, so on a screen too narrow for the table (the page
+scrolls 244px sideways at 1100 wide on termtime dev data), scrolling right to Variance or
+Owners leaves a blank grey bar where the show's figures were. It did the same inside the old
+scroll box. Pinning the heading's inner `div` with `sticky left-*` and a width of the visible
+area would fix it.
+
+### Saving a budget can land its row under a wrapped area heading
+
+`scroll-mt-28` on each budgets index row (112px) is a constant, but what it must clear is the
+column header (measured into `--sticky-head-height`) plus an area heading whose figures wrap to
+two or three lines on narrower screens (Ghost Quartet's took two at 1366). Past about 112px
+together, `scroll_to_controller` lands the saved row under the heading. `budgets_js_test`
+checks only at 1400 wide. Derive the margin from `--sticky-head-height` plus the heading's
+measured height.
+
 ## Public site and events
 
 ### SEO follow-ups that need something from outside the repo
