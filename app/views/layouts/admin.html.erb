@@ -37,7 +37,9 @@
 
       <%= render "/layouts/alert_div" %>
 
-      <main class="flex-1 overflow-y-auto flex flex-col">
+      <%# isolate: no z-index on the page (sticky table headers, the permission
+          grid's Update bar) can paint over the phone sidebar or its backdrop. %>
+      <main class="flex-1 overflow-y-auto flex flex-col isolate">
         <div class="px-6 py-4 flex-1">
           <%= content_for?(:content) ? yield(:content) : yield %>
         </div>
