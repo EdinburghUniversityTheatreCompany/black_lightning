@@ -210,6 +210,8 @@ ChaosRails::Application.routes.draw do
 
       # The imported EUSA Actuals ledger, and turning an unlinked debit row into a From-EUSA expense.
       resources :actuals, only: %i[index] do
+        # Put unplaced credits on the one income budget carrying their code, as Reconcile would have.
+        post :link_credits, on: :collection
         member do
           get :new_expense
           post :create_expense

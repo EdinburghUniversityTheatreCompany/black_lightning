@@ -174,10 +174,6 @@ module Admin
           .call(rows, blank_choice: params[:blank_cost_centre_id])
       end
 
-      def configured_cost_centres
-        @configured_cost_centres ||= ::Reimbursements::CostCentre.order(:id).to_a
-      end
-
       # Splits attributed rows into [new, already-imported] by dedup key against the actuals stored for
       # the same EUSA period AND cost centre. The centre is in the bucket key because two pots can carry
       # the same charge in one period. A STORED row with no cost centre counts in EVERY centre's bucket:
@@ -339,17 +335,7 @@ module Admin
         store.matchable_expenses
       end
 
-      # The income lines a credit may link to: those in its cost centre and in the financial year its
-      # date falls in. Every reader of a credit (the matcher, the shared-code note, the pair notes)
-      # comes through here, so the preview and apply never judge a credit differently.
-      def income_budgets_for(row, cost_centre)
-        year_ids = ::Reimbursements::FinancialYear.covering(row.date, selectable_financial_years).map(&:id)
-        ::Reimbursements::Reconciliation.in_credit_years(budgets_in(cost_centre, income_budgets_pool), year_ids)
-      end
-
-      def income_budgets_pool
-        @income_budgets_pool ||= store.budgets.select(&:income?)
-      end
+      def income_budgets_for(row, cost_centre) = credit_matcher.candidates(row, cost_centre)
 
       # Unmatched credits whose code several income budgets carry, as { row => how many }, so the
       # preview does not call them unmatchable.
@@ -369,17 +355,8 @@ module Admin
         expenses.select { |expense| in_cost_centre?(expense.budget&.cost_centre_id, cost_centre) }
       end
 
-      def budgets_in(cost_centre, budgets)
-        budgets.select { |budget| in_cost_centre?(budget.cost_centre_id, cost_centre) }
-      end
-
-      # A record with no cost centre (no budget, or a nil Budget#cost_centre_id) belongs to the row's
-      # centre only while exactly one centre is configured. Once a second exists, stop guessing: the row
-      # lists as unmatched until someone gives its budget a centre, instead of paying the wrong pot.
       def in_cost_centre?(record_cost_centre_id, cost_centre)
-        return record_cost_centre_id == cost_centre.id if record_cost_centre_id
-
-        configured_cost_centres.one?
+        credit_matcher.in_cost_centre?(record_cost_centre_id, cost_centre)
       end
 
       # What unticking each pair would do, as { pair key => { expense:, budget: } }. The "mark N matched

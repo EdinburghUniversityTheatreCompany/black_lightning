@@ -828,6 +828,20 @@ module Reimbursements
       actual
     end
 
+    # The ledger's "Link credits": the plan was read before the click, so the row is re-checked
+    # under a lock, or a credit split or linked since would also count on a second budget.
+    def link_credit_to_budget!(actual_id, budget_id)
+      linked = EusaActual.transaction do
+        actual = EusaActual.lock.find(actual_id)
+        next false unless actual.apportionable?
+
+        actual.update!(budget_id: budget_id)
+        true
+      end
+      bust_eusa_actuals!
+      linked
+    end
+
     # Turns an unlinked debit row into a From-EUSA expense and links the row to it as one unit;
     # raises NotConvertibleError if the row is not (or no longer) convertible. Two writes could
     # leave a Paid expense charged to a budget while the row keeps offering "Create expense", so

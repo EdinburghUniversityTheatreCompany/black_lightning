@@ -1,0 +1,24 @@
+<%# locals: (plan:) %>
+<%= render CardComponent.new(title: "Credits ready to link", html_class: "mb-3") do %>
+  <% if plan.links.any? %>
+    <p class="mb-2 text-sm text-gray-600">
+      Each budget below is the only income budget with these credits' nominal code.
+    </p>
+    <ul class="mb-3 list-disc pl-5 text-sm">
+      <% plan.by_budget.each do |budget, credits| %>
+        <li>
+          <%= budget.display_name %>: <%= pluralize(credits.size, "credit") %>,
+          <%= reimbursements_money(credits.sum(&:apportionable_total)) %>
+        </li>
+      <% end %>
+    </ul>
+    <%= button_to "Link #{link_credits_label(plan.links.size)}",
+                  link_credits_admin_reimbursements_actuals_path(scope_params),
+                  class: btn_classes(:primary, :sm) %>
+  <% end %>
+  <% if plan.held_back.any? %>
+    <p class="<%= "mt-3" if plan.links.any? %> mb-0 text-sm text-gray-600">
+      <%= held_back_credits_sentence(plan.held_back.size) %>
+    </p>
+  <% end %>
+<% end %>

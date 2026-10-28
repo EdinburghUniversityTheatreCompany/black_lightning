@@ -85,6 +85,10 @@
   </div>
 </div>
 
+<% if needs_attention && (@credit_links.links.any? || @credit_links.held_back.any?) %>
+  <%= render "link_credits", plan: @credit_links %>
+<% end %>
+
 <%# Hidden-offsets sentence: the only route to "Not offsetting" from the default view. %>
 <% if @offset_count.positive? && !@include_offsets %>
   <p class="mb-2 text-sm text-gray-600">

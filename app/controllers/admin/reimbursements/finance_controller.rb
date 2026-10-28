@@ -60,6 +60,17 @@ module Admin
         @selectable_financial_years ||= ::Reimbursements::FinancialYear.recent_first.to_a
       end
 
+      def configured_cost_centres
+        @configured_cost_centres ||= ::Reimbursements::CostCentre.order(:id).to_a
+      end
+
+      def credit_matcher
+        @credit_matcher ||= ::Reimbursements::CreditBudgetMatcher.new(
+          budgets: store.budgets, financial_years: selectable_financial_years,
+          cost_centres: configured_cost_centres
+        )
+      end
+
       # --- Cost-centre selector ---------------------------------------------
       # ?cost_centre=termtime on the finance lists (CostCentre is `param: :key`).
       #

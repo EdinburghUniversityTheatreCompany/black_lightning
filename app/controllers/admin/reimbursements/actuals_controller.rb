@@ -53,6 +53,7 @@ module Admin
         @matching_count = actuals.size
         @needs_attention_count = actuals.count(&:needs_attention?)
         @offset_count = actuals.count(&:offset?)
+        @credit_links = credit_links(actuals)
 
         actuals = apply_state(actuals)
         sorted = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
@@ -61,6 +62,15 @@ module Admin
           # The CSV is the full filtered set; pagination is display-only.
           format.csv { send_export ::Reimbursements::Exports::Actuals, sorted }
         end
+      end
+
+      # Recomputed rather than read from the page, so a budget added since then is used and a
+      # reversal imported since then holds its credit back.
+      def link_credits
+        plan = credit_links(store.eusa_actuals_for_cost_centre)
+        linked = plan.links.count { |link| store.link_credit_to_budget!(link.actual.record_id, link.budget.record_id) }
+        redirect_to admin_reimbursements_actuals_path(scope_params),
+                    notice: link_credits_notice(linked, plan.held_back.size)
       end
 
       def new_expense
@@ -282,6 +292,18 @@ module Admin
       end
 
       private
+
+      def credit_links(actuals)
+        ::Reimbursements::CreditLinks.new(actuals: actuals, ledger: store.eusa_actuals,
+                                          matcher: credit_matcher)
+      end
+
+      def link_credits_notice(linked, held_back)
+        notice = linked.zero? ? "No credits linked." : "Linked #{helpers.link_credits_label(linked)}."
+        return notice if held_back.zero?
+
+        "#{notice} #{helpers.held_back_credits_sentence(held_back)}"
+      end
 
       # Also reverses the settlement the row wrote, and the notice says so.
       def unlink_from_claim(actual)
