@@ -13,17 +13,9 @@ export default class extends Controller {
     const target = document.getElementById(`${this.prefixValue}${raw}`)
     if (!target) return
 
-    // The rows are tall; the element's scroll-margin clears the sticky header.
-    const box = target.closest(".table-scroll")
-    if (!box) {
-      target.scrollIntoView({ block: "start" })
-      return
-    }
-
-    // Inside a table's own scroll box, scrollIntoView also scrolls the page until the box's
-    // sticky column headers leave the screen. Bring the box into view, then scroll only the box.
-    box.scrollIntoView({ block: "start" })
-    const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0
-    box.scrollTop += target.getBoundingClientRect().top - box.getBoundingClientRect().top - margin
+    // The rows are tall; the element's scroll-margin clears the sticky header. Never put the
+    // target in a table's own scroll box (.table-scroll): scrollIntoView then also scrolls the
+    // page until the box's sticky headers leave the screen.
+    target.scrollIntoView({ block: "start" })
   }
 }

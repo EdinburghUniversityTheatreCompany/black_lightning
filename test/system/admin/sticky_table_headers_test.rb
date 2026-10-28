@@ -39,6 +39,32 @@ module Admin
       })()
     JS
 
+    # Every box between the table and <main> that scrolls vertically: a scrollbar inside the
+    # scrolling page.
+    INNER_SCROLLERS = <<~JS.freeze
+      (() => {
+        const found = [];
+        for (let el = document.querySelector(arguments[0]).parentElement; el.tagName !== "MAIN"; el = el.parentElement) {
+          if (/auto|scroll/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 1) {
+            found.push(el.className);
+          }
+        }
+        return found;
+      })()
+    JS
+
+    # How far the Edit column's right edge sits past <main>'s visible right edge (> 0 is off screen).
+    EDIT_OVERHANG = <<~JS.freeze
+      (() => {
+        const main = document.querySelector("main");
+        const table = document.querySelector(arguments[0]);
+        const edit = table.querySelector("tbody tr:last-child td:last-child");
+        const visibleRight = main.getBoundingClientRect().left + main.clientWidth;
+        return { tableWidth: table.scrollWidth, mainWidth: main.clientWidth,
+                 overhang: edit.getBoundingClientRect().right - visibleRight };
+      })()
+    JS
+
     def measure(table_selector, port_selector)
       execute_script(GROW_ROWS, table_selector)
       evaluate_script(MEASURE, table_selector, port_selector)
@@ -66,6 +92,31 @@ module Admin
 
       assert_selector "table.table-sticky-head thead th"
       assert_header_pinned measure("table.table-sticky-head", "main"), "shared index table"
+    end
+
+    # A year's budgets run long, so they get no scroll box of their own: the whole table
+    # shows and the page scrolls. Too wide a table scrolls <main> sideways, with Edit pinned
+    # to its right edge.
+    test "budgets index scrolls with the page, headers pinned to <main> and Edit on screen" do
+      grant_finance_permission(users(:member))
+      area = create_reimbursements_area(name: "Medea")
+      # Taller, once grown, than the old box's cap of a screen less 12rem.
+      5.times { |n| create_reimbursements_budget(name: "Line #{n}", area: area) }
+      login_as users(:member)
+      visit admin_reimbursements_budgets_url
+
+      assert_selector "table.table-sticky-head thead th"
+      result = measure("table.table-sticky-head", "main")
+      assert_empty evaluate_script(INNER_SCROLLERS, "table.table-sticky-head"),
+                   "the table scrolls vertically in its own box, inside the scrolling page"
+      assert_header_pinned result, "budgets index"
+
+      page.driver.browser.manage.window.resize_to(1100, 900)
+      width = evaluate_script(EDIT_OVERHANG, "table.table-sticky-head")
+      assert_operator width["tableWidth"], :>, width["mainWidth"], "precondition: the table is wider than the page"
+      assert_operator width["overhang"], :<=, 1, "the Edit column is off screen: #{width}"
+    ensure
+      page.driver.browser.manage.window.resize_to(1400, 1400)
     end
 
     # The hand-written finance tables keep their own horizontal scrollbar, so

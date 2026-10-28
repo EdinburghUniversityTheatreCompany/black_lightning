@@ -13,8 +13,8 @@ module Admin
       end
 
       # A Turbo redirect drops the #budget_<id> fragment, so scroll_to reads
-      # ?budget= and scrolls the table's own box. Measured, because a row hidden
-      # behind the sticky headers looks scrolled-to in every request test.
+      # ?budget= and scrolls the page. Measured, because a row hidden behind the
+      # sticky headers looks scrolled-to in every request test.
       test "saving a budget far down a long index lands with its row in view" do
         area = create_reimbursements_area(name: "Medea")
         lines = (1..30).map do |n|
@@ -31,23 +31,24 @@ module Admin
           (() => {
             const rect = (el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom } }
             const row = document.getElementById("budget_#{target.record_id}")
-            const box = row.closest(".table-scroll")
+            const main = document.querySelector("main")
+            const headers = [...row.closest("table").querySelectorAll("thead th")]
             return {
-              box: rect(box), row: rect(row), scrollTop: box.scrollTop,
-              screenTop: document.querySelector("main").getBoundingClientRect().top,
-              headerTop: Math.min(...[...box.querySelectorAll("thead th")].map((th) => th.getBoundingClientRect().top)),
+              screen: rect(main), row: rect(row), scrollTop: main.scrollTop,
+              headerTop: Math.min(...headers.map((th) => th.getBoundingClientRect().top)),
               heading: rect(row.closest("tbody").querySelector("th[scope=rowgroup]")),
-              headerBottom: Math.max(...[...box.querySelectorAll("thead th")].map((th) => th.getBoundingClientRect().bottom))
+              headerBottom: Math.max(...headers.map((th) => th.getBoundingClientRect().bottom))
             }
           })()
         JS
 
         row = rects["row"]
         assert_operator rects["scrollTop"], :>, 0, "precondition: the row starts out of view"
-        assert_operator rects["headerTop"], :>=, rects["screenTop"] - 1, "column headers scrolled off screen: #{rects}"
-        assert_operator row["top"], :>=, rects["headerBottom"] - 1, "row hidden under the column headers: #{rects}"
+        assert_operator rects["headerTop"], :>=, rects["screen"]["top"] - 1, "column headers scrolled off screen: #{rects}"
+        assert_in_delta rects["headerBottom"], rects["heading"]["top"], 2,
+                        "area heading not pinned under the column headers: #{rects}"
         assert_operator row["top"], :>=, rects["heading"]["bottom"] - 1, "row hidden under its area heading: #{rects}"
-        assert_operator row["bottom"], :<=, rects["box"]["bottom"] + 1, "row below the scroll box: #{rects}"
+        assert_operator row["bottom"], :<=, rects["screen"]["bottom"] + 1, "row below the screen: #{rects}"
       end
 
       test "moves a budget to a different area, then detaches it, from its own form in the browser" do
