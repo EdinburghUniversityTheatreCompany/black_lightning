@@ -545,9 +545,13 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     `variance`, `unallocated` and `over_budget?` go quiet on it.
   - **`remaining` and `unallocated` are nil, never zero, with no agreed total**; zero reads as
     fully overspent.
-  - **Read area figures off `store.areas`** (unscoped, preloads `:forecasts` and
-    `budgets: [:expenses, :forecasts]`; the area's own `:forecasts` because `Area#projected_amount`
-    reads them), never `budget.area`, whose unloaded `budgets` N+1s.
+  - **Read area figures off `store.areas`** (unscoped; preloads the area's own `:forecasts`,
+    which `Area#projected_amount` reads, and `DatabaseStore::AREA_BUDGET_PRELOADS`, which the
+    owner pages' Paid by EUSA reads), never `budget.area`, whose unloaded `budgets` N+1s.
+  - **A negative `unallocated` prints as words, never bare**: "Budgets add up to £X more than the
+    agreed total" (`reimbursements_area_unallocated`). "-£1,320.00 not yet allocated" was read as
+    money still to hand out (Pitch Panto kept its imported whole-show budget beside its
+    departments).
   - **The grouped index's area subtotal covers the whole area**; its rows are scoped to year and
     centre, and the row says when fewer lines are shown than exist.
   - **The overview's area card totals the budgets the screen is scoped to** (`AreaRollup`), while
@@ -1063,8 +1067,13 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     the credit's date, `FinancialYear.covering`; lines with no year count in every year; a date no
     year covers means any year). With several, the row is saved unlinked and the preview says how
     many share the code; finance places it with Split across budgets (one share moves it whole).
-    Never go back to first match: budgets share codes. The preview, the offsetting-pair note and
-    apply all read `ReconcileController#income_budgets_for`; never call the matcher around it.
+    Never go back to first match: budgets share codes. The preview, the offsetting-pair note,
+    apply and the ledger's Link credits all read `CreditBudgetMatcher`; never match around it.
+  - **Reconcile links credits only at import**, so a budget made later never picks up rows already
+    there. The ledger's Link credits (`ActualsController#link_credits`, `CreditLinks`) re-runs the
+    rule over needs-attention credits and **holds back any credit with an unplaced row of the
+    opposite amount** (`EusaActual#offset_candidates`): it may be an accrual and its reversal, and
+    linking one leg counts income that never arrived. Never drop the hold-back.
   - **Hard gates**: same absolute amount (exact BigDecimal), opposite sign, same nominal code,
     same cost centre, same financial year (a fixed 6 April boundary,
     `Reconciliation::FINANCIAL_YEAR_START_MONTH`/`_DAY`, not the `FinancialYear` rows; hand pairing
