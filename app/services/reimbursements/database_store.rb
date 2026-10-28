@@ -840,10 +840,8 @@ module Reimbursements
       actual
     end
 
-    # The ledger's "Link credits": the plan was read before the click, so the row is re-checked
-    # under a lock. A credit split or linked since would count on two budgets; a reversal
-    # imported since makes it a possible accrual (CreditLinks' hold-back); a budget deleted or
-    # retyped since is no income budget to link to.
+    # The ledger's "Link credits". The plan predates the click, so the row is re-checked under a
+    # lock: still unplaced, no reversal since (CreditLinks' hold-back), budget still Income.
     def link_credit_to_budget!(actual_id, budget_id)
       linked = EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)

@@ -1,12 +1,8 @@
 module Reimbursements
   ##
-  # The ledger's unplaced credits that exactly one income budget claims by nominal code
-  # (CreditBudgetMatcher), for "Link credits". Reconcile applies the same rule only at import, so
-  # a budget made afterwards never picks up the rows already there.
-  #
-  # A credit with an unplaced row of the opposite amount (EusaActual#offset_candidates) is held
-  # back, not linked: the two may be an accrual and its reversal, which cancel out, and linking
-  # one leg counts income that never arrived.
+  # The ledger's unplaced credits that exactly one income budget claims (CreditBudgetMatcher), for
+  # "Link credits". A credit with an unplaced row of the opposite amount is held back: the two may
+  # be an accrual and its reversal, and linking one leg counts income that never arrived.
   class CreditLinks
     Link = Struct.new(:actual, :budget)
 

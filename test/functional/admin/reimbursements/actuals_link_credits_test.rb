@@ -3,9 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # "Link credits": unplaced credits whose nominal code exactly one income budget carries, put
-    # on that budget in one go. Reconcile applies the same rule only at import, so a budget made
-    # afterwards (termtime's membership, 15 rows on 359000) never picked up the rows before it.
+    # "Link credits": Reconcile's credit rule re-run over the ledger, for a budget made after its
+    # rows came in (termtime's membership, 15 rows on 359000).
     class ActualsLinkCreditsTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 

@@ -133,7 +133,7 @@ module ReimbursementsHelper
       "less #{reimbursements_money(area.allocated_income)} of income"
   end
 
-  # The label where a card prints the figure under its own heading (area page, edit card).
+  # The heading where a card prints the excess on its own (area page, edit card).
   OVER_ALLOCATED_LABEL = "Budgets over the agreed total".freeze
 
   # Area#unallocated in words. Printed bare, a negative ("-£1,320.00 not yet allocated") was read
@@ -145,7 +145,7 @@ module ReimbursementsHelper
              class: "text-danger")
   end
 
-  # The ledger's Link credits button and the notice after it say the same thing.
+  # Shared by the Link credits button and its notice.
   def link_credits_label(count)
     "#{pluralize(count, 'credit')} to #{count == 1 ? 'its' : 'their'} income budget"
   end

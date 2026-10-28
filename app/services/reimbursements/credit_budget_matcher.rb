@@ -14,8 +14,7 @@ module Reimbursements
       Reconciliation.match_credit_to_budget(row, candidates(row, cost_centre))
     end
 
-    # The income budgets +row+ may link to: in its cost centre and in the financial year its date
-    # falls in. Every reader of a credit (matcher, shared-code note, pair notes) comes through here.
+    # The income budgets +row+ may link to: its cost centre, and the financial year of its date.
     def candidates(row, cost_centre)
       year_ids = FinancialYear.covering(row.date, @financial_years).map(&:id)
       in_centre = @income_budgets.select { |budget| in_cost_centre?(budget.cost_centre_id, cost_centre) }

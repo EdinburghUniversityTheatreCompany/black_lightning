@@ -49,7 +49,7 @@ module Admin
         @matching_count = actuals.size
         @needs_attention_count = actuals.count(&:needs_attention?)
         @offset_count = actuals.count(&:offset?)
-        # The card shows on the needs-attention page only, and matching costs a pass over the ledger.
+        # Needs-attention HTML only: matching costs a pass over the ledger.
         @credit_links = credit_links(actuals) if @state == STATE_NEEDS_ATTENTION && request.format.html?
 
         actuals = apply_state(actuals)
@@ -61,8 +61,7 @@ module Admin
         end
       end
 
-      # Recomputed rather than read from the page, so a budget added since then is used and a
-      # reversal imported since then holds its credit back.
+      # Recomputed, not read from the page: a budget or reversal added since counts.
       def link_credits
         plan = credit_links(filtered_actuals(store.eusa_actuals_for_cost_centre))
         linked = plan.links.count { |link| store.link_credit_to_budget!(link.actual.record_id, link.budget.record_id) }
@@ -290,7 +289,7 @@ module Admin
 
       private
 
-      # The period and search on screen, so Link credits links the rows its card was built from.
+      # Period and search, so Link credits links the rows its card listed.
       def filtered_actuals(actuals)
         @period = params[:period].to_s.strip
         @search = params[:search].to_s.strip
