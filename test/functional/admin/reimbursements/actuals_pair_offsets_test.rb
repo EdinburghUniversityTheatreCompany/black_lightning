@@ -50,10 +50,22 @@ module Admin
         assert_not [ @estimate, @reversal ].map(&:reload).any?(&:offset?)
       end
 
-      test "weak evidence proposes nothing: no shared reference, period or narrative, months apart" do
+      # Listed, so a credit Link credits or Reconcile held back is never stranded, but not ticked.
+      test "weak evidence is proposed unticked: no shared reference, period or narrative, months apart" do
         @reversal.update!(ref: "SI0099", period: "09", narrative: "Box office takings", date: Date.new(2027, 1, 20))
 
         get :index
+
+        assert_select "input[name='pairs[]'][value=?]", pair_key
+        assert_select "input[name='pairs[]'][checked]", count: 0
+      end
+
+      test "a period filter shows only the pairs with a leg in that period" do
+        get :index, params: { period: "06" }
+
+        assert_select "input[name='pairs[]'][value=?]", pair_key
+
+        get :index, params: { period: "03" }
 
         assert_select "input[name='pairs[]']", count: 0
       end

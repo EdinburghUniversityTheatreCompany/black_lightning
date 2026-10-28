@@ -151,9 +151,8 @@ module ReimbursementsHelper
   end
 
   def held_back_credits_sentence(count)
-    "#{pluralize(count, 'credit')} held back: #{count == 1 ? 'it has' : 'each has'} an unplaced row " \
-      "of the opposite amount, so the two may be an estimate and its reversal. If so, pair them " \
-      "with Mark as offsetting."
+    "#{pluralize(count, 'credit')} held back: #{count == 1 ? 'it is' : 'each is'} in a pair below " \
+      "that may be an estimate and its reversal. Mark the pair if so; if not, use Split across budgets."
   end
 
   # An amount as the value of a `step: 0.01` number input: 2dp, no delimiter or unit,

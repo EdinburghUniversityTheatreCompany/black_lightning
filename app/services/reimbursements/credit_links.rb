@@ -1,15 +1,15 @@
 module Reimbursements
   ##
   # The ledger's unplaced credits that exactly one income budget claims (CreditBudgetMatcher), for
-  # "Link credits". A credit with an unplaced row of the opposite amount is held back: the two may
-  # be an accrual and its reversal, and linking one leg counts income that never arrived.
+  # "Link credits". A credit in a proposed offsetting pair (LedgerOffsetPairs) is held back: the two
+  # may be an accrual and its reversal, and linking one leg counts income that never arrived.
   class CreditLinks
     Link = Struct.new(:actual, :budget)
 
     attr_reader :links, :held_back
 
-    # +actuals+ are the rows on screen; +ledger+ is every row, where a reversal may sit.
-    def initialize(actuals:, ledger:, matcher:)
+    # +actuals+ are the rows on screen; +paired_ids+ the rows in a proposed offsetting pair.
+    def initialize(actuals:, paired_ids:, matcher:)
       @links = []
       @held_back = []
       # An undated row has no year to judge, so a person places it.
@@ -18,7 +18,7 @@ module Reimbursements
         budget = centre && matcher.budget_for(actual, centre)
         next unless budget
 
-        if actual.offset_candidates(ledger).any?
+        if paired_ids.include?(actual.id)
           @held_back << actual
         else
           @links << Link.new(actual, budget)

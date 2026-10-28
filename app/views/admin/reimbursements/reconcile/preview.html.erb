@@ -121,8 +121,8 @@
           <%= if row.debit.positive?
                 "No matching Submitted or Paid claim"
               elsif @awaiting_reversal.include?(row)
-                "An unplaced row of the opposite amount is already on the ledger: if this reverses " \
-                  "it, mark the pair there as offsetting"
+                "An unplaced row of the opposite amount is already on the ledger. If this reverses " \
+                  "it, mark the pair as offsetting there; if it is real income, use Split across budgets"
               elsif (shared = @shared_credit_codes[row])
                 "#{shared} income budgets use this code: place it on the ledger with Split across budgets"
               elsif row.credit.positive?

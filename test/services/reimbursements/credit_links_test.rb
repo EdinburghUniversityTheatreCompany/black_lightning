@@ -14,7 +14,7 @@ module Reimbursements
       ledger = EusaActual.all.to_a
       matcher = CreditBudgetMatcher.new(budgets: Budget.all.to_a, financial_years: [],
                                         cost_centres: CostCentre.order(:id).to_a)
-      CreditLinks.new(actuals: ledger, ledger: ledger, matcher: matcher)
+      CreditLinks.new(actuals: ledger, paired_ids: LedgerOffsetPairs.new(ledger).paired_ids, matcher: matcher)
     end
 
     test "an unplaced credit one income budget claims is planned onto it" do

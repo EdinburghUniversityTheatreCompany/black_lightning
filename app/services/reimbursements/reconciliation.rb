@@ -437,7 +437,6 @@ module Reimbursements
       score += OFFSET_SCORE_NARRATIVE_PREFIX if narrative_prefix_similar?(row_a.narrative, row_b.narrative)
       score - offset_date_penalty(row_a.date, row_b.date)
     end
-    private_class_method :offset_pair_score
 
     # Two blank fields agree on nothing, so a blank never scores.
     def same_field?(left, right)

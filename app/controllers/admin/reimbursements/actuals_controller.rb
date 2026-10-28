@@ -52,7 +52,8 @@ module Admin
         # Needs-attention HTML only: matching costs a pass over the ledger.
         if @state == STATE_NEEDS_ATTENTION && request.format.html?
           @credit_links = credit_links(actuals)
-          @offset_pairs = ::Reimbursements::LedgerOffsetPairs.new(store.eusa_actuals_for_cost_centre).pairs
+          shown = actuals.to_set(&:id)
+          @offset_pairs = offset_pairs.pairs.select { |pair| pair.row_ids.any? { |id| shown.include?(id) } }
         end
 
         actuals = apply_state(actuals)
@@ -309,14 +310,11 @@ module Admin
         actuals
       end
 
-      def pair_offset(debit_id, credit_id)
-        debit = store.find_actual(debit_id)
-        credit = store.find_actual(credit_id)
-        return false unless debit&.debit.to_d.positive? && debit.pairable? && credit &&
-                            debit.offset_candidates([ credit ]).any?
+      def pair_offset(debit_id, credit_id) = store.pair_offsetting_rows!(debit_id, credit_id)
 
-        store.link_offsetting_pair!(debit.record_id, credit.record_id)
-        true
+      # Over the whole centre's ledger: a pair's legs often sit in different periods.
+      def offset_pairs
+        @offset_pairs_plan ||= ::Reimbursements::LedgerOffsetPairs.new(store.eusa_actuals_for_cost_centre)
       end
 
       def pair_offsets_notice(paired, refused)
@@ -334,7 +332,7 @@ module Admin
       end
 
       def credit_links(actuals)
-        ::Reimbursements::CreditLinks.new(actuals: actuals, ledger: store.eusa_actuals,
+        ::Reimbursements::CreditLinks.new(actuals: actuals, paired_ids: offset_pairs.paired_ids,
                                           matcher: credit_matcher)
       end
 

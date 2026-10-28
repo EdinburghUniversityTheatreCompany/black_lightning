@@ -1029,6 +1029,23 @@ module Reimbursements
       legs
     end
 
+    # The ledger's proposed pairs. The page predates the click, so both legs are re-checked under a
+    # lock: a leg placed since would be hidden as noise. Returns whether it paired.
+    def pair_offsetting_rows!(debit_id, credit_id)
+      paired = EusaActual.transaction do
+        legs = EusaActual.lock.where(id: [ debit_id, credit_id ]).order(:id).index_by(&:id)
+        debit = legs[debit_id.to_i]
+        credit = legs[credit_id.to_i]
+        next false unless debit&.signed_amount&.positive? && debit.pairable? && credit &&
+                          debit.offset_candidates([ credit ]).any?
+
+        link_offsetting_pair!(debit.id, credit.id)
+        true
+      end
+      bust_eusa_actuals!
+      paired
+    end
+
     private
 
     def bust_eusa_actuals!
