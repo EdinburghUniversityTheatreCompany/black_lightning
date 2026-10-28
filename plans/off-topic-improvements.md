@@ -439,6 +439,15 @@ be emailed to you", hears nothing. `.xlsx` is accepted today, but any non-rate-l
 the same. Match the message (`file type`, `from.email must be verified`, `recipient is
 suppressed`) to `discard_on`, and tell the requester when a report cannot be delivered.
 
+### A passing row shows through the bottom of the sticky column headers
+
+On the budgets index at 1366x768 (headless Chrome, termtime dev data), a few pixels of the row
+scrolling under the header stay visible between the header's labels and the pinned area heading:
+the header spans y 57-94 and `elementFromPoint` at y 89 returns its `<th>`, yet the row's text
+paints at about y 84-92. The old `.table-scroll` box showed the same, so it predates that box's
+removal (2026-10-28). Check in a headed browser first; if it is real, suspect sticky cells under
+`border-collapse: collapse`.
+
 ## Public site and events
 
 ### SEO follow-ups that need something from outside the repo
