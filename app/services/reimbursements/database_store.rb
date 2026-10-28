@@ -129,7 +129,7 @@ module Reimbursements
     # Preloads what the area edit page's figures read (Area#committed_amount, #allocated per
     # budget line).
     def find_area(record_id)
-      Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).find_by(id: record_id)
+      Area.includes(:owners, :forecasts, budgets: AREA_BUDGET_PRELOADS).find_by(id: record_id)
     end
 
     def find_batch(record_id)
@@ -218,13 +218,16 @@ module Reimbursements
       active_budgets.reject { |b| b.cost_centre&.hidden_from_submitters? }
     end
 
-    # Every area, every year: an id->record lookup, unscoped for #budgets' reason. Preloads each
-    # budget's expenses, forecasts and allocations plus the area's own forecasts, because
-    # Area#committed_amount, #allocated and #projected_amount read them per budget per area
-    # (an N+1 on every areas index or grouped budgets index otherwise).
+    # What an area's figures read per budget: Area#committed_amount, #allocated and
+    # #projected_amount, and the owner pages' Paid by EUSA (Budget#eusa_actual_amount).
+    AREA_BUDGET_PRELOADS = [ :forecasts, :actual_allocations, :eusa_actuals,
+                             { expenses: %i[eusa_actuals claim_share] } ].freeze
+
+    # Every area, every year: an id->record lookup, unscoped for #budgets' reason. Preloads the
+    # area's own forecasts and AREA_BUDGET_PRELOADS (an N+1 on every areas index or grouped
+    # budgets index otherwise).
     def areas
-      @areas ||= Area.includes(:owners, :forecasts,
-                               budgets: %i[expenses forecasts actual_allocations]).to_a
+      @areas ||= Area.includes(:owners, :forecasts, budgets: AREA_BUDGET_PRELOADS).to_a
     end
 
     # The areas the budget screens list.

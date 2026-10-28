@@ -111,6 +111,7 @@
           <th scope="col" class="px-3 py-2 text-right">Spent</th>
           <th scope="col" class="px-3 py-2 text-right">Waiting</th>
           <th scope="col" class="px-3 py-2 text-right">Left</th>
+          <th scope="col" class="px-3 py-2 text-right">Paid by EUSA</th>
           <th scope="col" class="px-3 py-2"><span class="sr-only">Open</span></th>
         </tr>
       </thead>
@@ -143,6 +144,7 @@
             <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.spent) %></td>
             <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.waiting) %></td>
             <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_spend_left(figures) %></td>
+            <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.paid_by_eusa) %></td>
             <td class="px-3 py-2 text-right whitespace-nowrap">
               <%= link_to "Open", row[:path], class: btn_classes(:secondary, :sm) %>
             </td>
@@ -153,6 +155,4 @@
   <% end %>
 <% end %>
 
-<p class="mt-4 text-sm text-gray-500">
-  Figures exclude VAT, so they can be lower than the amounts people claimed.
-</p>
+<%= render "admin/reimbursements/shared/paid_by_eusa_note" %>

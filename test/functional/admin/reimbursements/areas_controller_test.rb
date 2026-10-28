@@ -31,6 +31,23 @@ module Admin
         assert_select "dt", text: "Unallocated", count: 0
       end
 
+      # EUSA books what it paid, which can differ from the claim (here the gross, VAT included).
+      test "an area's budgets show what EUSA has paid for them beside what was claimed" do
+        area = create_reimbursements_area(name: "Pitch Panto", initial_budget: 1_320)
+        set = create_reimbursements_budget(name: "Set", area: area, initial_budget: 370)
+        claim = create_reimbursements_expense(budget: set, status: ::Reimbursements::Status::PAID,
+                                              amount: BigDecimal("114.24"),
+                                              amount_excl_vat: BigDecimal("95.20"), receipt: false)
+        create_reimbursements_actual(expense: claim, debit: BigDecimal("114.24"))
+
+        get :show, params: { id: area.record_id }
+
+        assert_response :success
+        assert_select "th", text: "Paid by EUSA"
+        assert_select "td", text: "£95.20"
+        assert_select "td", text: "£114.24"
+      end
+
       test "index requires the finance permission" do
         sign_in users(:committee)
         get :index

@@ -26,7 +26,8 @@ module Admin
                                                income_lines: [ line("Ticket income", income: true) ],
                                                finance: false))
 
-        assert_equal [ %w[Name Budget Spent Waiting Left], %w[Name Expected Received] ], headings
+        assert_equal [ [ "Name", "Budget", "Spent", "Waiting", "Left", "Paid by EUSA" ],
+                       %w[Name Expected Received] ], headings
         assert_selector "table:first-of-type tbody td", text: "Set"
         assert_selector "tbody td", text: "Ticket income"
       end
@@ -36,7 +37,8 @@ module Admin
                                                income_lines: [ line("Ticket income", income: true) ],
                                                finance: true))
 
-        assert_equal [ [ "Name", "Nominal code", "Budget", "Spent", "Waiting", "Left", "Actions" ],
+        assert_equal [ [ "Name", "Nominal code", "Budget", "Spent", "Waiting", "Left", "Paid by EUSA",
+                         "Actions" ],
                        [ "Name", "Nominal code", "Expected", "Received" ] ], headings
         assert_selector "tbody td", text: "432320", count: 2
         assert_link "Edit", href: "/admin/reimbursements/budgets/set/edit"

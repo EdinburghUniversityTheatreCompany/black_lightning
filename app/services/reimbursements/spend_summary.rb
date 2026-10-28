@@ -11,12 +11,13 @@ module Reimbursements
   # Income lines are left out (expense and income are never totalled together), except
   # +unallocated+, which is Area#unallocated and so basis-aware.
   class SpendSummary
-    attr_reader :budget_amount, :spent, :waiting, :unallocated
+    attr_reader :budget_amount, :spent, :waiting, :unallocated, :paid_by_eusa
 
     def self.for_budget(budget)
       new(budget_amount: budget.no_budget_set? ? nil : budget.projected_amount,
           spent: budget.committed_amount,
-          waiting: budget.pipeline_amount)
+          waiting: budget.pipeline_amount,
+          paid_by_eusa: budget.income? ? nil : budget.eusa_actual_amount)
     end
 
     # The comparator is the area's agreed total where it has one, else what its expense lines
@@ -30,7 +31,8 @@ module Reimbursements
           spent: lines.sum(&:committed_amount),
           waiting: lines.sum(&:pipeline_amount),
           from_lines: agreed.nil? && !total.nil?,
-          unallocated: area.unallocated)
+          unallocated: area.unallocated,
+          paid_by_eusa: lines.sum(&:eusa_actual_amount))
     end
 
     # Nil when no line carries a figure. A line whose plan is unset is skipped, not counted as
@@ -41,12 +43,15 @@ module Reimbursements
     end
     private_class_method :line_total
 
-    def initialize(budget_amount:, spent:, waiting:, from_lines: false, unallocated: nil)
+    # +paid_by_eusa+ is what the EUSA ledger shows paid out for the claims (Budget#eusa_actual_amount),
+    # weeks behind Spent; nil for an income line, whose ledger figure is money received.
+    def initialize(budget_amount:, spent:, waiting:, from_lines: false, unallocated: nil, paid_by_eusa: nil)
       @budget_amount = budget_amount
       @spent = spent
       @waiting = waiting
       @from_lines = from_lines
       @unallocated = unallocated
+      @paid_by_eusa = paid_by_eusa
     end
 
     # Nil, never zero, when nobody set a budget: 0 reads as "fully spent".

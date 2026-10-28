@@ -27,6 +27,21 @@ module Admin
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
+      test "an owner sees what EUSA has paid for their budget" do
+        claim = create_reimbursements_expense(person: @other, budget: @owned,
+                                              status: ::Reimbursements::Status::PAID,
+                                              amount: BigDecimal("114.24"),
+                                              amount_excl_vat: BigDecimal("95.20"), receipt: false)
+        create_reimbursements_actual(expense: claim, debit: BigDecimal("114.24"))
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "th", text: "Paid by EUSA"
+        assert_select "td", text: "£114.24"
+      end
+
       test "denies members without the reimbursements permission" do
         sign_in users(:committee)
         get :index

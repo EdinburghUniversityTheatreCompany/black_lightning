@@ -480,6 +480,23 @@ module Reimbursements
       end
     end
 
+    test "areas and find_area preload each budget's EUSA rows, which the owner pages read" do
+      area = Area.create!(name: "Pitch Panto", initial_budget: 1320)
+      set = Budget.create!(name: "Set", nominal_code: "431580", area: area)
+      claim = Expense.create!(budget: set, status: Status::PAID, amount_excl_vat: 95.2)
+      EusaActual.create!(expense: claim, nominal_code: "431580", debit: 114.24)
+      tickets = Budget.create!(name: "Panto", nominal_code: "331130", budget_type: "Income", area: area)
+      EusaActual.create!(budget: tickets, nominal_code: "331130", credit: 500)
+
+      [ DatabaseStore.new.areas.find { |loaded| loaded.id == area.id },
+        DatabaseStore.new.find_area(area.id) ].each do |loaded|
+        assert_queries_count(0) do
+          assert_equal [ BigDecimal("114.24"), BigDecimal("500") ],
+                       loaded.budgets.sort_by(&:id).map(&:eusa_actual_amount)
+        end
+      end
+    end
+
     test "expenses preloads payment details so a payee bank check costs no query" do
       pat = create_reimbursements_person(sort_code: "001122", account_number: "12345678")
       Expense.create!(person: pat, status: Status::PENDING, amount_excl_vat: 10)
