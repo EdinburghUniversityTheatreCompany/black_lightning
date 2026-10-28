@@ -109,16 +109,22 @@ module DisplayHelper
     sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
-  CONTENT_WARNINGS_LABEL = /\A(?:content|trigger) warnings?(?::\s*|\z)/i
+  CONTENT_WARNINGS_LABEL = /\A(?:content|trigger)\s+warning(?:s|\(s\))?\s*(?:[:\-–—]\s*|\z)/i
+  CONTENT_WARNINGS_SEPARATOR = " · ".freeze
 
   # Content warnings are markdown, usually a bold age line over a bulleted list. The
   # board prints one line of text: each paragraph, bullet or line break becomes a " · "
   # (the markdown renders breaks as typed), cut at a word to fit.
   def display_content_warnings(markdown, length: 180)
     # The panel prints its own label, so a line or prefix saying "Content warnings" goes.
-    items = render_plain(markdown).lines.map { |line| line.squish.sub(CONTENT_WARNINGS_LABEL, "") }.compact_blank
-    # String#truncate, not the view helper: the view escapes the result once.
-    items.join(" · ").truncate(length, separator: " ", omission: "…").sub(/ ·…\z/, "…")
+    # A heading's trailing colon would sit before the separator ("Age 16+: · Strobe").
+    items = render_plain(markdown).lines.map do |line|
+      line.squish.sub(CONTENT_WARNINGS_LABEL, "").sub(/\s*:\z/, "")
+    end
+    # String#truncate, not the view helper: the view escapes the result once. A cut just
+    # after a separator would leave it dangling before the ellipsis.
+    text = items.compact_blank.join(CONTENT_WARNINGS_SEPARATOR).truncate(length, separator: " ", omission: "…")
+    text.sub(/#{Regexp.escape(CONTENT_WARNINGS_SEPARATOR.rstrip)}…\z/, "…")
   end
 
   # The credits are one list (cast, then company) flowing down CSS columns, and

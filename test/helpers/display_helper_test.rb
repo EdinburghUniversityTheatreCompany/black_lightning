@@ -447,6 +447,14 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "strobe, haze", display_content_warnings("Content warnings: strobe, haze")
     assert_equal "Content warning applies to the second act",
                  display_content_warnings("Content warning applies to the second act")
+    [ "Content Warning(s):", "CONTENT WARNINGS -", "Content warnings :" ].each do |heading|
+      assert_equal "Strobe", display_content_warnings("#{heading}\n\n- Strobe"), heading
+    end
+  end
+
+  test "display_content_warnings joins a heading ending in a colon without stray punctuation" do
+    assert_equal "Age 16+ · Strobe lighting", display_content_warnings("Age 16+:\n\n- Strobe lighting")
+    assert_equal "Age…", display_content_warnings("Age:\n\nStrobe lighting", length: 8)
   end
 
   test "display_content_warnings never ends on a dangling separator" do

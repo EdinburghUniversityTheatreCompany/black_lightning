@@ -115,6 +115,7 @@ class Display::PagesControllerTest < ActionController::TestCase
     get :next_event, params: { slot: "1" }
 
     assert_response :success
+    assert_match "Tonight", response.body, "the Tonight panel must render for the guard to be tested"
     assert_no_match "Content warnings", response.body
   end
 
