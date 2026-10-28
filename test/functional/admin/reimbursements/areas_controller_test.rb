@@ -12,6 +12,25 @@ module Admin
         sign_in @user
       end
 
+      test "an over-allocated area's page and edit card state the excess, not a negative" do
+        area = over_allocated_area
+
+        get :show, params: { id: area.record_id }
+
+        assert_response :success
+        assert_select "dt", text: "Budgets over the agreed total"
+        assert_includes response.body, "£1,320.00"
+        assert_not_includes response.body, "-£1,320.00"
+        assert_select "dt", text: "Not yet given to a budget", count: 0
+
+        get :edit, params: { id: area.record_id }
+
+        assert_response :success
+        assert_select "dt", text: "Budgets over the agreed total"
+        assert_not_includes response.body, "-£1,320.00"
+        assert_select "dt", text: "Unallocated", count: 0
+      end
+
       test "index requires the finance permission" do
         sign_in users(:committee)
         get :index

@@ -66,6 +66,15 @@ module ReimbursementsTestHelpers
     )
   end
 
+  # Production's Pitch Panto: the imported whole-show budget kept beside the departments that
+  # replaced it, so its budgets add up to £1,320 more than the £1,320 agreed total.
+  def over_allocated_area
+    area = create_reimbursements_area(name: "Pitch Panto", initial_budget: 1_320)
+    create_reimbursements_budget(name: "Panto", area: area, initial_budget: 1_320)
+    create_reimbursements_budget(name: "Set", area: area, initial_budget: 1_320)
+    area
+  end
+
   # cost_centre: nil resolves through CostCentre.default, which is order(:id).first once a
   # second centre exists: pass it explicitly in any two-centre test.
   #

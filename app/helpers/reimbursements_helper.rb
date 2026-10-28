@@ -133,6 +133,15 @@ module ReimbursementsHelper
       "less #{reimbursements_money(area.allocated_income)} of income"
   end
 
+  # Area#unallocated in words. Printed bare, a negative ("-£1,320.00 not yet allocated") was read
+  # as money still to hand out, when it means the budgets add up to more than the agreed total.
+  def reimbursements_area_unallocated(amount)
+    return "#{reimbursements_money(amount)} not yet allocated" unless amount.negative?
+
+    tag.span("Budgets add up to #{reimbursements_money(-amount)} more than the agreed total",
+             class: "text-danger")
+  end
+
   # An amount as the value of a `step: 0.01` number input: 2dp, no delimiter or unit,
   # so deliberately not reimbursements_money (a number input rejects both).
   #

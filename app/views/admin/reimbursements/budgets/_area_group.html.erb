@@ -21,7 +21,7 @@
         <% end %>
         <% unless rollup.unallocated.nil? %>
           <span class="text-sm text-gray-600">
-            <%= reimbursements_money(rollup.unallocated) %> not yet allocated
+            <%= reimbursements_area_unallocated(rollup.unallocated) %>
           </span>
         <% end %>
         <%# Names no DIRECTION, the only wording true in all four cases: an

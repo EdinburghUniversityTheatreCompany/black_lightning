@@ -47,7 +47,7 @@
             <span class="text-sm text-gray-600">
               Allocated <%= reimbursements_area_allocation(area) %>
               <% unless area.unallocated.nil? %>
-                &middot; <%= reimbursements_money(area.unallocated) %> not yet allocated
+                &middot; <%= reimbursements_area_unallocated(area.unallocated) %>
               <% end %>
             </span>
             <span class="text-sm text-gray-600">

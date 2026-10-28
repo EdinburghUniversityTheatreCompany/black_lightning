@@ -49,11 +49,15 @@
     </div>
     <% if show_unallocated? %>
       <div>
-        <dt class="text-sm text-gray-500">Not yet given to a budget</dt>
-        <dd class="text-2xl font-semibold tabular-nums">
-          <%= reimbursements_money(summary.unallocated) %>
+        <dt class="text-sm text-gray-500">
+          <%= over_allocated? ? "Budgets over the agreed total" : "Not yet given to a budget" %>
+        </dt>
+        <dd class="text-2xl font-semibold tabular-nums <%= "text-danger" if over_allocated? %>">
+          <%= reimbursements_money(summary.unallocated.abs) %>
           <% if finance? %>
-            <small class="block text-xs font-normal text-gray-500">unallocated</small>
+            <small class="block text-xs font-normal text-gray-500">
+              <%= over_allocated? ? "over-allocated" : "unallocated" %>
+            </small>
           <% end %>
         </dd>
       </div>

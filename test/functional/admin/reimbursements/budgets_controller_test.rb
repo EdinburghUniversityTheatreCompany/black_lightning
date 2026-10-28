@@ -350,6 +350,27 @@ module Admin
         assert_includes heading, "£600.00 not yet allocated"
       end
 
+      # Production's Pitch Panto kept its whole-show budget beside the departments replacing it,
+      # and finance read "-£1,320.00 not yet allocated" as £1,320 still to hand out.
+      test "an over-allocated area says by how much its budgets exceed the agreed total" do
+        sign_in @user
+        area = over_allocated_area
+
+        get :index
+
+        assert_response :success
+        heading = area_heading(area)
+        assert_includes heading, "Budgets add up to £1,320.00 more than the agreed total"
+        assert_not_includes heading, "not yet allocated"
+        assert_not_includes heading, "-£1,320.00"
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Budgets add up to £1,320.00 more than the agreed total"
+        assert_not_includes response.body, "-£1,320.00"
+      end
+
       test "the grouped index names no agreed total when nobody agreed one" do
         sign_in @user
         area = create_reimbursements_area(name: "Unbudgeted area")

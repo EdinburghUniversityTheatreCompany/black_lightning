@@ -37,6 +37,8 @@ module Admin
       def term(key) = finance? ? FINANCE_TERMS[key] : nil
 
       def show_unallocated? = area.present? && !summary.unallocated.nil?
+
+      def over_allocated? = summary.unallocated.negative?
     end
   end
 end
