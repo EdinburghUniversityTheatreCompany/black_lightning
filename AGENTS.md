@@ -50,6 +50,10 @@ tool in `mise/config.toml`; CI's `pnpm/action-setup` reads the same field, so gi
 - **A table cell with its own background ignores `.table-hover`'s row grey** (a `bg-white` cell,
   or `.table-pinned-actions`' pinned cell, which wins on specificity). Give every cell of such a
   row `group-hover:bg-gray-50`, with `group` on the `<tr>`, or the row greys unevenly.
+- **A table that can run long gets no `.table-scroll` box**: it caps the height, a scrollbar
+  inside the scrolling page. Straight in its card, a `.table-sticky-head` pins to `<main>`, and
+  too wide a table scrolls `<main>` sideways, with `.table-pinned-actions` keeping its last
+  column on screen (the budgets index; `sticky_table_headers_test`).
 
 ## Maintain Documentation
 
