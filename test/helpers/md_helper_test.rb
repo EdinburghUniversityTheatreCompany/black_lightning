@@ -36,6 +36,11 @@ class MdHelperTest < ActionView::TestCase
     assert_equal "Strobe", render_plain("Strobe\n{: .warning}").strip
   end
 
+  # strip_tags re-encodes U+00A0 as &nbsp;, which CGI.unescapeHTML does not decode.
+  test "render_plain decodes a non-breaking space" do
+    assert_equal "Haze\u00A0lights", render_plain("Haze\u00A0lights").strip
+  end
+
   test "render_plain decodes HTML entities" do
     assert_includes render_plain("Tom & Jerry"), "Tom & Jerry"
     assert_not_includes render_plain("Tom & Jerry"), "&amp;"

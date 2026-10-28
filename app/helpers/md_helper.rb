@@ -58,7 +58,8 @@ module MdHelper
     return "" if md.nil?
 
     # apply_ial removes {: .class} lists, which render_markdown hides and plain text would print.
-    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(apply_ial(commonmark(md))))
+    # strip_tags re-encodes entities; Nokogiri decodes them all (CGI.unescapeHTML misses &nbsp;).
+    Nokogiri::HTML5.fragment(ActionController::Base.helpers.strip_tags(apply_ial(commonmark(md)))).text
   end
 
   def truncate_markdown(content, length = 100)
