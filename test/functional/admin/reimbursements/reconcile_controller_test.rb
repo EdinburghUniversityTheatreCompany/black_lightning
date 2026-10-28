@@ -225,15 +225,17 @@ module Admin
       assert_nil ::Reimbursements::EusaActual.where.not(credit: nil).sole.budget_id
     end
 
-    test "one stored row holds back one pasted credit; the next of the same amount links" do
+    # Either credit may be the estimate's reversal, so neither is linked as income; the ledger
+    # lists both possible pairs for a person.
+    test "every pasted credit a stored row may reverse is held back, not just the first" do
       stored_estimate
       sign_in @user
       second = credit_row(narrative: "Box office again", date: "14/05/2026")
 
       post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}\n#{second}" }
 
-      assert_equal 1, assigns(:matched_credits).size
-      assert_equal 1, assigns(:awaiting_reversal).size
+      assert_empty assigns(:matched_credits)
+      assert_equal 2, assigns(:awaiting_reversal).size
     end
 
     test "a placed stored row, or one on another code, does not hold a credit back" do

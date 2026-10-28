@@ -71,6 +71,20 @@ module Admin
         assert_match "1 credit held back", flash[:notice]
       end
 
+      # The weaker of two possible partners is still held back: it may be the reversal.
+      test "every credit with a possible partner is held back, however weak the match" do
+        create_reimbursements_eusa_actual(nominal_code: "359000", debit: BigDecimal("640"), ref: "JNL1",
+                                          period: "01", date: Date.current - 90)
+        other = create_reimbursements_eusa_actual(nominal_code: "359000", credit: BigDecimal("640"), ref: "JNL1",
+                                                  period: "01", date: Date.current - 90)
+
+        post :link_credits
+
+        assert_nil @fee.reload.budget_id
+        assert_nil other.reload.budget_id
+        assert_match "2 credits held back", flash[:notice]
+      end
+
       test "only the cost centre on screen is linked" do
         termtime = create_second_reimbursements_cost_centre
         @membership.update!(cost_centre: termtime)

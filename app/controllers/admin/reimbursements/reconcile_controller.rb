@@ -247,8 +247,7 @@ module Admin
           elsif row.credit.positive?
             # Undated rows are left out, as the ledger's pairs leave them out.
             reversals ||= store.eusa_actuals.select { |actual| actual.pairable? && actual.date && actual.signed_amount.positive? }
-            if (reversed = reversal_for(entry, reversals))
-              reversals.delete(reversed)
+            if reversal_for(entry, reversals)
               @awaiting_reversal << row
               unmatched << entry
             elsif (budget = credit_matcher.budget_for(row, entry.cost_centre))
@@ -365,7 +364,7 @@ module Admin
       end
 
       # The unplaced stored debit a pasted credit may reverse, by the hand-pairing gate on the row as
-      # it will be stored. Such a credit waits for the ledger's pairs; one debit holds back one credit.
+      # it will be stored. Every such credit waits for the ledger's pairs, however many share a debit.
       def reversal_for(entry, reversals)
         pasted = ::Reimbursements::EusaActual.new(
           nominal_code: entry.row.nominal_code, credit: entry.row.credit,

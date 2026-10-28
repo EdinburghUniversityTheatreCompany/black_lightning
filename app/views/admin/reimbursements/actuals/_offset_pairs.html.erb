@@ -4,12 +4,13 @@
     <p class="mb-2 text-sm text-gray-600">
       Each pair is one amount booked both ways, like an estimate and its later reversal. A marked
       pair counts as neither spend nor income. Ticked pairs share a reference, or a period and
-      description; look at an unticked one before ticking it.
+      description; look at an unticked one before ticking it. A row listed twice can be marked in
+      one pair only.
     </p>
     <ul class="mb-3 space-y-2 text-sm">
       <% pairs.each do |pair| %>
         <li class="flex items-start gap-2">
-          <%= check_box_tag "pairs[]", pair.key, pair.strong?, id: "pair_#{pair.key.tr(':', '_')}",
+          <%= check_box_tag "pairs[]", pair.key, pair.ticked, id: "pair_#{pair.key.tr(':', '_')}",
                             class: checkbox_classes %>
           <%= label_tag "pair_#{pair.key.tr(':', '_')}" do %>
             <span class="font-medium tabular-nums"><%= reimbursements_money(pair.debit.debit) %></span>
