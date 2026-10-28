@@ -11,6 +11,15 @@ module Admin
 
       tests ActualsController
 
+      # Every write refuses, as the locked re-check does for a row placed after the plan was read.
+      class ChangedSinceStore < ::Reimbursements::DatabaseStore
+        def link_credit_to_budget!(*) = false
+      end
+
+      teardown do
+        BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
+      end
+
       setup do
         grant_finance_permission(users(:member))
         sign_in users(:member)
@@ -86,6 +95,15 @@ module Admin
 
         assert_not ::Reimbursements.build_store.link_credit_to_budget!(@fee.id, @membership.id)
         assert_equal other.id, @fee.reload.budget_id
+      end
+
+      test "the notice owns up to credits the locked re-check left alone" do
+        BaseController.store_builder = ->(**) { ChangedSinceStore.new }
+
+        post :link_credits
+
+        assert_equal "No credits linked. 1 credit changed since the page loaded and was left alone.",
+                     flash[:notice]
       end
 
       test "a reversal imported since the page was read still holds the credit back" do

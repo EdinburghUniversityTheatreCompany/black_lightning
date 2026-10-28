@@ -848,7 +848,9 @@ module Reimbursements
       linked = EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)
         next false unless actual.apportionable? && Budget.exists?(id: budget_id, budget_type: "Income")
-        next false if actual.offset_candidates(EusaActual.where(nominal_code: actual.nominal_code).to_a).any?
+        opposite = EusaActual.where(nominal_code: actual.nominal_code).includes(:allocations, :claim_shares)
+                             .select { |row| row.signed_amount == -actual.signed_amount }
+        next false if actual.offset_candidates(opposite).any?
 
         actual.update!(budget_id: budget_id)
         true

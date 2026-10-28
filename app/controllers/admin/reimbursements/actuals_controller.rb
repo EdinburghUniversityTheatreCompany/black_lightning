@@ -66,7 +66,8 @@ module Admin
       def link_credits
         plan = credit_links(filtered_actuals(store.eusa_actuals_for_cost_centre))
         linked = plan.links.count { |link| store.link_credit_to_budget!(link.actual.record_id, link.budget.record_id) }
-        redirect_to actuals_path_with_filters, notice: link_credits_notice(linked, plan.held_back.size)
+        redirect_to actuals_path_with_filters,
+                    notice: link_credits_notice(linked, plan.links.size - linked, plan.held_back.size)
       end
 
       def new_expense
@@ -303,11 +304,14 @@ module Admin
                                           matcher: credit_matcher)
       end
 
-      def link_credits_notice(linked, held_back)
+      # +changed+ failed the locked re-check: placed, retyped or given a reversal since the plan.
+      def link_credits_notice(linked, changed, held_back)
         notice = linked.zero? ? "No credits linked." : "Linked #{helpers.link_credits_label(linked)}."
-        return notice if held_back.zero?
-
-        "#{notice} #{helpers.held_back_credits_sentence(held_back)}"
+        if changed.positive?
+          notice += " #{helpers.pluralize(changed, 'credit')} changed since the page loaded and " \
+                    "#{changed == 1 ? 'was' : 'were'} left alone."
+        end
+        held_back.zero? ? notice : "#{notice} #{helpers.held_back_credits_sentence(held_back)}"
       end
 
       # Also reverses the settlement the row wrote, and the notice says so.

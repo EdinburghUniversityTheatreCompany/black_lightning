@@ -243,9 +243,7 @@ module Admin
               unmatched << entry
             end
           elsif row.credit.positive?
-            budget = ::Reimbursements::Reconciliation.match_credit_to_budget(
-              row, income_budgets_for(row, entry.cost_centre)
-            )
+            budget = credit_matcher.budget_for(row, entry.cost_centre)
             budget ? matched_credits << [ entry, budget ] : unmatched << entry
           else
             unmatched << entry
@@ -374,9 +372,7 @@ module Admin
             pair.debit_row, expenses_in(cost_centre, remaining)
           )
           remaining.delete(expense) if expense
-          budget = ::Reimbursements::Reconciliation.match_credit_to_budget(
-            pair.credit_row, income_budgets_for(pair.credit_row, entries[pair.credit_index].cost_centre)
-          )
+          budget = credit_matcher.budget_for(pair.credit_row, entries[pair.credit_index].cost_centre)
           [ pair.key, { expense: expense, budget: budget } ]
         end
       end
