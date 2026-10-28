@@ -1590,6 +1590,9 @@ Start the test database using `docker start /mysql8` before running any tests.
   the JS differs the auto-build fails and every request test errors, or tests run the other JS.
   Admin flashes appear only through JavaScript, so a page served without its bundle also fails
   `assert_text "… saved"`, looking flaky.
+  - **A Tailwind class new to the app, added only in a view, needs `bin/vite build --force`.**
+    vite-ruby rebuilds only when `app/javascript` changes, so a plain build keeps the old CSS
+    and the system tests run without the class. CI builds fresh, so only a local run is wrong.
   - **If a worktree's `node_modules` is a symlink to another checkout, build with
     `pnpm_config_verify_deps_before_run=false RAILS_ENV=test bin/vite build`.** Otherwise pnpm 11's
     dependency check (also run by the test auto-build) tries `pnpm install`, which would purge the
