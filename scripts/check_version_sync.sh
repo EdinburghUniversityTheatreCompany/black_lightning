@@ -11,7 +11,7 @@
 # image builds on a different Ruby than the tests ran on, or the suite goes green against a
 # database server nobody deploys.
 #
-# Part of the dev-env standard (dev-hooks:dev-env-setup, v29) — run by the hk `versions` step and
+# Part of the dev-env standard (dev-hooks:dev-env-setup, v30) — run by the hk `versions` step and
 # CI's `versions` job so the local and CI gates can't drift. Don't hand-edit the logic; the next
 # policy change should be a plain re-copy of the template (a repo's own formatter may re-indent
 # this file to local style, which is fine).
@@ -37,6 +37,11 @@
 #
 # CI's own setup steps are checked too: agreeing files prove nothing if the job that runs the
 # tests installs some other version (see "CI setup steps" below).
+#
+# ruff is the one tool a repo can install twice: mise's copy runs in hk and CI, uv's runs under
+# `uv run ruff` and in the editor hooks that prefer .venv/bin/ruff. A minor release can switch
+# on new default rules, so the two copies must be the same release: uv.lock's ruff joins the
+# comparison with mise's.
 
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -167,6 +172,29 @@ read_lock() {
       exit
     }
   ' "$LOCK"
+}
+
+# uv.lock's resolved release of a Python package: the `version` line of its `[[package]]` entry,
+# which follows the `name` line.
+read_uvlock() {
+	[ -f uv.lock ] || return 0
+	awk -v pkg="$1" '
+    /^\[/ { cur = 0; next }
+    /^name[[:space:]]*=/ {
+      v = $0
+      sub(/^[^=]*=[[:space:]]*"/, "", v)
+      sub(/".*/, "", v)
+      cur = (v == pkg)
+      next
+    }
+    cur && /^version[[:space:]]*=/ {
+      v = $0
+      sub(/^[^=]*=[[:space:]]*"/, "", v)
+      sub(/".*/, "", v)
+      print v
+      exit
+    }
+  ' uv.lock
 }
 
 # A full release (3.12.12, 24.11.0) rather than a line of them (3.12, 24): setup-* actions and uv
@@ -522,8 +550,8 @@ echo "Toolchain:"
 [ -n "$MISE" ] || skip "no mise.toml or other mise config, so no mise pins to cross-check"
 [ -n "$DOCKERFILES" ] || skip "no Dockerfile, so no image-build ARGs to cross-check"
 
-# tool | version file (empty = no conventional one) | Dockerfile ARG
-while IFS='|' read -r tool vfile arg; do
+# tool | version file (empty = no conventional one) | Dockerfile ARG | uv.lock package
+while IFS='|' read -r tool vfile arg uvpkg; do
 	[ -n "$tool" ] || continue
 	n=0
 	src_label=()
@@ -555,10 +583,15 @@ while IFS='|' read -r tool vfile arg; do
 	raw=$(read_pkgmgr "$tool")
 	[ -n "$raw" ] && add_source "package.json packageManager" "$(normalize "$tool" "$raw")"
 
+	if [ -n "$uvpkg" ]; then
+		raw=$(read_uvlock "$uvpkg")
+		[ -n "$raw" ] && add_source "uv.lock $uvpkg" "$raw"
+	fi
+
 	# Each Dockerfile is its own source, labelled by name: with two of them the ✓ line lists both,
 	# and a mismatch says which file to fix rather than just "Dockerfile".
 	while IFS= read -r dockerfile; do
-		[ -n "$dockerfile" ] || continue
+		[ -n "$dockerfile" ] && [ -n "$arg" ] || continue
 		raw=$(read_arg "$dockerfile" "$arg")
 		case "$(lines "$raw")" in
 		0) ;;
@@ -595,6 +628,7 @@ yarn||YARN_VERSION
 pnpm||PNPM_VERSION
 npm||NPM_VERSION
 bun||BUN_VERSION
+ruff|||ruff
 TOOLS
 
 echo
