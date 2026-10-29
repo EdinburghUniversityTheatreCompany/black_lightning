@@ -17,6 +17,9 @@ paths = [
   '''^\.env''',                        # dotenv — gitignored
   '''^log/''', '''^tmp/''',            # Rails runtime artifacts
   '''^\.venv/''',                      # Python (shell/py stacks)
+  # Python bytecode and pytest state at any depth: a .pyc next to a test's credential-shaped
+  # fixture can match the github-pat rule and block a commit on a file nobody staged.
+  '''(^|/)__pycache__/''', '''(^|/)\.pytest_cache/''',
   '''^node_modules/''', '''^vendor/''', '''^\.pnpm-store/''',
   '''^config/credentials/.*\.key$''',  # Rails master keys (the *.yml.enc blobs stay scanned)
   '''^config/secrets\.yml$''',         # gitignored local Rails secrets (legacy secrets.yml — never committed)

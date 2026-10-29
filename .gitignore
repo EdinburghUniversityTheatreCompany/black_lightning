@@ -75,7 +75,11 @@ npm-debug.log*
 # pnpm store
 .pnpm-store/
 
-.claude
+# Local Claude Code state stays out; settings.json is committed so cloud sessions never link
+# their transcript from a commit (dev-env v28).
+.claude/*
+!.claude/settings.json
+
 # Git worktrees for isolated feature work
 .worktrees/
 

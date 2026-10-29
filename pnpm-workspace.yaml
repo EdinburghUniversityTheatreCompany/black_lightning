@@ -1,3 +1,8 @@
+# Skip releases younger than 4 days (in minutes), the same cooldown as the Gemfile's
+# `cooldown: 4` and mise's minimum_release_age. Set here so it holds for every checkout, not only
+# where a global pnpm config sets it.
+minimumReleaseAge: 5760
+
 allowBuilds:
   "@parcel/watcher": true
 
