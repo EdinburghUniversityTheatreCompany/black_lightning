@@ -1,7 +1,7 @@
 # Deferred dependency upgrades
 
 Upgrades that could **not** be applied during a dependency sweep, with the reason and what lands
-them. Last reviewed: **2026-10-27**.
+them. Last reviewed: **2026-10-29**.
 
 Every Ruby entry below is blocked by a constraint outside this repo. Re-check with
 `bundle outdated` / `pnpm outdated`: anything still listed here is expected to appear.
@@ -56,9 +56,12 @@ here; `bundle outdated` lists them until their dependents widen.
   (Dockerfile:100) can find vite. Setting `NODE_ENV=production` in that image, an obvious-looking
   optimisation, would then break the asset build with "vite: not found". If the move is wanted, do
   it together with an explicit `pnpm install --prod=false` in the Dockerfile.
-- **pnpm 11.9.0 → 12.5.1** was offered by the CLI and not taken: `packageManager` in
-  `package.json` is the single source of truth and is bumped with `corepack use pnpm@<version>`,
-  which rewrites the integrity hash. That is its own change, not a dependency sweep.
+- **pnpm 12 (12.16.1 on 2026-10-29) is not taken; pnpm is on 11.28.8**, the newest 11.x past
+  the cooldown (bumped with `corepack use pnpm@<version>`, which rewrites the integrity hash). 12
+  is a rewrite with breaking changes: an unknown `pnpm-workspace.yaml` key now fails the command,
+  `--frozen-lockfile false` is gone, and peer-cycle resolution re-keys the lockfile on the next
+  re-resolve. Take it as its own change, with a Docker image build: the Dockerfile's
+  `npm install -g pnpm` installs the newest pnpm, which then runs the `packageManager` version.
 
 ## Held back by the supply-chain cooldown: not deferred, just young
 
