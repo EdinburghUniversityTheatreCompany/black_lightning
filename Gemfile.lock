@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/mickzijdel/rubocop-mick.git
-  revision: 392fa105e8d09a54bbb39e59df19b328a4a616d7
+  revision: f3c13c8f1bdcd2c5dd7c9826bce66261ca3ea79d
   specs:
     rubocop-mick (0.1.0)
       lint_roller (~> 1.1)
@@ -134,7 +134,7 @@ GEM
     breadcrumbs_on_rails (4.1.0)
       railties (>= 5.0)
     builder (3.3.0)
-    bullet (8.3.0)
+    bullet (8.3.1)
       activesupport (>= 3.0.0)
       uniform_notifier (~> 1.11)
     bundler-audit (0.9.3)
@@ -345,7 +345,7 @@ GEM
       parser
       rainbow (~> 3.0)
       sorbet-runtime (>= 0.5)
-    parser (3.3.12.0)
+    parser (3.3.13.0)
       ast (~> 2.4.1)
       racc
     path_expander (2.0.1)
@@ -570,7 +570,7 @@ GEM
       fugit (~> 1.11)
       railties (>= 7.1)
       thor (>= 1.3.1)
-    sorbet-runtime (0.6.13591)
+    sorbet-runtime (0.6.13594)
     sord (7.1.0)
       commander (~> 5.0)
       parlour (~> 9.1)
