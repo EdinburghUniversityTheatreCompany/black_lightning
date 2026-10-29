@@ -1,26 +1,33 @@
 #!/usr/bin/env bash
 # Assert that every place a toolchain or service version is pinned agrees.
 #
-# A version is spelled out in several files because different consumers read different ones:
-# mise/config.toml drives local dev (and mise-action in CI), .ruby-version / .node-version /
-# .python-version feed setup-*, the Dockerfile ARGs build the production image, package.json's
-# `packageManager` drives corepack, mise.lock records the exact release a floating spec resolves
-# to, and `image:` tags decide what production runs versus what CI tests against. Nothing makes
-# them agree, so a bump that misses one file is silent.
+# A version gets spelled out in several files because different consumers read different ones:
+# mise.toml drives local dev (and mise-action in CI), .ruby-version / .node-version /
+# .python-version feed setup-ruby / setup-node / setup-python, the Dockerfile ARGs build the
+# production image, package.json's `packageManager` field drives corepack, mise.lock records the
+# exact release a floating mise.toml spec resolves to, and the `image:` tags
+# in a compose file or config/deploy.yml decide what production runs versus what CI tests
+# against. Nothing makes them agree on its own, so a bump that misses one file is silent: the
+# image builds on a different Ruby than the tests ran on, or the suite goes green against a
+# database server nobody deploys.
 #
-# Part of the dev-env standard (dev-hooks:dev-env-setup, v27), run by the hk `versions` step and
-# CI's `versions` job. Don't hand-edit the logic: the next policy change should be a plain re-copy
-# of the template (a repo's own formatter may re-indent this file, which is fine).
+# Part of the dev-env standard (dev-hooks:dev-env-setup, v29) — run by the hk `versions` step and
+# CI's `versions` job so the local and CI gates can't drift. Don't hand-edit the logic; the next
+# policy change should be a plain re-copy of the template (a repo's own formatter may re-indent
+# this file to local style, which is fine).
 #
-# Only files that exist get checked, and every skip is printed, so a pass never looks like more
-# coverage than it is. The gate reports and never rewrites a pin: which file holds the correct
-# value is a judgement call.
+# Only files that exist get checked, and every skip is printed: a repo legitimately without a
+# Dockerfile or a compose file passes, but its pass never looks like more coverage than it is.
+# The gate reports and never rewrites a pin — which file holds the correct value is a judgement
+# call (in one repo the right fix was to change production, not CI).
 #
-# Deliberately NOT checked: go.mod's `go` directive, which is the *minimum* language version, not
-# a toolchain pin, so it is routinely (and correctly) older than mise's `go`.
+# Deliberately NOT checked: go.mod's `go` directive. It declares the *minimum* language version
+# the module builds with, not the toolchain a build pins, so it is routinely — and correctly —
+# older than mise.toml's `go`. Comparing them would fail healthy repos.
 #
-# Deliberately NOT enforced: Dockerfile style (a hardcoded `ARG NODE_VERSION` versus deriving the
-# Node major from .node-version). This verifies that whatever pins exist agree.
+# Deliberately NOT enforced: Dockerfile style. Whether an image hardcodes `ARG NODE_VERSION` or
+# derives the Node major from .node-version is a per-repo choice. This verifies that whatever
+# pins exist agree, so adopting the standard never forces a Dockerfile rewrite.
 #
 # EVERY Dockerfile in the repo root is checked, not just the first one found. A repo
 # commonly carries a production `Dockerfile` beside a `Dockerfile.dev`, and stopping at the first
@@ -54,6 +61,10 @@ for f in mise.toml .mise.toml mise/config.toml .config/mise.toml .config/mise/co
 		break
 	fi
 done
+# mise writes the lock beside the config: mise/config.toml locks to mise/mise.lock, and
+# .mise.toml to the root mise.lock.
+LOCK=mise.lock
+[ -n "$MISE" ] && LOCK=$(dirname "$MISE")/mise.lock && LOCK=${LOCK#./}
 
 # Newline-separated, because a `for f in $DOCKERFILES` would word-split a name containing a
 # space. An unmatched glob is left literal by the shell (no nullglob here), so `Dockerfile.*` in
@@ -75,18 +86,20 @@ for f in Dockerfile Containerfile Dockerfile.* Containerfile.*; do
 "
 done
 
-# A mise `[tools]` value. Handles `node = "22.4.1"`, the inline table
-# `ruby = { version = "4.0.2", compile = false }` (first quoted string after `=`) and the table
-# form `[tools.ruby]` + `version = "4.0.2"`.
+# A mise config's pin for a tool: `node = "22.4.1"` and the inline table
+# `ruby = { version = "4.0.2", compile = false }` under `[tools]` (the first quoted string after
+# `=`), or the table `[tools.ruby]` with `version = "4.0.2"`.
 read_mise() {
 	[ -n "$MISE" ] || return 0
 	awk -v key="$1" '
     /^[[:space:]]*\[/ {
       intools = ($0 ~ /^[[:space:]]*\[tools\][[:space:]]*$/)
-      insub = ($0 ~ "^[[:space:]]*\\[tools\\." key "\\][[:space:]]*$")
+      intable = ($0 ~ "^[[:space:]]*\\[tools\\.\"?" key "\"?\\][[:space:]]*$")
       next
     }
-    insub && /^[[:space:]]*version[[:space:]]*=/ { if (match($0, /"[^"]*"/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit } }
+    intable && /^[[:space:]]*version[[:space:]]*=/ {
+      if (match($0, /"[^"]*"/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit }
+    }
     !intools { next }
     {
       line = $0
@@ -110,7 +123,7 @@ read_arg() {
 	sed -n "s/^[[:space:]]*ARG[[:space:]]\{1,\}$2=//p" "$1" | tr -d "[:blank:]\r\"'" | sort -u
 }
 
-# package.json's `"packageManager": "pnpm@9.1.0+sha512…"`, corepack's pin.
+# package.json's `"packageManager": "pnpm@9.1.0+sha512…"` — corepack's pin, for the JS stack.
 read_pkgmgr() { # $1 tool, [$2 package.json path]
 	local pj=${2:-package.json}
 	[ -f "$pj" ] || return 0
@@ -119,7 +132,7 @@ read_pkgmgr() { # $1 tool, [$2 package.json path]
 }
 
 # `.ruby-version` may be bare (3.4.10) or prefixed (ruby-3.4.10); `.node-version` may carry a
-# leading v. All are valid for setup-* and mise, so normalise before comparing.
+# leading v (v22.4.1). Every form is valid for setup-* and mise, so normalise before comparing.
 normalize() {
 	local v
 	v=$(printf '%s' "$2" | tr -d "[:space:]\"'")
@@ -131,11 +144,11 @@ normalize() {
 
 lines() { printf '%s' "$1" | grep -c .; }
 
-# mise.lock's exact release for a tool: `[[tools.python]]` (or the older single-table
+# The lock's exact release for a tool: `[[tools.python]]` (or the older single-table
 # `[tools.python]`) followed by `version = "3.14.6"`. It is what mise installs locally and what
 # mise-action installs in CI, so it is the release every other pin is measured against.
 read_lock() {
-	[ -f mise.lock ] || return 0
+	[ -f "$LOCK" ] || return 0
 	awk -v key="$1" '
     /^\[\[?tools\.("[^"]*"|[^."\]]+)\]\]?[[:space:]]*$/ {
       h = $0
@@ -153,7 +166,7 @@ read_lock() {
       print v
       exit
     }
-  ' mise.lock
+  ' "$LOCK"
 }
 
 # A full release (3.12.12, 24.11.0) rather than a line of them (3.12, 24): setup-* actions and uv
@@ -371,11 +384,11 @@ own_vfile() {
 	esac
 }
 
-# A partial release floats: name what CI will resolve and, if mise.lock has it, what local runs.
+# A partial release floats: name what CI will resolve and, if the lock has it, what local runs.
 floats_msg() { # $1 tool, $2 partial version
 	local locked
 	locked=$(read_lock "$1")
-	printf 'CI resolves the newest %s.x%s; write the full release' "$2" "${locked:+, while mise.lock pins $locked}"
+	printf 'CI resolves the newest %s.x%s; write the full release' "$2" "${locked:+, while $LOCK pins $locked}"
 }
 
 # A step reading a version file: it must exist, name a full release, and — when it is not the
@@ -506,7 +519,7 @@ compare_sources() {
 }
 
 echo "Toolchain:"
-[ -n "$MISE" ] || skip "no mise config, so no mise pins to cross-check"
+[ -n "$MISE" ] || skip "no mise.toml or other mise config, so no mise pins to cross-check"
 [ -n "$DOCKERFILES" ] || skip "no Dockerfile, so no image-build ARGs to cross-check"
 
 # tool | version file (empty = no conventional one) | Dockerfile ARG
@@ -534,7 +547,7 @@ while IFS='|' read -r tool vfile arg; do
 		esac
 		locked=$(read_lock "$tool")
 		if [ -n "$locked" ]; then
-			add_source "mise.lock $tool" "$(normalize "$tool" "$locked")"
+			add_source "$LOCK $tool" "$(normalize "$tool" "$locked")"
 			floating=""
 		fi
 	fi
@@ -558,7 +571,8 @@ while IFS='|' read -r tool vfile arg; do
 		[ "$t" = "$tool" ] && add_source "$label" "$v"
 	done <"$CI_PINS"
 
-	# A floating mise spec is only worth mentioning when another file pins the tool.
+	# A floating mise spec is only worth mentioning when some other file does pin the tool —
+	# on its own it is the standard's normal state, not a gap.
 	floating_note=""
 	[ -n "$floating" ] && floating_note=" ($MISE spec is \"$floating\", no fixed version to compare)"
 
@@ -589,7 +603,7 @@ if [ -z "$WORKFLOWS" ]; then
 	skip "no workflows, nothing to check"
 elif [ "$nsetup" -eq 0 ]; then
 	if printf '%s' "$ci_rows" | grep -q $'\037jdx/mise-action\037'; then
-		skip "no setup-* steps; the workflows install their toolchain with mise-action (mise.lock)"
+		skip "no setup-* steps; the workflows install their toolchain with mise-action ($LOCK)"
 	else
 		skip "no language setup steps in the workflows"
 	fi
@@ -597,10 +611,12 @@ fi
 cat "$CI_OUT"
 
 # ── Service image tags ────────────────────────────────────────────────────────────────
-# CI has to exercise the services production runs, or the suite goes green against a database
-# nobody deploys. Manifests differ per repo, so discover whichever are present and compare every
-# file that pins a given image. An image named in only one file is reported, never failed (CI may
-# legitimately not need Redis).
+# CI has to exercise the services production actually runs, or the suite goes green against a
+# database nobody deploys. Deployment manifests differ per repo (a compose file, Kamal's
+# config/deploy.yml, a devcontainer compose), so discover whichever are present instead of
+# hardcoding one, and compare every file that pins a given image against the others. An image
+# named in only one file is not drift (CI may legitimately not need Redis), so it is reported
+# but never fails.
 echo
 echo "Service image tags:"
 
@@ -621,8 +637,9 @@ done
 if [ "$nfiles" -eq 0 ]; then
 	skip "no compose / deploy / workflow files, nothing to cross-check"
 else
-	# `image: mysql:8.4`, `"mysql:8.4"` or `mysql:8.4@sha256:…` (CI pins by digest, so match only the
-	# tag). Commented-out, templated (${…}, {{…}}, <%…%>) and untagged images are skipped.
+	# `image: mysql:8.4`, `image: "mysql:8.4"`, `image: mysql:8.4@sha256:…` (CI pins by digest, so
+	# match only the tag). Commented-out and templated (${…}, {{…}}, <%…%>) images are skipped, as
+	# are untagged ones (a bare `image: acme/app` pins nothing).
 	printf '%s' "$FILES" | while IFS= read -r f; do
 		[ -n "$f" ] || continue
 		awk -v f="$f" '
