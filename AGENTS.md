@@ -1598,8 +1598,9 @@ the sitemap in `SitemapsController`.
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
 
-- **After touching a Stimulus controller or a stylesheet, run `RAILS_ENV=test bin/vite build`**, or
-  about four tests fail with "Vite Ruby can't find entrypoints/admin.js", looking unrelated. In a
+- **After touching a Stimulus controller, a stylesheet or `package.json` (a `packageManager` bump
+  too), run `RAILS_ENV=test bin/vite build`**, or about four tests fail with "Vite Ruby can't find
+  entrypoints/admin.js" (or `application.js`), looking unrelated. In a
   worktree keep `public/vite-test` a real directory, never a symlink to another checkout's: once
   the JS differs the auto-build fails and every request test errors, or tests run the other JS.
   Admin flashes appear only through JavaScript, so a page served without its bundle also fails
