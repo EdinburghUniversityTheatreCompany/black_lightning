@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/mickzijdel/rubocop-mick.git
-  revision: f3c13c8f1bdcd2c5dd7c9826bce66261ca3ea79d
+  revision: 2a773c44843d6a4add57af6e155532bdf22afb69
   specs:
     rubocop-mick (0.1.0)
       lint_roller (~> 1.1)
