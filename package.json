@@ -5,15 +5,15 @@
     "@fortawesome/fontawesome-free": "7.3.1",
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo-rails": "^8.0.23",
-    "@milkdown/core": "^7.22.3",
-    "@milkdown/plugin-clipboard": "^7.22.3",
-    "@milkdown/plugin-history": "^7.22.3",
-    "@milkdown/plugin-listener": "^7.22.3",
-    "@milkdown/plugin-upload": "^7.22.3",
-    "@milkdown/preset-commonmark": "^7.22.3",
-    "@milkdown/preset-gfm": "^7.22.3",
-    "@milkdown/prose": "7.22.3",
-    "@milkdown/utils": "^7.22.3",
+    "@milkdown/core": "^7.23.0",
+    "@milkdown/plugin-clipboard": "^7.23.0",
+    "@milkdown/plugin-history": "^7.23.0",
+    "@milkdown/plugin-listener": "^7.23.0",
+    "@milkdown/plugin-upload": "^7.23.0",
+    "@milkdown/preset-commonmark": "^7.23.0",
+    "@milkdown/preset-gfm": "^7.23.0",
+    "@milkdown/prose": "7.23.0",
+    "@milkdown/utils": "^7.23.0",
     "@popperjs/core": "^2.11.8",
     "@rails/activestorage": "^8.1.400",
     "@tailwindcss/forms": "^0.5.11",
@@ -27,7 +27,7 @@
     "date-fns": "^4.4.0",
     "dropzone": "^6.3.5",
     "leaflet": "^1.9.4",
-    "sass-embedded": "^1.106.1",
+    "sass-embedded": "^1.107.1",
     "sortablejs": "^1.15.7",
     "stimulus-rails-nested-form": "^4.1.0",
     "stimulus-vite-helpers": "^3.1.0",
@@ -48,7 +48,7 @@
   ],
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.13.0",
-    "globals": "^17.13.0"
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0"
   }
 }
