@@ -1,4 +1,4 @@
-source "https://rubygems.org", cooldown: 4
+source "https://rubygems.org", cooldown: 3
 
 ruby File.read(".ruby-version").strip
 

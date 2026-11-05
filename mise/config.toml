@@ -2,9 +2,9 @@
 # mise.lock records resolved versions and checksums, so installs are reproducible.
 # Upgrade with `mise upgrade`, then commit the changed mise.lock.
 lockfile = true
-# `mise upgrade` skips versions published in the last 4 days, the same cooldown as the Bundler
+# `mise upgrade` skips versions published in the last 3 days, the same cooldown as the Bundler
 # and npm dependencies. `mise install` still reproduces mise.lock.
-minimum_release_age = "4d"
+minimum_release_age = "3d"
 
 [tools.ruby]
 version = "4.0.9"
@@ -34,7 +34,7 @@ postinstall = [
 [env]
 # dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
 # hand-edit — bump it by running the skill's upgrade path.
-DEV_ENV_VERSION = "30"
+DEV_ENV_VERSION = "31"
 _.path = ["bin"]
 
 # Install dev dependencies

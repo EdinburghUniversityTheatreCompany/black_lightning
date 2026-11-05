@@ -65,8 +65,8 @@ here; `bundle outdated` lists them until their dependents widen.
 
 ## Held back by the supply-chain cooldown: not deferred, just young
 
-pnpm applies a 4-day `minimumReleaseAge`, Bundler the Gemfile's `cooldown: 4` and pinact
-`-m 4`, so a release newer than that is skipped **by design** and lands on the next sweep. Do not
+pnpm applies a 3-day `minimumReleaseAge`, Bundler the Gemfile's `cooldown: 3` and pinact
+`-m 3`, so a release newer than that is skipped **by design** and lands on the next sweep. Do not
 disable the cooldown to grab one, except for a security fix someone has decided is urgent.
 
 To take one gem early, lift the cooldown for that run only:

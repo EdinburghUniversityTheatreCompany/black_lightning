@@ -10,20 +10,44 @@ updates:
     schedule:
       interval: "weekly"
     # Supply-chain cooldown so Dependabot doesn't PR a freshly-published release (same idea as
-    # the Bundler/npm cooldowns + mise minimum_release_age). 7 days: zizmor's dependabot-cooldown
-    # audit treats anything under a week as insufficient.
+    # the Bundler/npm cooldowns + mise minimum_release_age). 3 days; .github/zizmor.yml lowers
+    # zizmor's dependabot-cooldown minimum (7 by default) to match. Each ecosystem has two
+    # groups: minor/patch bumps land in one PR (majors keep their own), and every security fix
+    # lands together, so a one-gem PR can't fail bundler-audit on the other vulnerable gems
+    # still on main.
     cooldown:
-      default-days: 7
+      default-days: 3
+    groups:
+      gems:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      gems-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
     cooldown:
-      default-days: 7
+      default-days: 3
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: daily
     open-pull-requests-limit: 10
     cooldown:
-      default-days: 7
+      default-days: 3
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]

@@ -216,7 +216,7 @@ run `mise install && hk install` once.
   `git stash pop` can take someone else's work. Use a throwaway commit and `git reset --soft`.
 - **`HK_SKIP_HOOK=1` does not stop hk's repo-wide stash.** When another session may be working in
   the repo, commit with `--no-verify` and run the checks over the branch afterwards.
-- **The Gemfile's `cooldown: 4` needs Bundler ≥ 4.0.13; older ones ignore it silently** (Ruby
+- **The Gemfile's `cooldown: 3` needs Bundler ≥ 4.0.13; older ones ignore it silently** (Ruby
   4.0.2 shipped Bundler 4.0.6; 4.0.9 ships 4.0.20). Keep `BUNDLED WITH` at or above that
   (`bundle update --bundler=<version>`). It is working when an update lists
   held-back releases ("available in N days").
@@ -241,7 +241,7 @@ run `mise install && hk install` once.
   findings remain, 76 of them missing length validators (mostly `reimbursements_*`), most others
   NOT NULL / FK / unique-index gaps needing data-aware backfill migrations. Two herb rules are
   disabled in `.herb.yml`.
-- **jscpd reads ERB markup since 5.4.2** (it runs the newest release past a 4-day cooldown, so
+- **jscpd reads ERB markup since 5.4.2** (it runs the newest release past a 3-day cooldown, so
   a release can turn CI red on a push that changed nothing). About six identical lines of
   markup in two templates fail the gate. Extract a component or local partial; a deliberate
   look-alike gets `<%# jscpd:ignore-start: <reason> %>` … `<%# jscpd:ignore-end %>` (an ERB
