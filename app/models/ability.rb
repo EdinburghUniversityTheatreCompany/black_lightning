@@ -138,11 +138,9 @@ class Ability
 
     can :read, Admin::Feedback, show: { users: { id: user.id } }
 
-    team_member_roles_that_can_update_shows = [ "Director", "Producer", "Co-Producer", "Assistant Producer" ]
-    team_member_roles_that_can_update_shows.each do |role|
-      can %I[read update], Show, team_members: { position: role, user_id: user.id }
-      can %I[read create update delete], Review, event: { team_members: { position: role, user_id: user.id } }
-    end
+    shows_this_user_manages = TeamMember.shows_with_user_in_management_role(user).pluck(:id)
+    can %I[read update], Show, id: shows_this_user_manages
+    can %I[read create update delete], Review, event: { id: shows_this_user_manages }
 
     can :read, Admin::MaintenanceDebt, user_id: user.id
     can :read, Admin::StaffingDebt, user_id: user.id
@@ -187,9 +185,8 @@ class Ability
     cannot [ :add_user, :remove_user ], Role
 
     # All users with role X control the roles which have X as a parent.
-    child_roles_this_user_can_manage = Role.joins(:parents).where(parents_roles: { id: user.roles }).pluck(:id)
-
-    can [ :read, :update, :add_user, :remove_user ], Role, id: child_roles_this_user_can_manage
+    child_roles_this_user_manages = Role.joins(:parents).where(parents_roles: { id: user.roles }).pluck(:id)
+    can [ :read, :update, :add_user, :remove_user ], Role, id: child_roles_this_user_manages
 
     # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
     can [ :read ], Role, id: Role.trained.pluck(:id)

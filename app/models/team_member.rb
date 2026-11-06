@@ -6,6 +6,7 @@
 # == Schema Information
 #
 # Table name: team_members
+# Database name: primary
 #
 #  id            :integer          not null, primary key
 #  display_order :integer
@@ -71,6 +72,14 @@ class TeamMember < ActiveRecord::Base
 
   ACTOR_PATTERN = /\A(actor|cast)\s*\((.+)\)\s*\z/i
 
+  def self.shows_with_user_in_management_role(user)
+    coarse = self.joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Event'")
+      .where("events.type = 'Show'")
+      .where(user_id: user.id)
+    fine = coarse.select { |tm| tm.has_management_role? }.collect { |tm| tm.teamwork_id }
+    Show.find(fine)
+  end
+
   def cast?
     position_segments.any? { |s| s.match?(ACTOR_PATTERN) }
   end
@@ -94,6 +103,12 @@ class TeamMember < ActiveRecord::Base
   # Public because SchemaHelper reads it; a second copy of this regex would drift.
   def position_segments
     position.split(/\/(?![^(]*\))/).map(&:strip)
+  end
+
+  MANAGEMENT_ROLES = [ "director", "producer", "production manager", "showrunner" ]
+
+  def has_management_role?
+    position_segments.any? { |s| MANAGEMENT_ROLES.any? { |role| s.downcase.end_with? role } }
   end
 
   private
