@@ -130,7 +130,7 @@ module NavigationHelper
     children << { title: "Users", path: admin_users_path, fa_icon: "fa-circle-user" }                      if can? :index, User
     children << { title: "Activate Members", path: activate_admin_users_path, fa_icon: "fa-circle-check" } if can? :create, User
     children << { title: "Techies", path: admin_techies_path, fa_icon: "fa-toolbox" }                  if can? :index, Techie
-    children << { title: "Duplicates", path: admin_duplicates_path, fa_icon: "fa-code-merge" } if can? :index, :duplicates
+    children << { title: "Duplicates", path: admin_duplicates_path, fa_icon: "fa-code-merge" } if can? :index, :duplicate
     navbar_categories << { title: "Users", children: children, fa_icon: "fa-circle-user" }
 
     # Apps
