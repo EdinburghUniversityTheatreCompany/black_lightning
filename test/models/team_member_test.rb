@@ -228,4 +228,52 @@ class TeamMemberTest < ActiveSupport::TestCase
 
     assert_equal [ nil, nil ], show.team_members.reload.map(&:display_order)
   end
+
+  test "correct positions should have management roles" do
+    event = FactoryBot.create(:event)
+    user1 = FactoryBot.create(:user)
+    user2 = FactoryBot.create(:user)
+    user3 = FactoryBot.create(:user)
+    user4 = FactoryBot.create(:user)
+
+    team_member1 = event.team_members.create!(user_id: user1.id, position: "Director")
+    team_member2 = event.team_members.create!(user_id: user2.id, position: "Producer")
+    team_member3 = event.team_members.create!(user_id: user3.id, position: "Production Manager")
+    team_member4 = event.team_members.create!(user_id: user4.id, position: "Showrunner")
+
+    assert team_member1.has_management_role?, "Should have management role because is director"
+    assert team_member2.has_management_role?, "Should have management role because is producer"
+    assert team_member3.has_management_role?, "Should have management role because is prod man"
+    assert team_member4.has_management_role?, "Should have management role because is showrunner"
+  end
+
+  test "incorrect positions should not have management roles" do
+    event = FactoryBot.create(:event)
+    user1 = FactoryBot.create(:user)
+    user2 = FactoryBot.create(:user)
+    user3 = FactoryBot.create(:user)
+    user4 = FactoryBot.create(:user)
+
+    team_member1 = event.team_members.create!(user_id: user1.id, position: "Tech Manager")
+    team_member2 = event.team_members.create!(user_id: user2.id, position: "Actor (Producer)")
+    team_member3 = event.team_members.create!(user_id: user3.id, position: "Actor (Costume Manager)")
+    team_member4 = event.team_members.create!(user_id: user4.id, position: "Production Assistant")
+
+    assert_not team_member1.has_management_role?
+    assert_not team_member2.has_management_role?
+    assert_not team_member3.has_management_role?
+    assert_not team_member4.has_management_role?
+  end
+
+  test "complex positions should have management roles" do
+    event = FactoryBot.create(:event)
+    user1 = FactoryBot.create(:user)
+    user2 = FactoryBot.create(:user)
+
+    team_member1 = event.team_members.create!(user_id: user1.id, position: "Co-Costume Manager / Director / Writer")
+    team_member2 = event.team_members.create!(user_id: user2.id, position: "First Assistant Co-Producer / Spokesperson / Actor")
+
+    assert team_member1.has_management_role?, "Should have management role because is director"
+    assert team_member2.has_management_role?, "Should have management role because is assistant producer"
+  end
 end
