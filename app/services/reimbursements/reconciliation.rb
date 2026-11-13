@@ -47,14 +47,7 @@ module Reimbursements
       return [] if text.empty?
 
       delimiter = text.lines.first.strip.include?("\t") ? "\t" : ","
-      # Excel, Sage and ActualsUpload leave a quote inside a tab-separated cell bare (a play title in a
-      # rights narrative), so tabs parse liberally. Commas stay strict: liberal there splits a quoted
-      # comma into an extra column and shifts the amounts.
-      table = begin
-        CSV.parse(text, col_sep: delimiter, liberal_parsing: delimiter == "\t")
-      rescue CSV::MalformedCSVError => e
-        raise ArgumentError, "#{e.message} Check the quote marks on that line, or paste the rows straight from Excel."
-      end
+      table = read_table(text, delimiter)
 
       col_map = build_col_map(table.first)
       validate_col_map(col_map)
@@ -67,7 +60,8 @@ module Reimbursements
 
         if row.length <= min_required_col
           raise ArgumentError,
-            "Row #{i + 1} has only #{row.length} columns (need at least #{min_required_col + 1})"
+            "Row #{i + 1} has only #{row.length} columns (need at least #{min_required_col + 1}). " \
+            "A line break inside a cell splits its row: remove it and paste again."
         end
 
         cell = ->(key) { col_map.key?(key) ? row[col_map[key]].to_s.strip : "" }
@@ -102,6 +96,25 @@ module Reimbursements
 
       rows
     end
+
+    # Tab-separated text is one row per line, never CSV quoting: Sage and Excel leave a quote inside
+    # a cell bare, and a quote CSV reads as opening a cell swallows the rows up to the next one.
+    def read_table(text, delimiter)
+      return CSV.parse(text) unless delimiter == "\t"
+
+      text.split(/\r\n?|\n/).map { |line| line.split("\t", -1).map { |cell| unquote_tsv_cell(cell) } }
+    rescue CSV::MalformedCSVError => e
+      raise ArgumentError,
+        "#{e.message} Check the quote marks on that line, or copy the rows from Excel and paste them instead."
+    end
+    private_class_method :read_table
+
+    # A whole-quoted cell reads as CSV read it, so rows stored before keep their dedup keys.
+    def unquote_tsv_cell(cell)
+      quoted = cell.match(/\A"((?:[^"]|"")*)"\z/)
+      quoted ? quoted[1].gsub('""', '"') : cell
+    end
+    private_class_method :unquote_tsv_cell
 
     # The one canonical spelling of an EUSA period: zero-padded to two digits, so "6" and "06" are one
     # month and "10" no longer sorts between "1" and "2". Only a purely numeric value of up to two digits

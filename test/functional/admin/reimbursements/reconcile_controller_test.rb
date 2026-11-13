@@ -393,11 +393,19 @@ module Admin
       assert_includes response.body, "Could not parse actuals"
     end
 
-    # A raise here is the 500 page inside the wizard's Turbo Frame, which shows only "Content missing".
+    # A raise renders the 500 page inside the wizard's frame: "Content missing".
+    test "preview reads a bare quote mark in a tab-separated narrative" do
+      sign_in @user
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(narrative: 'CONCORD - "HAMLET " RIGHTS')}" }
+
+      assert_response :success
+      assert_includes response.body, ERB::Util.html_escape('CONCORD - "HAMLET " RIGHTS')
+    end
+
     test "preview re-renders show with an alert on quoting it cannot read" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n" \
-                                            "439999\tF40\tBACS001\t15/03/2025\t03\t\"Unclosed\t\t1.00\t\t1.00" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER.tr("\t", ',')}\n" \
+                                            "439999,F40,BACS001,15/03/2025,03,\"Hamlet\" rights,,1.00,,1.00" }
 
       assert_response :success
       assert_includes response.body, "Could not parse actuals"

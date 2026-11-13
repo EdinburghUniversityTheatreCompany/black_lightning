@@ -187,27 +187,29 @@ module Reimbursements
       assert_equal bd("-400.56"), rows[2].net
     end
 
-    test "a tab-separated narrative keeps its quote marks as typed" do
-      [
+    test "bare quote marks in a tab-separated paste stay as typed, one row per line" do
+      narratives = [
         "CONCORD THEATRICALS - \"ABSURD PERSON SINGULAR \" RIGHTS",
-        "\"HAMLET\" PERFORMANCE RIGHTS"
-      ].each do |narrative|
-        row_text = "431940\tBED\t\tLEGAL COSTS & LICENSING\t05/10/2026\t7\tBACS\t#{narrative}\t280.00\tEUSA"
-        row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\r\n#{row_text}\r\n#{SAGE_DEBIT_ROW}").first
-        assert_equal narrative, row.narrative
-        assert_equal bd("280.00"), row.debit
-      end
+        "\"HAMLET\" PERFORMANCE RIGHTS",
+        # An unclosed quote must not swallow the rows up to the next quote mark.
+        "\"ABSURD PERSON SINGU",
+        "HAMLET\" RIGHTS",
+        "ROYALTIES HAMLET\""
+      ]
+      lines = narratives.map { |n| "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t#{n}\t280.00\tEUSA" }
+      lines << "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t\"SAY \"\"HI\"\"\"\t1.00\tEUSA"
+
+      rows = Reconciliation.parse_actuals_rows([ SAGE_HEADER, *lines ].join("\r\n"))
+
+      assert_equal narratives + [ "SAY \"HI\"" ], rows.map(&:narrative)
+      assert_equal [ bd("280.00") ] * 5 + [ bd("1.00") ], rows.map(&:debit)
     end
 
-    test "quoting the parser cannot read is an ArgumentError naming the line" do
-      unclosed = "#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}\n" \
-                 "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t\"ABSURD RIGHTS\t280.00\tEUSA"
-      comma = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net\n" \
-              "439999,F40,BACS001,15/03/2025,03,\"ABSURD\" RIGHTS,,123.45,,123.45"
-      { unclosed => /line 3/, comma => /line 2/ }.each do |text, line|
-        error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows(text) }
-        assert_match line, error.message
-      end
+    test "a stray quote mark in a comma-separated paste is an ArgumentError naming the line" do
+      text = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net\n" \
+             "439999,F40,BACS001,15/03/2025,03,\"ABSURD\" RIGHTS,,123.45,,123.45"
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows(text) }
+      assert_match(/line 2/, error.message)
     end
 
     # --- match_debit_to_expense -------------------------------------------
