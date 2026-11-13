@@ -206,12 +206,28 @@ module Reimbursements
     end
 
     test "a tab-separated cell holding a tab or line break is refused, not shifted" do
-      { "\"A\tB\"" => /more cells/, "\"A\nB\"" => /only \d+ columns/ }.each do |narrative, message|
-        row_text = "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t#{narrative}\t280.00\tEUSA"
+      {
+        "\"A\tB\"\t280.00\tEUSA" => /more cells/,
+        # A blank last cell must not hide the shift.
+        "\"A\tB\"\t280.00\t" => /more cells/,
+        "\"A\nB\"\t280.00\tEUSA" => /only \d+ columns/
+      }.each do |rest, message|
+        row_text = "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t#{rest}"
         error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{row_text}") }
         assert_match message, error.message
         assert_match(/line break inside a cell/, error.message)
       end
+    end
+
+    test "a blank cell at either end of a tab-separated paste keeps its column" do
+      header = "\t#{SAGE_HEADER}"
+      first = "\t431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\tFIRST\t280.00\tEUSA"
+      last = "\t431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\tLAST\t1.00\t"
+
+      rows = Reconciliation.parse_actuals_rows(" \n#{header}\n#{first}\n#{last}\n \n")
+
+      assert_equal %w[FIRST LAST], rows.map(&:narrative)
+      assert_equal [ bd("280.00"), bd("1.00") ], rows.map(&:debit)
     end
 
     test "a stray quote mark in a comma-separated paste is an ArgumentError naming the line" do
