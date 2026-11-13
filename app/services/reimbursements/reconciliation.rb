@@ -47,7 +47,14 @@ module Reimbursements
       return [] if text.empty?
 
       delimiter = text.lines.first.strip.include?("\t") ? "\t" : ","
-      table = CSV.parse(text, col_sep: delimiter)
+      # Excel, Sage and ActualsUpload leave a quote inside a tab-separated cell bare (a play title in a
+      # rights narrative), so tabs parse liberally. Commas stay strict: liberal there splits a quoted
+      # comma into an extra column and shifts the amounts.
+      table = begin
+        CSV.parse(text, col_sep: delimiter, liberal_parsing: delimiter == "\t")
+      rescue CSV::MalformedCSVError => e
+        raise ArgumentError, "#{e.message} Check the quote marks on that line, or paste the rows straight from Excel."
+      end
 
       col_map = build_col_map(table.first)
       validate_col_map(col_map)

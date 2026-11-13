@@ -143,6 +143,14 @@ fixes are a column-visibility control or Owners behind a popover.
 
 ## Reimbursements: claims, batches and reconciliation
 
+### Any 500 inside a wizard's Turbo Frame reads "Content missing"
+
+The error page has no matching frame, so Reconcile and both import wizards show only "Content
+missing", and the operator cannot tell a crash from a bug in the page (Reconcile's stray-quote
+`CSV::MalformedCSVError`, fixed 2026-11-13, looked like that for four tries). A
+`turbo:frame-missing` listener that visits the response as a full page (`event.detail.visit`)
+would show the real error page instead.
+
 ### Should an unlinked EUSA credit attach to an *expense* budget? (decision)
 
 `Reconciliation.match_credit_to_budget` only ever offers a credit row to **income** budgets, so a

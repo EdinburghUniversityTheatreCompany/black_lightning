@@ -187,6 +187,29 @@ module Reimbursements
       assert_equal bd("-400.56"), rows[2].net
     end
 
+    test "a tab-separated narrative keeps its quote marks as typed" do
+      [
+        "CONCORD THEATRICALS - \"ABSURD PERSON SINGULAR \" RIGHTS",
+        "\"HAMLET\" PERFORMANCE RIGHTS"
+      ].each do |narrative|
+        row_text = "431940\tBED\t\tLEGAL COSTS & LICENSING\t05/10/2026\t7\tBACS\t#{narrative}\t280.00\tEUSA"
+        row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\r\n#{row_text}\r\n#{SAGE_DEBIT_ROW}").first
+        assert_equal narrative, row.narrative
+        assert_equal bd("280.00"), row.debit
+      end
+    end
+
+    test "quoting the parser cannot read is an ArgumentError naming the line" do
+      unclosed = "#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}\n" \
+                 "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t\"ABSURD RIGHTS\t280.00\tEUSA"
+      comma = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net\n" \
+              "439999,F40,BACS001,15/03/2025,03,\"ABSURD\" RIGHTS,,123.45,,123.45"
+      { unclosed => /line 3/, comma => /line 2/ }.each do |text, line|
+        error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows(text) }
+        assert_match line, error.message
+      end
+    end
+
     # --- match_debit_to_expense -------------------------------------------
 
     def debit_row(nominal_code: "439999", debit: bd("123.45"), row_date: Date.new(2025, 3, 15))
