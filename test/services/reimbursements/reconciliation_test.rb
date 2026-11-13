@@ -207,10 +207,10 @@ module Reimbursements
 
     test "a tab-separated cell holding a tab or line break is refused, not shifted" do
       {
-        "\"A\tB\"\t280.00\tEUSA" => /more cells/,
+        "\"A\tB\"\t280.00\tEUSA" => /11 columns/,
         # A blank last cell must not hide the shift.
-        "\"A\tB\"\t280.00\t" => /more cells/,
-        "\"A\nB\"\t280.00\tEUSA" => /only \d+ columns/
+        "\"A\tB\"\t280.00\t" => /11 columns/,
+        "\"A\nB\"\t280.00\tEUSA" => /8 columns/
       }.each do |rest, message|
         row_text = "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t#{rest}"
         error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{row_text}") }
@@ -228,6 +228,13 @@ module Reimbursements
 
       assert_equal %w[FIRST LAST], rows.map(&:narrative)
       assert_equal [ bd("280.00"), bd("1.00") ], rows.map(&:debit)
+    end
+
+    test "a comma-separated row with a split amount is refused, even when its extra cell is blank" do
+      text = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net\n" \
+             "439999,F40,BACS001,15/03/2025,03,Alice,Show,1,200.00,,"
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows(text) }
+      assert_match(/11 columns but the header has 10/, error.message)
     end
 
     test "a stray quote mark in a comma-separated paste is an ArgumentError naming the line" do

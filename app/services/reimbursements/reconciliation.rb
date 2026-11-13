@@ -48,30 +48,28 @@ module Reimbursements
       # Blank lines only: a tab at either end of the paste is a blank cell.
       text = text.to_s.sub(/\A(?:[ \t]*\r?\n)+/, "").sub(/(?:\r?\n[ \t]*)+\z/, "")
       delimiter = text.lines.first.strip.include?("\t") ? "\t" : ","
-      tsv = delimiter == "\t"
       table = read_table(text, delimiter)
 
       col_map = build_col_map(table.first)
       validate_col_map(col_map)
-      min_required_col = col_map.values.max
       header_length = table.first.length
-      tsv_hint = " A tab or line break inside a cell splits it: remove it and paste again."
-      extra_hint = tsv ? tsv_hint : " A comma in a cell without quotes splits it: copy the rows from Excel and paste them instead."
+      split_hint = if delimiter == "\t"
+        " A tab or line break inside a cell splits it: remove it and paste again."
+      else
+        " A comma or line break in a cell without quotes splits it: copy the rows from Excel and paste them instead."
+      end
 
       rows = []
       table.each_with_index do |row, i|
         next if i.zero? # header
         next if row.all? { |cell| cell.to_s.strip.empty? }
 
-        if row.length <= min_required_col
+        # A split cell shifts the rest of its row, so a debit could be read as a credit. Exported and
+        # copied sheets are rectangular, so any other cell count is a split.
+        unless row.length == header_length
           raise ArgumentError,
-            "Row #{i + 1} has only #{row.length} columns (need at least #{min_required_col + 1}).#{tsv_hint if tsv}"
+            "Row #{i + 1} has #{row.length} columns but the header has #{header_length}.#{split_hint}"
         end
-        # A split cell shifts the rest of its row right, so a debit could be read as a credit. Excel
-        # pastes rectangular rows, so in tab-separated text even a blank extra cell is a split.
-        extras = row.drop(header_length)
-        extras = extras.reject { |extra| extra.to_s.strip.empty? } unless tsv
-        raise ArgumentError, "Row #{i + 1} has more cells than the header row.#{extra_hint}" if extras.any?
 
         cell = ->(key) { col_map.key?(key) ? row[col_map[key]].to_s.strip : "" }
         parsed_date = parse_british_date(cell.call(:date))
