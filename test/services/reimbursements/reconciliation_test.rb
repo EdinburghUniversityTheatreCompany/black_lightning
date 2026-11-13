@@ -205,6 +205,15 @@ module Reimbursements
       assert_equal [ bd("280.00") ] * 5 + [ bd("1.00") ], rows.map(&:debit)
     end
 
+    test "a tab-separated cell holding a tab or line break is refused, not shifted" do
+      { "\"A\tB\"" => /more cells/, "\"A\nB\"" => /only \d+ columns/ }.each do |narrative, message|
+        row_text = "431940\tBED\t\tLEGAL\t05/10/2026\t7\tBACS\t#{narrative}\t280.00\tEUSA"
+        error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{row_text}") }
+        assert_match message, error.message
+        assert_match(/line break inside a cell/, error.message)
+      end
+    end
+
     test "a stray quote mark in a comma-separated paste is an ArgumentError naming the line" do
       text = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net\n" \
              "439999,F40,BACS001,15/03/2025,03,\"ABSURD\" RIGHTS,,123.45,,123.45"

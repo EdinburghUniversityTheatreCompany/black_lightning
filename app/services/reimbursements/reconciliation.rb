@@ -58,10 +58,14 @@ module Reimbursements
         next if i.zero? # header
         next if row.all? { |cell| cell.to_s.strip.empty? }
 
+        split_hint = delimiter == "\t" ? " A tab or line break inside a cell splits it: remove it and paste again." : ""
         if row.length <= min_required_col
           raise ArgumentError,
-            "Row #{i + 1} has only #{row.length} columns (need at least #{min_required_col + 1}). " \
-            "A line break inside a cell splits its row: remove it and paste again."
+            "Row #{i + 1} has only #{row.length} columns (need at least #{min_required_col + 1}).#{split_hint}"
+        end
+        # A split cell shifts the rest of its row right, so a debit could be read as a credit.
+        if row.drop(table.first.length).any? { |extra| !extra.to_s.strip.empty? }
+          raise ArgumentError, "Row #{i + 1} has more cells than the header row.#{split_hint}"
         end
 
         cell = ->(key) { col_map.key?(key) ? row[col_map[key]].to_s.strip : "" }
