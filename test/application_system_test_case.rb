@@ -1,9 +1,6 @@
 require "test_helper"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  # Undoes the inherited parallelize: browser startup dominates, so 8 workers measured no faster.
-  parallelize(workers: 1)
-
   SCREEN_SIZE = [ 1400, 1400 ].freeze
 
   driven_by :selenium, using: :headless_chrome, screen_size: SCREEN_SIZE do |driver_options|
