@@ -17,7 +17,7 @@ Current key versions (kept in sync with the manifests — `Gemfile.lock`, `packa
 | Layer | Tool | Version |
 | --- | --- | --- |
 | Framework | Rails | 8.1 |
-| Language | Ruby | 4.0.9 |
+| Language | Ruby | 4.0.10 |
 | Database | MySQL | 8 (multi-database: primary, queue, cache) |
 | Auth | Devise | 5.0 |
 | Components | ViewComponent | 4.19 |
