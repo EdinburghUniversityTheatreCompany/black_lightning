@@ -379,7 +379,7 @@ class User < ApplicationRecord
   ##
 
   def staffing_jobs_unlinked_count
-    staffing_jobs.left_joins(:staffing_debt).where(admin_staffing_debts: { id: nil }).count
+    staffing_jobs.unassociated.count
   end
 
   def staffing_debts_unlinked_count

@@ -12,7 +12,7 @@ class Admin::StaffingDebtsController < AdminController
   def show
     @title = "Staffing Debt for #{@staffing_debt.user.name(current_user)}"
 
-    @jobs = @staffing_debt.user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt
+    @jobs = @staffing_debt.user.staffing_jobs.unassociated
 
     super
   end

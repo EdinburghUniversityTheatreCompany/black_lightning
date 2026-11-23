@@ -66,7 +66,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     non_counting_staffing = FactoryBot.create(:staffing_that_does_not_count_towards_debt, unstaffed_job_count: 1)
     job_that_does_not_count_towards_debt = non_counting_staffing.staffing_jobs.first
 
-    test_jobs = Admin::StaffingJob.unassociated_staffing_jobs_that_count_towards_debt
+    test_jobs = Admin::StaffingJob.unassociated
 
     assert_includes test_jobs, unassociated_job_that_counts_towards_debt
     assert_not_includes test_jobs, associated_job_that_counts_towards_debt
