@@ -28,7 +28,17 @@ class Admin::StaffingJob < ApplicationRecord
   validates :name, presence: true
 
   scope :pending_reminder, -> { where(reminder_sent_at: nil).where.not(user: nil) }
+  # we assume unassociated means "not associated with debt, and debt-counting" because otherwise
+  # the query is quite noisy. beware!
+  scope :unassociated, -> { counts_towards_debt.where.missing(:staffing_debt) }
+  scope :counts_towards_debt, -> {
+    # sync with `counts_towards_debt?`
+    where(staffable_type: "Admin::Staffing")
+      .includes(:staffing).where(staffing: { counts_towards_debt: true })
+      .where('lower(name) != "committee rep"')
+  }
 
+  belongs_to :staffing, class_name: "Admin::Staffing", foreign_key: "staffable_id", optional: true
   belongs_to :staffable, polymorphic: true
   belongs_to :user, optional: true
   has_one :staffing_debt, class_name: "Admin::StaffingDebt", foreign_key: "admin_staffing_job_id"
@@ -45,20 +55,17 @@ class Admin::StaffingJob < ApplicationRecord
   # The functions that use staffable don't check if it's a staffing instead of a template.
   # They should just hard-fail when the staffable is a template. That situation should simply not occur.
 
+  def staffing
+    staffable if staffable.is_a?(Admin::Staffing)
+  end
+
   def completed?
-    staffable.end_time < DateTime.current
+    staffing.end_time < DateTime.current
   end
 
   def counts_towards_debt?
-    staffable.present? && staffable.counts_towards_debt? && name.downcase != "committee rep"
-  end
-
-  # Returns the staffing jobs that are not associated with any debt and count towards staffing.
-  def self.unassociated_staffing_jobs_that_count_towards_debt
-    staffing_jobs = all.joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null")
-    ids = staffing_jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
-
-    all.where(id: ids)
+    # sync with `counts_towards_debt` scope
+    staffing&.counts_towards_debt? && name.downcase != "committee rep"
   end
 
   def ical_calendar(method:)
@@ -73,12 +80,12 @@ class Admin::StaffingJob < ApplicationRecord
   def to_ical_event
     event = Icalendar::Event.new
     event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
-    event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
-    event.dtend         = Icalendar::Values::DateTime.new(staffable.end_time.utc, "tzid" => "UTC")
-    event.summary       = "#{staffable.show_title}: #{name}"
-    event.description   = "You are staffing #{staffable.show_title} as #{name}."
+    event.dtstart       = Icalendar::Values::DateTime.new(staffing.start_time.utc, "tzid" => "UTC")
+    event.dtend         = Icalendar::Values::DateTime.new(staffing.end_time.utc, "tzid" => "UTC")
+    event.summary       = "#{staffing.show_title}: #{name}"
+    event.description   = "You are staffing #{staffing.show_title} as #{name}."
     event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
-    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffable.updated_at ].max.utc, "tzid" => "UTC")
+    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffing.updated_at ].max.utc, "tzid" => "UTC")
     event.sequence      = calendar_sequence
     event
   end
